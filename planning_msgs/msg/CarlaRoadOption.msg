@@ -1,0 +1,9 @@
+int32 option
+
+int32 VOID = -1
+int32 LEFT = 1
+int32 RIGHT = 2
+int32 STRAIGHT = 3
+int32 LANEFOLLOW = 4
+int32 CHANGELANELEFT = 5
+int32 CHANGELANERIGHT = 6

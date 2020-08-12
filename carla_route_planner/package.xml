@@ -1,0 +1,20 @@
+<?xml version="1.0"?>
+<package format="2">
+  <name>carla_route_planner</name>
+  <version>0.0.0</version>
+  <description>The carla_route_planner package</description>
+  <maintainer email="carla.simulator@gmail.com">CARLA Simulator Team</maintainer>
+  <license>MIT</license>
+  <buildtool_depend>catkin</buildtool_depend>
+  <build_depend>roslaunch</build_depend>
+  <build_depend>planning_msgs</build_depend>
+  <build_depend>planning_srvs</build_depend>
+  <build_depend>rospy</build_depend>
+  <exec_depend>nav_msgs</exec_depend>
+  <exec_depend>planning_msgs</exec_depend>
+  <exec_depend>planning_srvs</exec_depend>
+  <exec_depend>carla_waypoint_types</exec_depend>
+  <exec_depend>rospy</exec_depend>
+  <export>
+  </export>
+</package>

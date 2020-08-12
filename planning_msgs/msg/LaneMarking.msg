@@ -1,0 +1,4 @@
+LaneMarkingColor color
+LaneChangeType lane_change
+LaneMarkingType type
+float64 width

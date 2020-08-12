@@ -1,0 +1,13 @@
+//
+// Created by ldh on 20-7-10.
+//
+
+#ifndef PLANNING_ALGORITHM_SRC_FRENET_LATTICE_PLANNER_INCLUDE_ST_GRAPH_HPP_
+#define PLANNING_ALGORITHM_SRC_FRENET_LATTICE_PLANNER_INCLUDE_ST_GRAPH_HPP_
+#include <ros/ros.h>
+namespace planning{
+namespace frenet_lattice{
+
+}
+}
+#endif //PLANNING_ALGORITHM_SRC_FRENET_LATTICE_PLANNER_INCLUDE_ST_GRAPH_HPP_

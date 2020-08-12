@@ -1,0 +1,2 @@
+geometry_msgs/Vector3 extent
+geometry_msgs/Point location
