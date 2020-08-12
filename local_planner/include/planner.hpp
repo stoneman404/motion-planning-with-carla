@@ -1,5 +1,5 @@
-#ifndef CATKIN_WS_SRC_PLANNING_INCLUDE_PLANNER_HPP_
-#define CATKIN_WS_SRC_PLANNING_INCLUDE_PLANNER_HPP_
+#ifndef CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_PLANNER_HPP_
+#define CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_PLANNER_HPP_
 #include <ros/ros.h>
 #include <carla_msgs/CarlaEgoVehicleStatus.h>
 #include <derived_object_msgs/ObjectArray.h>
@@ -73,4 +73,4 @@ private:
 
 }
 
-#endif //CATKIN_WS_SRC_PLANNING_INCLUDE_PLANNER_HPP_
+#endif

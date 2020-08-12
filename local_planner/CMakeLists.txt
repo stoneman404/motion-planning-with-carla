@@ -15,6 +15,7 @@ find_package(catkin REQUIRED COMPONENTS
         geometry_msgs
         sensor_msgs
         planning_msgs
+        planning_srvs
         tf
         std_msgs
         visualization_msgs
@@ -181,7 +182,6 @@ add_executable(${PROJECT_NAME}_node
 ## Specify libraries to link a library or executable target against
 target_link_libraries(${PROJECT_NAME}_node
         ${catkin_LIBRARIES}
-        ${planning_msgs_LIBRARIES}
         )
 
 #############

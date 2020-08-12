@@ -1,5 +1,5 @@
-#ifndef CATKIN_WS_SRC_PLANNING_INCLUDE_PLANNING_CONFIG_HPP_
-#define CATKIN_WS_SRC_PLANNING_INCLUDE_PLANNING_CONFIG_HPP_
+#ifndef CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_PLANNING_CONFIG_HPP_
+#define CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_PLANNING_CONFIG_HPP_
 #include <ros/ros.h>
 #include "vehicle_params.hpp"
 #include <carla_msgs/CarlaEgoVehicleInfo.h>
@@ -29,4 +29,4 @@ private:
     ~PlanningConfig() = default;
 };
 }
-#endif //CATKIN_WS_SRC_PLANNING_INCLUDE_PLANNING_CONFIG_HPP_
+#endif

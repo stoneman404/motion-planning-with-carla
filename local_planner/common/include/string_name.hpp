@@ -1,5 +1,5 @@
-#ifndef CATKIN_WS_SRC_PLANNING_COMMON_INCLUDE_STRING_NAME_HPP_
-#define CATKIN_WS_SRC_PLANNING_COMMON_INCLUDE_STRING_NAME_HPP_
+#ifndef CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_STRING_NAME_HPP_
+#define CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_STRING_NAME_HPP_
 #include <string>
 namespace planning{
 namespace topic{
@@ -24,4 +24,4 @@ const std::string kGetEgoWaypontServiceName = "/carla_waypoint_publisher/ego_veh
 }
 }
 
-#endif //CATKIN_WS_SRC_PLANNING_COMMON_INCLUDE_STRING_NAME_HPP_
+#endif //CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_STRING_NAME_HPP_
