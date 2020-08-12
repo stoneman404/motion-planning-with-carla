@@ -10,15 +10,32 @@ hybrid a star is the main planner for open space planner. Note that this planner
 - ROS Melodic
 
 ### 1.2 Ros Graph
-![](https://github.com/stoneman404/motion-planning-with-carla/tree/master/graph_search_planner/figs/rosgraph.png)
+
+<p align = "center">
+    <img src = "./graph_search_planner/figs/rosgraph.png">
+    <br>
+    <em> rosgraph for Hybrid A Star</em>
+</p>
 
 ### 1.3 Result
 
-![](https://github.com/stoneman404/motion-planning-with-carla/tree/master/graph_search_planner/figs/hybrid_astar_result1.png)
+<p align = "center">
+    <img src = "./graph_search_planner/figs/hybrid_astar_result1.png">
+    <br>
+    <em> hybrid_astar_result </em>
+</p>
 
-![](https://github.com/stoneman404/motion-planning-with-carla/tree/master/graph_search_planner/figs/hybrid_astar_result2.png)
+<p align = "center">
+    <img src = "./graph_search_planner/figs/hybrid_astar_result2.png">
+    <br>
+    <em> hybrid_astar_result </em>
+</p>
 
-![](https://github.com/stoneman404/motion-planning-with-carla/tree/master/graph_search_planner/figs/hybrid_astar_result3.png)
+<p align = "center">
+    <img src = "./graph_search_planner/figs/hybrid_astar_result3.png">
+    <br>
+    <em> hybrid_astar_result </em>
+</p>
 
 ### 1.4 TODO
 
