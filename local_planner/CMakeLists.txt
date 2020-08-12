@@ -163,7 +163,7 @@ set(planning_SRC
         src/planning_config.cpp
         src/reference_line/reference_line.cpp
         src/reference_line/reference_line_generator.cpp
-        src/reference_line/reference_point.cpp)
+        src/reference_line/reference_point.cpp common/src/qunitic_polynomial.cpp common/src/quartic_polynomial.cpp common/src/polynomial.cpp)
 
 add_executable(${PROJECT_NAME}_node
         ${planning_SRC}
