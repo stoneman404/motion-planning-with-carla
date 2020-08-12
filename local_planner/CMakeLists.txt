@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(planning)
+project(local_planner)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 add_compile_options(-std=c++11)
@@ -112,7 +112,7 @@ find_package(catkin REQUIRED COMPONENTS
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
         #        INCLUDE_DIRS include
-        #        LIBRARIES planning
+        #        LIBRARIES local_planner
         #        CATKIN_DEPENDS
         #        carla_msgs
         #        derived_object_msgs
@@ -139,7 +139,7 @@ include_directories(
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/planning.cpp
+#   src/${PROJECT_NAME}/local_planner.cpp
 # )
 
 ## Add cmake target dependencies of the library
