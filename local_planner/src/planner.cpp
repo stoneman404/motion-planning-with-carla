@@ -8,7 +8,7 @@
 
 namespace planning {
 Planner::Planner(const ros::NodeHandle &nh) : nh_(nh) {
-  PlanningConfig::Instance().UpdateParams(nh_);
+  PlanningConfig::Instance().UpdateParams(nh_)
   this->InitPublisher();
   this->InitSubscriber();
   this->InitServiceClient();
