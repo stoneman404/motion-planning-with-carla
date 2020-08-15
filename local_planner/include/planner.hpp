@@ -35,6 +35,10 @@ protected:
     void InitPublisher();
     void InitSubscriber();
     void InitServiceClient();
+    bool UpdateVehicleStatus();
+    bool UpdateObstacleStatus();
+    bool GetWayPoint(const int &object_id,
+                     carla_waypoint_types::CarlaWaypoint &carla_waypoint);
 
 private:
     bool has_init_vehicle_params_ = false;
@@ -53,8 +57,8 @@ private:
 
     ////////////////// ServiceClinet //////////////////////
     ros::ServiceClient route_service_client_;
-    ros::ServiceClient actor_waypoint_client_;
-    ros::ServiceClient ego_waypoint_client_;
+    ros::ServiceClient get_actor_waypoint_client_;
+    ros::ServiceClient get_waypoint_client_;
 
     ////////////////////// Subscriber /////////////////////
     ros::Subscriber ego_vehicle_subscriber_;

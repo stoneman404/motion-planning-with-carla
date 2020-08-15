@@ -8,24 +8,21 @@
 
 namespace planning {
 Planner::Planner(const ros::NodeHandle &nh) : nh_(nh) {
-  PlanningConfig::Instance().UpdateParams(nh_)
+  PlanningConfig::Instance().UpdateParams(nh_);
   this->InitPublisher();
   this->InitSubscriber();
   this->InitServiceClient();
 }
 
 void Planner::RunOnce() {
-
   if (ego_vehicle_id_ == -1) {
     return;
   }
+  /// initialize the vehicle params
   if (!has_init_vehicle_params_) {
     PlanningConfig::Instance().UpdateVehicleParams(ego_object_, ego_vehicle_info_);
     has_init_vehicle_params_ = true;
   }
-  VehicleState::Instance().Update(ego_vehicle_status_, ego_odometry_, ego_vehicle_info_);
-  ObstacleFilter::Instance().UpdateObstacles(objects_map_, ego_odometry_);
-
 }
 
 void Planner::InitPublisher() {
@@ -86,7 +83,7 @@ void Planner::InitSubscriber() {
       [this](const geometry_msgs::PoseWithCovarianceStamped::ConstPtr init_pose) {
         this->init_pose_ = *init_pose;
         ROS_INFO("the init_pose_: x: %lf, y: %lf",
-            init_pose_.pose.pose.position.x, init_pose_.pose.pose.position.y);
+                 init_pose_.pose.pose.position.x, init_pose_.pose.pose.position.y);
       });
 
   this->goal_pose_subscriber_ = nh_.subscribe<geometry_msgs::PoseStamped>(
@@ -94,16 +91,17 @@ void Planner::InitSubscriber() {
       [this](const geometry_msgs::PoseStamped::ConstPtr goal_pose) {
         this->goal_pose_ = *goal_pose;
         ROS_INFO("the goal_pose_ : x: %lf, y: %lf",
-            goal_pose_.pose.position.x, goal_pose_.pose.position.y);
+                 goal_pose_.pose.position.x, goal_pose_.pose.position.y);
       });
 }
 
 void Planner::InitServiceClient() {
-  this->ego_waypoint_client_ = nh_.serviceClient<carla_waypoint_types::GetWaypoint>(
+  this->get_waypoint_client_ = nh_.serviceClient<carla_waypoint_types::GetWaypoint>(
       service::kGetEgoWaypontServiceName);
-  this->actor_waypoint_client_ = nh_.serviceClient<carla_waypoint_types::GetActorWaypoint>(
+  this->get_actor_waypoint_client_ = nh_.serviceClient<carla_waypoint_types::GetActorWaypoint>(
       service::kGetActorWaypointServiceName);
   this->route_service_client_ = nh_.serviceClient<planning_srvs::Route>(service::kRouteServiceName);
+
 }
 
 bool Planner::ReRoute(const geometry_msgs::Pose &start,
@@ -113,7 +111,7 @@ bool Planner::ReRoute(const geometry_msgs::Pose &start,
   srv.request.start_pose = start;
   srv.request.end_pose = destination;
   if (!route_service_client_.call(srv)) {
-    ROS_FATAL("[Planner::Reroute], Failed to reroute!");
+    ROS_FATAL("[Planner::Reroute], Failed to ReRoute!");
     return false;
   } else {
     response = srv.response;
@@ -128,9 +126,60 @@ bool Planner::Plan(const carla_msgs::CarlaEgoVehicleInfo &ego_vehicle_info,
                    const carla_msgs::CarlaEgoVehicleStatus &vehicle_status,
                    planning_msgs::Trajectory::Ptr trajectory) {
   if (trajectory == nullptr) {
-    ROS_FATAL("[Planner::Planning], the trajectory ptr is NULL");
+    ROS_FATAL("[Planner::Plan], the trajectory ptr is NULL");
     return false;
   }
 
+}
+bool Planner::UpdateObstacleStatus() {
+  /// update the obstacle at each run
+  ObstacleFilter::Instance().UpdateObstacles(objects_map_, ego_odometry_);
+  auto &obstacles = ObstacleFilter::Instance().multable_obstacles();
+  int failed_count = 0;
+  for (auto &obstacle : obstacles) {
+    carla_waypoint_types::CarlaWaypoint waypoint;
+    if (!this->GetWayPoint(obstacle->Id(), waypoint)){
+      ROS_WARN("the obstacle[id: %i] failed to get waypoint.", obstacle->Id());
+      failed_count++;
+      continue;
+    }
+    obstacle->set_road_id(waypoint.road_id);
+    obstacle->set_section_id(waypoint.section_id);
+    obstacle->set_lane_id(waypoint.lane_id);
+  }
+
+  if (failed_count >= ObstacleFilter::Instance().ObstaclesSize()){
+
+    return false;
+  }
+  return true;
+}
+
+bool Planner::UpdateVehicleStatus() {
+  /// update the vehicle state at each run
+  VehicleState::Instance().Update(ego_vehicle_status_, ego_odometry_, ego_vehicle_info_);
+  auto ego_id = ego_vehicle_info_.id;
+  carla_waypoint_types::CarlaWaypoint waypoint;
+  if (!this->GetWayPoint(ego_id, waypoint)){
+    return false;
+  }
+  VehicleState::Instance().set_lane_id(waypoint.lane_id);
+  VehicleState::Instance().set_section_id(waypoint.section_id);
+  VehicleState::Instance().set_road_id(waypoint.road_id);
+
+}
+bool Planner::GetWayPoint(const int &object_id,
+                          carla_waypoint_types::CarlaWaypoint &carla_waypoint) {
+  if (object_id < 0) {
+    return false;
+  }
+  carla_waypoint_types::GetActorWaypoint srv;
+  srv.request.id = id;
+  if (!get_actor_waypoint_client_.call(srv)) {
+    ROS_FATAL("Cannot UpdateVehicleStatus");
+    return false;
+  }
+  carla_waypoint = srv.response.waypoint;
+  return true;
 }
 }

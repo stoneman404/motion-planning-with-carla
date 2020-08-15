@@ -23,6 +23,8 @@ public:
     void UpdateObstacles(const std::unordered_map<int,derived_object_msgs::Object>& objects,
         const nav_msgs::Odometry& ego_vehicle);
     size_t ObstaclesSize() const {return obstacles_.size();}
+    const std::list<std::shared_ptr<Obstacle>>& Obstacles() const {return obstacles_;}
+    std::list<std::shared_ptr<Obstacle>>& multable_obstacles()  {return obstacles_;}
 private:
     std::list<std::shared_ptr<Obstacle>> obstacles_;
 private:

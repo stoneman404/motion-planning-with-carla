@@ -25,8 +25,13 @@ public:
     double centripential_acc() const{ return centripental_acc_;}
     double steer_percentage() const {return steer_percentage_;}
     const geometry_msgs::Vector3 center_of_mass() const {return center_of_mass_;}
-
+    const int& lane_id() const {return lane_id_;}
+    const int& road_id() const {return road_id_;}
+    const int& section_id() const {return section_id_;}
     // setter
+    void set_lane_id(int lane_id) {this->lane_id_ = lane_id;}
+    void set_section_id(int section_id) {this->section_id_ = section_id;}
+    void set_road_id(int road_id) {this->road_id_ = road_id;}
     void set_linear_vel(double vel) ;
     void set_angular_vel(double omega);
     void set_pose(const geometry_msgs::Pose& pose);
@@ -36,10 +41,13 @@ public:
     geometry_msgs::Pose PredictNextPose(double t);
 
 private:
+
+    int lane_id_ = -1;
+    int section_id_ = -1;
+    int road_id_ = -1;
     geometry_msgs::Pose pose_;
     double kappa_;
     double heading_;
-
     double linear_vel_;
     double angular_vel_;
     double linear_acc_;

@@ -15,6 +15,8 @@ bool has_value
 geometry_msgs/Pose pose
 # the lane width
 float64 lane_width
+float64 right_lane_width
+float64 left_lane_width
 # the lane change type of this waypoint,
 # allowed to change LEFT, RIGTH, BOTH or NONE
 LaneChangeType lane_change

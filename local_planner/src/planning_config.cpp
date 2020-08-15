@@ -11,6 +11,7 @@ void PlanningConfig::UpdateParams(const ros::NodeHandle &nh) {
   nh.param<double>("/local_planner/obstacle_trajectory_time", obstacle_trajectory_time_, 8.0);
   nh.param<double>("/local_planner/delta_t", delta_t_, 0.1);
   nh.param<double>("/local_planner/filter_obstacle_length", filter_obstacle_length_, 100);
+  nh.param<double>("/local_planner/collison_buffer", collision_buffer_, 5.0);
 }
 
 void PlanningConfig::UpdateVehicleParams(const derived_object_msgs::Object &object,

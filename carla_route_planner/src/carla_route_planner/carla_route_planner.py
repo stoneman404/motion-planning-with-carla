@@ -184,12 +184,16 @@ class CarlaToRosWaypointConverter(object):
             left_lane = wp[0].get_left_lane()
             right_lane = wp[0].get_right_lane()
             if left_lane is None:
+                waypoint.left_lane_width = -1.0
                 waypoint.has_left_lane = False
             else:
                 waypoint.has_left_lane = True
+                waypoint.left_lane_width = wp[0].get_left_lane().lane_width
             if right_lane is None:
+                waypoint.left_right_width = -1.0
                 waypoint.has_right_lane = False
             else:
+                waypoint.right_lane_width = wp[0].get_right_lane().lane_width
                 waypoint.has_right_lane = True
             waypoint.lane_width = wp[0].lane_width
             waypoint.lane_type = self.set_lane_type(wp[0])
@@ -207,14 +211,14 @@ class CarlaToRosWaypointConverter(object):
             waypoint.right_lane_marking = self.set_right_lane_marking(wp[0])
             waypoint.left_lane_marking = self.set_left_lane_marking(wp[0])
             waypoint.road_option = self.set_road_option()
-            waypoint.junction.id = wp[0].junction.id
-            waypoint.junction.bounding_box.location.x = wp[0].junction.location.x
-            waypoint.junction.bounding_box.location.y = -wp[0].junction.location.y
-            waypoint.junction.bounding_box.location.z = wp[0].junction.location.z
-
-            waypoint.junction.bounding_box.extent.x = wp[0].junction.extent.x
-            waypoint.junction.bounding_box.extent.y = wp[0].junction.extent.y
-            waypoint.junction.bounding_box.extent.z = wp[0].junction.extent.z
+            if waypoint.is_junction:
+                waypoint.junction.id = wp[0].junction.id
+                waypoint.junction.bounding_box.location.x = wp[0].junction.location.x
+                waypoint.junction.bounding_box.location.y = -wp[0].junction.location.y
+                waypoint.junction.bounding_box.location.z = wp[0].junction.location.z
+                waypoint.junction.bounding_box.extent.x = wp[0].junction.extent.x
+                waypoint.junction.bounding_box.extent.y = wp[0].junction.extent.y
+                waypoint.junction.bounding_box.extent.z = wp[0].junction.extent.z
 
             waypoint.s = wp[0].s
             response.route.append(waypoint)

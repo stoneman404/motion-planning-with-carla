@@ -13,6 +13,7 @@ public:
     static PlanningConfig &Instance();
     void UpdateParams(const ros::NodeHandle &nh);
     const VehicleParams& vehicle_params() const {return vehicle_params_;}
+    double collision_buffer() const {return collision_buffer_;}
     double obstacle_trajectory_time() const { return obstacle_trajectory_time_; }
     double delta_t() const { return delta_t_; }
     double filter_obstacle_length() const {return filter_obstacle_length_;}
@@ -23,6 +24,7 @@ private:
     double obstacle_trajectory_time_;
     double delta_t_;
     double filter_obstacle_length_;
+    double collision_buffer_;
 
 private:
     PlanningConfig() = default;
