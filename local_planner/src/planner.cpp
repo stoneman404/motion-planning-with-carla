@@ -131,11 +131,13 @@ bool Planner::Plan(const carla_msgs::CarlaEgoVehicleInfo &ego_vehicle_info,
   }
 
 }
+
 bool Planner::UpdateObstacleStatus() {
   /// update the obstacle at each run
   ObstacleFilter::Instance().UpdateObstacles(objects_map_, ego_odometry_);
   auto &obstacles = ObstacleFilter::Instance().multable_obstacles();
   int failed_count = 0;
+
   for (auto &obstacle : obstacles) {
     carla_waypoint_types::CarlaWaypoint waypoint;
     if (!this->GetWayPoint(obstacle->Id(), waypoint)){
@@ -148,11 +150,8 @@ bool Planner::UpdateObstacleStatus() {
     obstacle->set_lane_id(waypoint.lane_id);
   }
 
-  if (failed_count >= ObstacleFilter::Instance().ObstaclesSize()){
-
-    return false;
-  }
-  return true;
+  // if all obstacles are failed to get waypoint, something going wrong
+  return failed_count < ObstacleFilter::Instance().ObstaclesSize();
 }
 
 bool Planner::UpdateVehicleStatus() {
@@ -160,9 +159,11 @@ bool Planner::UpdateVehicleStatus() {
   VehicleState::Instance().Update(ego_vehicle_status_, ego_odometry_, ego_vehicle_info_);
   auto ego_id = ego_vehicle_info_.id;
   carla_waypoint_types::CarlaWaypoint waypoint;
+
   if (!this->GetWayPoint(ego_id, waypoint)){
     return false;
   }
+
   VehicleState::Instance().set_lane_id(waypoint.lane_id);
   VehicleState::Instance().set_section_id(waypoint.section_id);
   VehicleState::Instance().set_road_id(waypoint.road_id);
@@ -170,15 +171,18 @@ bool Planner::UpdateVehicleStatus() {
 }
 bool Planner::GetWayPoint(const int &object_id,
                           carla_waypoint_types::CarlaWaypoint &carla_waypoint) {
+
   if (object_id < 0) {
     return false;
   }
+
   carla_waypoint_types::GetActorWaypoint srv;
-  srv.request.id = id;
+  srv.request.id = object_id;
   if (!get_actor_waypoint_client_.call(srv)) {
     ROS_FATAL("Cannot UpdateVehicleStatus");
     return false;
   }
+
   carla_waypoint = srv.response.waypoint;
   return true;
 }

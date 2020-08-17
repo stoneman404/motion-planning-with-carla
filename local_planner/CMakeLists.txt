@@ -158,6 +158,13 @@ set(planning_SRC
         common/src/qunitic_polynomial.cpp
         common/src/quartic_polynomial.cpp
         common/src/polynomial.cpp
+
+        src/maneuver_manage/maneuver_planner.cpp
+        src/maneuver_manage/stop_at_sign.cpp
+        src/maneuver_manage/emergency_stop_state.cpp
+        src/maneuver_manage/keep_lane_state.cpp
+        src/maneuver_manage/change_lane_left_state.cpp
+        src/maneuver_manage/change_lane_right_state.cpp
         src/planner/frenet_lattice_planner/frenet_lattice_planner.cpp
         src/planner.cpp
         src/vehicle_state/vehicle_state.cpp
@@ -167,12 +174,6 @@ set(planning_SRC
         src/reference_line/reference_line.cpp
         src/reference_line/reference_line_generator.cpp
         src/reference_line/reference_point.cpp
-        src/maneuver_manage/maneuver_planner.cpp
-        src/maneuver_manage/stop_at_sign.cpp
-        src/maneuver_manage/emergency_stop_state.cpp
-        src/maneuver_manage/keep_lane_state.cpp
-        src/maneuver_manage/change_lane_left_state.cpp
-        src/maneuver_manage/change_lane_right_state.cpp
         src/planning_context.cpp)
 
 add_executable(${PROJECT_NAME}_node

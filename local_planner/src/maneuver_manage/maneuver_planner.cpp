@@ -5,7 +5,7 @@
 #include "maneuver_manage/change_lane_right_state.hpp"
 #include "maneuver_manage/stop_at_sign.hpp"
 #include "maneuver_manage/emergency_stop_state.hpp"
-namespace planning{
+namespace planning {
 
 ManeuverPlanner::ManeuverPlanner() {
   this->InitPlanner();
@@ -19,6 +19,5 @@ void ManeuverPlanner::SetState(State &new_state) {
   this->current_state_.reset(&new_state);
   current_state_->Enter(this);
 }
-
 
 }

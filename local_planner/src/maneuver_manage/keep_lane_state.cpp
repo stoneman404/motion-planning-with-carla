@@ -19,15 +19,14 @@ bool KeepLaneState::Execute(ManeuverPlanner *maneuver_planner) {
     return true;
   }
   auto obstacles = ObstacleFilter::Instance().Obstacles();
+
   for (const auto &obstacle : obstacles) {
     // ignore the vehicle and pedestrians in other lane or road
     if (obstacle->road_id() != VehicleState::Instance().road_id()
-    || obstacle->section_id() != VehicleState::Instance().section_id()
-    || obstacle->lane_id() != VehicleState::Instance().lane_id()){
+        || obstacle->section_id() != VehicleState::Instance().section_id()
+        || obstacle->lane_id() != VehicleState::Instance().lane_id()) {
       continue;
     }
-    
-
 
   }
 

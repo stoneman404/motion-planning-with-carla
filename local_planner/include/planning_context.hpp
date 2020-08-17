@@ -22,7 +22,6 @@ public:
     const LocalGoal& local_goal() const {return local_goal_;}
     LocalGoal& multable_local_goal() { return local_goal_;}
 
-
 private:
     std::list<planning_srvs::RouteResponse> route_list_;
     LocalGoal local_goal_;

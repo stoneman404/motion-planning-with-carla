@@ -1,17 +1,17 @@
 #include "maneuver_manage/state.hpp"
 #include "maneuver_manage/change_lane_left_state.hpp"
-namespace planning{
+namespace planning {
 
-bool ChangeLaneLeft::Execute(ManeuverPlanner* manuever_planner) {
+bool ChangeLaneLeft::Execute(ManeuverPlanner *manuever_planner) {
 
   return false;
 }
 
-void ChangeLaneLeft::Enter(ManeuverPlanner* manuever_planner) {
+void ChangeLaneLeft::Enter(ManeuverPlanner *manuever_planner) {
   ROS_INFO("We are current enter the ChangeLaneLeft State");
 
 }
-void ChangeLaneLeft::Exit(ManeuverPlanner* manuever_planner) {
+void ChangeLaneLeft::Exit(ManeuverPlanner *manuever_planner) {
   ROS_INFO("We are current exit the ChangeLaneLeft State");
 
 }

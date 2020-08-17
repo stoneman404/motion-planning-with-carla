@@ -77,4 +77,4 @@ private:
 
 }
 
-#endif
+#endif //CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_PLANNER_HPP_
