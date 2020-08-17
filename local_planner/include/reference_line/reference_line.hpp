@@ -115,7 +115,7 @@ public:
      * @param y
      * @return
      */
-    ReferencePoint GetReferencePoint(double x, double y);
+    ReferencePoint GetReferencePoint(double x, double y) const;
 
     /**
      * @brief: get the reference point
@@ -138,7 +138,9 @@ public:
      * @return
      */
     double Length() const;
+ ///////////////////////////////////////////////////////////////
 
+ //todo the next two methods would done or removed in the future
     /**
      * @brief: get the speed limit from s
      * @param s
@@ -153,7 +155,7 @@ public:
      * @param speed_limit
      */
     void AddSpeedLimit(double start_s, double end_s, double speed_limit);
-
+///////////////////////////////////////////////////////////////////////////
     /**
      * @brief: check the object has influnece on this lane
      * @param sl_boundary
@@ -176,6 +178,16 @@ public:
     bool IsSmoothedReferenceLine() const { return smoothed_; }
 
 private:
+    /**
+     *
+     * @param start
+     * @param end
+     * @param point
+     * @return
+     */
+    inline double DistanceToLineSegment(const Eigen::Vector2d &start,
+                                        const Eigen::Vector2d &end,
+                                        const Eigen::Vector2d &point) const;
 
     size_t GetIndex(double s) const;
 

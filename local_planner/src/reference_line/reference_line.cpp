@@ -4,6 +4,7 @@
 #include "reference_line/reference_line.hpp"
 #include "math_utils.hpp"
 #include "coordinate_transformer.hpp"
+#include <boost/math/tools/minima.hpp>
 namespace planning {
 
 ReferenceLine::ReferenceLine(const planning_srvs::RouteResponse &route_response) {
@@ -183,12 +184,49 @@ ReferencePoint ReferenceLine::GetReferencePoint(double s) const {
 
 }
 
-ReferencePoint ReferenceLine::GetReferencePoint(double x, double y) {
-  return ReferencePoint();
+ReferencePoint ReferenceLine::GetReferencePoint(double x, double y) const {
+  ROS_ASSERT(!reference_points_.empty());
+  auto func_distance_square = [](const ReferencePoint &point, double x, double y) {
+    double dx = point.x() - x;
+    double dy = point.y() - y;
+    return dx * dx + dy * dy;
+  };
+  double dmin = func_distance_square(reference_points_.front(), x, y);
+  size_t min_index = 0;
+  for (size_t i = 1; i < reference_points_.size(); ++i) {
+    double d_tmp = func_distance_square(reference_points_[i], x, y);
+    if (d_tmp < dmin) {
+      dmin = d_tmp;
+      min_index = i;
+    }
+  }
+
+  size_t index_start = min_index == 0 ? min_index : min_index - 1;
+  size_t index_end = min_index + 1 == reference_points_.size() ? min_index : min_index + 1;
+  double s0 = accumulated_s_[index_start];
+  double s1 = accumulated_s_[index_end];
+  // here we use two lambda functions, too lazy!!
+  auto find_min_distance_point = [this](const ReferencePoint &p1, double s0,
+                                        const ReferencePoint &p1, double s1, double x, double y) {
+    auto func_dist_square = [this, &p0, &p1, &s0, &s1, &x, &y](double s) {
+      auto p = Interpolate(p0, p1, s0, s1, s);
+      double dx = p.x() - x;
+      double dy = p.y() - y;
+      return dx * dx + dy * dy;
+    };
+    return boost::math::tools::brent_find_minima(func_dist_square, s0, s1, 8).first;
+  };
+
+  double s = find_min_distance_point(reference_points_[index_start],
+                                     s0, reference_points_[index_end], s1, x, y);
+  return Interpolate(reference_points_[index_start], reference_points_[index_end], s0, s1, s);
 }
 
 ReferencePoint ReferenceLine::GetReferencePoint(const std::pair<double, double> &xy) const {
-  return ReferencePoint();
+
+  const double x = xy.first;
+  const double y = xy.second;
+  return GetReferencePoint(x, y);
 }
 
 double ReferenceLine::GetSpeedLimitFromS(double s) const {
@@ -284,7 +322,7 @@ bool ReferenceLine::GetSLBoundary(const Box2d &box, SLBoundary *sl_boundary) con
     Eigen::Vector2d v1 = Eigen::Vector2d(sl_mid.s - sl_corners[index0].s,
                                          sl_mid.l - sl_corners[index0].l);
     sl_boundary->boundary_points.push_back(sl_corners[index0]);
-    // corners 的顺序是从右前方逆时针排列的．所以当叉乘为负的时候，说明中点除了凸包
+    // corners 的顺序是从右前方逆时针排列的．所以当叉乘为负的时候，说明中点出了凸包
     if ((v0.x() * v1.y() - v0.y() * v1.x()) < 0.0) {
       sl_boundary->boundary_points.push_back(sl_mid);
     }
@@ -310,8 +348,8 @@ bool ReferenceLine::Smooth() {
     ROS_WARN("[ReferenceLine::Smooth], the number of reference_points is less than 3");
     return false;
   }
-
 }
+
 size_t ReferenceLine::GetIndex(double s) const {
 
   if (s > accumulated_s_.back()) {
@@ -339,6 +377,96 @@ ReferencePoint ReferenceLine::Interpolate(const ReferencePoint &p0,
   auto ref_point = ReferencePoint(x, y, heading, kappa, dkappa);
 
   return ref_point;
+}
+
+bool ReferenceLine::XYToSL(const Eigen::Vector2d &xy, SLPoint *sl_point) const {
+  double s = 0.0;
+  double l = 0.0;
+  if (reference_points_.size() < 2) {
+    return false;
+  }
+  double min_dist = std::numeric_limits<double>::max();
+  size_t min_index = 0;
+  for (size_t i = 0; i < reference_points_.size() - 1; ++i) {
+    Eigen::Vector2d start = Eigen::Vector2d(reference_points_[i].x(), reference_points_[i].y());
+    Eigen::Vector2d end = Eigen::Vector2d(reference_points_[i + 1].x(), reference_points_[i + 1].y());
+    double distance = DistanceToLineSegment(start, end, xy);
+    if (distance < min_dist) {
+      min_dist = distance;
+      min_index = i;
+    }
+  }
+
+  Eigen::Vector2d unit_direction;
+  unit_direction << reference_points_[min_index + 1].x() - reference_points_[min_index].x(),
+      reference_points_[min_index + 1].y() - reference_points_[min_index].y();
+  const double segment_length = unit_direction.norm();
+  unit_direction.normalize();
+  Eigen::Vector2d start = Eigen::Vector2d(reference_points_[min_index].x(),
+                                          reference_points_[min_index].y());
+  Eigen::Vector2d vec = xy - start;
+  const double proj = vec.dot(unit_direction);
+  const double prod = vec[1] * unit_direction[0] - vec[0] * unit_direction[1];
+  if (min_index == 0){
+    s = std::min(proj, segment_length);
+    if (proj < 0){
+      l = prod;
+    } else {
+      l = (prod > 0.0 ?  1 : -1) * min_dist;
+    }
+  }else if (min_index == reference_points_.size() - 2){
+    s = accumulated_s_[min_index] + std::max(0.0, proj);
+    if (proj > 0){
+      l = prod;
+    } else {
+      l = (prod > 0.0 ? 1 : -1) * min_dist;
+    }
+  } else {
+    s = accumulated_s_[min_index] + std::max(0.0, std::min(proj, segment_length));
+    l = (prod > 0.0 ? 1 : -1) * min_dist;
+   }
+
+  sl_point->s = s;
+  sl_point->l = l;
+  return true;
+
+}
+
+bool ReferenceLine::XYToSL(double x, double y, SLPoint *sl_point) const {
+
+}
+
+bool ReferenceLine::SLToXY(const SLPoint &sl_point, Eigen::Vector2d *xy_point) const {
+  if (reference_points_.size() < 2) {
+    return false;
+  }
+  const auto matched_ref_point = GetReferencePoint(sl_point.s);
+  const auto angle = matched_ref_point.heading();
+  (*xy_point)[0] = matched_ref_point.x() - std::sin(angle) * sl_point.l;
+  (*xy_point)[1] = matched_ref_point.y() + std::cos(angle) * sl_point.l;
+  return true;
+
+}
+
+double ReferenceLine::DistanceToLineSegment(const Eigen::Vector2d &start,
+                                            const Eigen::Vector2d &end,
+                                            const Eigen::Vector2d &point) const {
+  double length = (end - start).norm();
+  if (length < 1e-6) {
+    return (point - start).norm();
+  }
+  Eigen::Vector2d unit_direction = (end - start);
+  unit_direction.normalize();
+  Eigen::Vector2d xy = point - start;
+  const double proj = xy.dot(unit_direction);
+  if (proj < 0.0) {
+    return xy.norm();
+  }
+
+  if (proj > length) {
+    return (end - point).norm();
+  }
+  return std::fabs(xy[0] * unit_direction[1] - xy[1] * unit_direction[0]);
 }
 
 }
