@@ -3,6 +3,7 @@
 #include "reference_point.hpp"
 #include <planning_srvs/Route.h>
 #include <box2d.hpp>
+#include <planning_msgs/PathPoint.h>
 namespace planning {
 
 struct SpeedLimit {
@@ -66,12 +67,18 @@ public:
     explicit ReferenceLine(const std::vector<planning_msgs::WayPoint> &waypoints);
 
     /**
+     * constructor
+     * @param route_response
+     */
+    explicit ReferenceLine(const planning_srvs::RouteResponse &route_response);
+
+    /**
      * transform the xy to sl point
      * @param xy
      * @param sl_point
      * @return
      */
-    bool XYToSL(const Eigen::Vector2d& xy, SLPoint* sl_point) const;
+    bool XYToSL(const Eigen::Vector2d &xy, SLPoint *sl_point) const;
     /**
      *
      * @param x
@@ -79,7 +86,7 @@ public:
      * @param sl_point
      * @return
      */
-    bool XYToSL(double x, double y, SLPoint* sl_point) const;
+    bool XYToSL(double x, double y, SLPoint *sl_point) const;
 
     /**
      *
@@ -87,22 +94,14 @@ public:
      * @param xy_point
      * @return
      */
-    bool SLToXY(const SLPoint& sl_point, Eigen::Vector2d* xy_point) const;
-
-
-
-    /**
-     * constructor
-     * @param route_response
-     */
-    explicit ReferenceLine(const planning_srvs::RouteResponse &route_response);
+    bool SLToXY(const SLPoint &sl_point, Eigen::Vector2d *xy_point) const;
 
     /**
      * get frenet frame from reference line, covert xy in cart cord to frenet frame
      * @param xy : position in cart coordinate
      * @return
      */
-    FrenetFramePoint GetFrenetFramePoint(const Eigen::Vector2d &xy) const;
+    FrenetFramePoint GetFrenetFramePoint(const planning_msgs::PathPoint &path_point) const;
 
     /**
      * get reference point according s
@@ -156,22 +155,62 @@ public:
     void AddSpeedLimit(double start_s, double end_s, double speed_limit);
 
     /**
-     * @brief: check the obstacle is on lane
+     * @brief: check the object has influnece on this lane
      * @param sl_boundary
      * @return
      */
-    bool IsOnLane(const SLBoundary& sl_boundary) const;
+    bool IsOnLane(const SLBoundary &sl_boundary) const;
 
-    bool GetSLBoundary(const Box2d& box, SLBoundary* sl_boundary) const;
+    /**
+     * @brief : build object sl boundary
+     * @param box : the object's bounding box
+     * @param sl_boundary : the output sl_boundary
+     * @return : false if build sl_boundary failed, true otherwise
+     */
+    bool GetSLBoundary(const Box2d &box, SLBoundary *sl_boundary) const;
+
+    /**
+     * @brief : check the reference line is smoothed or not
+     * @return : true if the reference line is smoothed, false otherwise
+     */
+    bool IsSmoothedReferenceLine() const { return smoothed_; }
 
 private:
+
+    size_t GetIndex(double s) const;
+
+    /**
+     * @brief : smooth the reference line
+     * @return : true if smooth the reference line success , false otherwise
+     */
+    bool Smooth();
+    /**
+     *
+     * @param p0
+     * @param p1
+     * @param s0
+     * @param s1
+     * @param s
+     * @return
+     */
+    ReferencePoint Interpolate(const ReferencePoint &p0,
+                               const ReferencePoint &p1,
+                               double s0,
+                               double s1,
+                               double s) const;
+
+private:
+    bool smoothed_ = false;
     std::vector<ReferencePoint> reference_points_;
     std::vector<SpeedLimit> speed_limits_;
     std::vector<double> lane_left_width_;
     std::vector<double> lane_right_width_;
+    std::vector<Eigen::Vector2d> left_boundary_;
+    std::vector<Eigen::Vector2d> right_boundary_;
+    std::vector<double> accumulated_s_;
+    std::vector<Eigen::Vector2d> unit_directions_;
     double length_; // the total length of this reference line
-    planning_msgs::CarlaRoadOption road_option_;
-
+    bool use_spline_curve_ = false;
 };
 
 }
