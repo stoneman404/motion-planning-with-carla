@@ -179,7 +179,6 @@ set(planning_SRC
         src/obstacle_filter/obstacle.cpp
         src/planning_config.cpp
         src/reference_line/reference_line.cpp
-        src/reference_line/reference_line_generator.cpp
         src/reference_line/reference_point.cpp
         src/reference_line/reference_line_smoother.cpp
         src/planning_context.cpp
@@ -272,7 +271,6 @@ catkin_add_gtest(reference_line_smoother_test
         src/obstacle_filter/obstacle.cpp
         src/planning_config.cpp
         src/reference_line/reference_line.cpp
-        src/reference_line/reference_line_generator.cpp
         src/reference_line/reference_point.cpp
         src/reference_line/reference_line_smoother.cpp
         src/planning_context.cpp
