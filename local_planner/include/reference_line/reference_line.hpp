@@ -1,9 +1,11 @@
 #ifndef CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_REFERENCE_LINE_REFERENCE_LINE_HPP_
 #define CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_REFERENCE_LINE_REFERENCE_LINE_HPP_
-#include "reference_point.hpp"
 #include <planning_srvs/Route.h>
 #include <box2d.hpp>
 #include <planning_msgs/PathPoint.h>
+
+#include "reference_point.hpp"
+
 namespace planning {
 
 struct SpeedLimit {
@@ -73,6 +75,13 @@ public:
     explicit ReferenceLine(const planning_srvs::RouteResponse &route_response);
 
     /**
+     * @brief: update the reference points, which will has
+     * influence on accumulated s and unit directions
+     * @param ref_points
+     * @return
+     */
+    bool UpdateReferencePoints(const std::vector<ReferencePoint> &ref_points);
+    /**
      * transform the xy to sl point
      * @param xy
      * @param sl_point
@@ -138,9 +147,9 @@ public:
      * @return
      */
     double Length() const;
- ///////////////////////////////////////////////////////////////
+    ///////////////////////////////////////////////////////////////
 
- //todo the next two methods would done or removed in the future
+    //todo the next two methods would done or removed in the future
     /**
      * @brief: get the speed limit from s
      * @param s
@@ -155,7 +164,7 @@ public:
      * @param speed_limit
      */
     void AddSpeedLimit(double start_s, double end_s, double speed_limit);
-///////////////////////////////////////////////////////////////////////////
+    ///////////////////////////////////////////////////////////////////////////
     /**
      * @brief: check the object has influnece on this lane
      * @param sl_boundary
@@ -177,7 +186,41 @@ public:
      */
     bool IsSmoothedReferenceLine() const { return smoothed_; }
 
+    /**
+    *
+    * @param p0
+    * @param p1
+    * @param s0
+    * @param s1
+    * @param s
+    * @return
+    */
+    ReferencePoint Interpolate(const ReferencePoint &p0,
+                               const ReferencePoint &p1,
+                               double s0,
+                               double s1,
+                               double s) const;
+
+    bool RefineReferenceLine();
+
+    const std::vector<double> &GetAccumulatedS() const { return accumulated_s_; }
+    std::vector<ReferencePoint> &mutable_reference_points() { return reference_points_; }
+    const std::vector<ReferencePoint> &reference_points() const { return reference_points_; }
+    const std::vector<Eigen::Vector2d> &right_boundary() const { return right_boundary_; }
+    const std::vector<Eigen::Vector2d> &left_boundary() const { return left_boundary_; }
+    // first is left boundary, second is right boundary
+    std::pair<std::vector<Eigen::Vector2d>, std::vector<Eigen::Vector2d>> boundary() const {
+      const auto right_boundary = right_boundary_;
+      const auto left_boundary = left_boundary_;
+      auto boundary_pair = std::make_pair(left_boundary, right_boundary);
+      return boundary_pair;
+    }
+    const std::vector<double> &right_lane_width() const { return lane_right_width_; }
+    const std::vector<double> &left_lane_width() const { return lane_left_width_; }
+
 private:
+
+    bool RebuildReferenceLineWithSpline();
     /**
      *
      * @param start
@@ -191,30 +234,11 @@ private:
 
     size_t GetIndex(double s) const;
 
-    /**
-     * @brief : smooth the reference line
-     * @return : true if smooth the reference line success , false otherwise
-     */
-    bool Smooth();
-    /**
-     *
-     * @param p0
-     * @param p1
-     * @param s0
-     * @param s1
-     * @param s
-     * @return
-     */
-    ReferencePoint Interpolate(const ReferencePoint &p0,
-                               const ReferencePoint &p1,
-                               double s0,
-                               double s1,
-                               double s) const;
 
 private:
     bool smoothed_ = false;
     std::vector<ReferencePoint> reference_points_;
-    std::vector<SpeedLimit> speed_limits_;
+//    std::vector<SpeedLimit> speed_limits_;
     std::vector<double> lane_left_width_;
     std::vector<double> lane_right_width_;
     std::vector<Eigen::Vector2d> left_boundary_;

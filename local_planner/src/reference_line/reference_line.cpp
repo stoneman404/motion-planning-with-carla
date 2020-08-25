@@ -5,6 +5,7 @@
 #include "math_utils.hpp"
 #include "coordinate_transformer.hpp"
 #include <boost/math/tools/minima.hpp>
+#include <coin/IpIpoptNLP.hpp>
 namespace planning {
 
 ReferenceLine::ReferenceLine(const planning_srvs::RouteResponse &route_response) {
@@ -24,8 +25,8 @@ ReferenceLine::ReferenceLine(const planning_srvs::RouteResponse &route_response)
     lane_left_width_.push_back(left_width);
     lane_right_width_.push_back(right_width);
     Eigen::Vector2d heading;
+    accumulated_s_.push_back(s);
     if (i + 1 >= route_response.route.size()) {
-      accumulated_s_.push_back(s);
       heading = Eigen::Vector2d(route_response.route[i].pose.position.x -
                                     route_response.route[i - 1].pose.position.x,
                                 route_response.route[i].pose.position.y -
@@ -63,6 +64,37 @@ ReferenceLine::ReferenceLine(const planning_srvs::RouteResponse &route_response)
 
 }
 
+bool ReferenceLine::UpdateReferencePoints(const std::vector<ReferencePoint> &ref_points) {
+
+  if (ref_points.size() != reference_points_.size()) {
+    return false;
+  }
+  reference_points_ = ref_points;
+  double s = 0.0;
+  for (size_t i = 0; i < ref_points.size(); ++i) {
+    accumulated_s_[i] = s;
+
+    Eigen::Vector2d heading;
+    if (i + 1 >= ref_points.size()) {
+      heading = Eigen::Vector2d(ref_points[i].x() - ref_points[i - 1].x(),
+                                ref_points[i].y() - ref_points[i - 1].y());
+    } else {
+      heading = Eigen::Vector2d(ref_points[i + 1].x() - ref_points[i].x(),
+                                ref_points[i + 1].y() - ref_points[i].y());
+      s += std::hypot(heading[0], heading[1]);
+    }
+    heading.normalize();
+    unit_directions_[i] = heading;
+    reference_points_[i].set_heading(
+        NormalizeAngle(std::atan2(unit_directions_[i].y(),
+                                  unit_directions_[i].x())));
+
+  }
+  length_ = s;
+  smoothed_ = true;
+  return true;
+}
+
 ReferenceLine::ReferenceLine(const std::vector<planning_msgs::WayPoint> &waypoints) {
   ROS_ASSERT(waypoints.size() >= 2);
   lane_left_width_.reserve(waypoints.size());
@@ -80,8 +112,9 @@ ReferenceLine::ReferenceLine(const std::vector<planning_msgs::WayPoint> &waypoin
     lane_left_width_.push_back(left_width);
     lane_right_width_.push_back(right_width);
     Eigen::Vector2d heading;
+    accumulated_s_.push_back(s);
+
     if (i + 1 >= waypoints.size()) {
-      accumulated_s_.push_back(s);
       heading = Eigen::Vector2d(waypoints[i].pose.position.x -
                                     waypoints[i - 1].pose.position.x,
                                 waypoints[i].pose.position.y -
@@ -119,7 +152,7 @@ ReferenceLine::ReferenceLine(const std::vector<planning_msgs::WayPoint> &waypoin
 
 ReferenceLine::ReferenceLine(const ReferenceLine &other) {
   this->smoothed_ = other.smoothed_;
-  this->speed_limits_ = other.speed_limits_;
+//  this->speed_limits_ = other.speed_limits_;
   this->length_ = other.length_;
   this->right_boundary_ = other.right_boundary_;
   this->left_boundary_ = other.left_boundary_;
@@ -147,11 +180,12 @@ FrenetFramePoint ReferenceLine::GetFrenetFramePoint(const planning_msgs::PathPoi
   const double theta_ref = ref_point.heading();
   const double kappa_ref = ref_point.kappa();
   const double dkappa_ref = ref_point.dkappa();
-  const double dl = CoordinateTransformer::CalcLateralDerivative(theta_ref, theta, l, kappa_ref);
-  const double ddl = CoordinateTransformer::CalcSecondLateralDerivative(theta_ref, theta,
-                                                                        kappa_ref, kappa, dkappa_ref, l);
-  frenet_frame_point.dl = dl;
-  frenet_frame_point.ddl = ddl;
+//  const double dl = CoordinateTransformer::CalcLateralDerivative(theta_ref, theta, l, kappa_ref);
+//  const double ddl = CoordinateTransformer::CalcSecondLateralDerivative(theta_ref, theta,
+//                                                                        kappa_ref, kappa,
+//                                                                        dkappa_ref, l);
+//  frenet_frame_point.dl = dl;
+//  frenet_frame_point.ddl = ddl;
   return frenet_frame_point;
 }
 
@@ -206,7 +240,7 @@ ReferencePoint ReferenceLine::GetReferencePoint(double x, double y) const {
   double s0 = accumulated_s_[index_start];
   double s1 = accumulated_s_[index_end];
   // here we use two lambda functions, too lazy!!
-  auto find_min_distance_point = [this](const ReferencePoint &p1, double s0,
+  auto find_min_distance_point = [this](const ReferencePoint &p0, double s0,
                                         const ReferencePoint &p1, double s1, double x, double y) {
     auto func_dist_square = [this, &p0, &p1, &s0, &s1, &x, &y](double s) {
       auto p = Interpolate(p0, p1, s0, s1, s);
@@ -343,12 +377,6 @@ bool ReferenceLine::GetSLBoundary(const Box2d &box, SLBoundary *sl_boundary) con
   return true;
 }
 
-bool ReferenceLine::Smooth() {
-  if (reference_points_.size() <= 2) {
-    ROS_WARN("[ReferenceLine::Smooth], the number of reference_points is less than 3");
-    return false;
-  }
-}
 
 size_t ReferenceLine::GetIndex(double s) const {
 
@@ -407,16 +435,16 @@ bool ReferenceLine::XYToSL(const Eigen::Vector2d &xy, SLPoint *sl_point) const {
   Eigen::Vector2d vec = xy - start;
   const double proj = vec.dot(unit_direction);
   const double prod = vec[1] * unit_direction[0] - vec[0] * unit_direction[1];
-  if (min_index == 0){
+  if (min_index == 0) {
     s = std::min(proj, segment_length);
-    if (proj < 0){
+    if (proj < 0) {
       l = prod;
     } else {
-      l = (prod > 0.0 ?  1 : -1) * min_dist;
+      l = (prod > 0.0 ? 1 : -1) * min_dist;
     }
-  }else if (min_index == reference_points_.size() - 2){
+  } else if (min_index == reference_points_.size() - 2) {
     s = accumulated_s_[min_index] + std::max(0.0, proj);
-    if (proj > 0){
+    if (proj > 0) {
       l = prod;
     } else {
       l = (prod > 0.0 ? 1 : -1) * min_dist;
@@ -424,7 +452,7 @@ bool ReferenceLine::XYToSL(const Eigen::Vector2d &xy, SLPoint *sl_point) const {
   } else {
     s = accumulated_s_[min_index] + std::max(0.0, std::min(proj, segment_length));
     l = (prod > 0.0 ? 1 : -1) * min_dist;
-   }
+  }
 
   sl_point->s = s;
   sl_point->l = l;
@@ -467,6 +495,42 @@ double ReferenceLine::DistanceToLineSegment(const Eigen::Vector2d &start,
     return (end - point).norm();
   }
   return std::fabs(xy[0] * unit_direction[1] - xy[1] * unit_direction[0]);
+}
+bool ReferenceLine::RefineReferenceLine() {
+  if (reference_points_.size() < 2) {
+    return false;
+  } else if (reference_points_.size() > 2) {
+    return true;
+  } else {
+    const auto start_ref_point = reference_points_[0];
+    const auto end_ref_point = reference_points_[1];
+    const double s0 = accumulated_s_[0];
+    const double s1 = accumulated_s_[1];
+    const double s = 0.5 * (s0 + s1);
+
+    ReferencePoint mid_ref_point = Interpolate(start_ref_point, end_ref_point, s0, s1, s);
+    reference_points_.insert(reference_points_.begin() + 1, mid_ref_point);
+    accumulated_s_.insert(accumulated_s_.begin() + 1, s);
+    unit_directions_.insert(unit_directions_.begin() + 1, unit_directions_[0]);
+    double left_lane_width = lerp(lane_right_width_[0], s0, lane_left_width_[1], s1, s);
+    double right_lane_width = lerp(lane_right_width_[0], s0, lane_right_width_[1], s1, s);
+    lane_left_width_.insert(lane_left_width_.begin() + 1, left_lane_width);
+    lane_right_width_.insert(lane_right_width_.begin() + 1, right_lane_width);
+    double left_boundary_x = lerp(left_boundary_[0].x(), s0, left_boundary_[1].x(), s1, s);
+    double left_boundary_y = lerp(left_boundary_[0].y(), s0, left_boundary_[1].y(), s1, s);
+    double right_boundary_x = lerp(right_boundary_[0].x(), s0, right_boundary_[1].x(), s1, s);
+    double right_boundary_y = lerp(right_boundary_[0].y(), s0, right_boundary_[1].y(), s1, s);
+    Eigen::Vector2d left_boundary, right_boundary;
+    left_boundary << left_boundary_x, left_boundary_y;
+    right_boundary << right_boundary_x, right_boundary_y;
+    left_boundary_.insert(left_boundary_.begin() + 1, left_boundary);
+    right_boundary_.insert(right_boundary_.begin() + 1, right_boundary);
+    return true;
+  }
+
+}
+bool ReferenceLine::RebuildReferenceLineWithSpline() {
+
 }
 
 }

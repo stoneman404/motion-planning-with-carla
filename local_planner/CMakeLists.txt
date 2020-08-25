@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8.3)
 project(local_planner)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
-add_compile_options(-std=c++11)
+add_compile_options(-std=c++14)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -21,7 +21,11 @@ find_package(catkin REQUIRED COMPONENTS
         visualization_msgs
         carla_waypoint_types
         )
+find_package(Eigen3 REQUIRED)
+#find_package(Ceres REQUIRED)
 
+set(IPOPT_LIBRARY_DIRS /usr/local/lib)
+set(IPOPT_INCLUDE_DIRS /usr/local/include/coin)
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
 
@@ -135,9 +139,12 @@ catkin_package(
 include_directories(
         include/
         common/include/
+        /usr/include/include/
         ${catkin_INCLUDE_DIRS}
+        ${IPOPT_INCLUDE_DIRS}
 )
 
+#link_directories(/usr/local/lib)
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
 #   src/${PROJECT_NAME}/local_planner.cpp
@@ -166,7 +173,7 @@ set(planning_SRC
         src/maneuver_manage/change_lane_left_state.cpp
         src/maneuver_manage/change_lane_right_state.cpp
         src/planner/frenet_lattice_planner/frenet_lattice_planner.cpp
-        src/planner.cpp
+
         src/vehicle_state/vehicle_state.cpp
         src/obstacle_filter/obstacle_filter.cpp
         src/obstacle_filter/obstacle.cpp
@@ -174,7 +181,10 @@ set(planning_SRC
         src/reference_line/reference_line.cpp
         src/reference_line/reference_line_generator.cpp
         src/reference_line/reference_point.cpp
-        src/planning_context.cpp)
+        src/reference_line/reference_line_smoother.cpp
+        src/planning_context.cpp
+        src/planner.cpp
+        src/reference_line/reference_line_smooth_ipopt_interface.cpp)
 
 add_executable(${PROJECT_NAME}_node
         ${planning_SRC}
@@ -193,7 +203,9 @@ add_executable(${PROJECT_NAME}_node
 ## Specify libraries to link a library or executable target against
 target_link_libraries(${PROJECT_NAME}_node
         ${catkin_LIBRARIES}
+        ipopt
         )
+
 
 #############
 ## Install ##
@@ -246,10 +258,35 @@ install(DIRECTORY config/
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_planning.cpp)
-# if(TARGET ${PROJECT_NAME}-test)
-#   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
-# endif()
+catkin_add_gtest(reference_line_smoother_test
+
+        common/src/math_utils.cpp
+        common/src/box2d.cpp
+        common/src/coordinate_transformer.cpp
+        common/src/qunitic_polynomial.cpp
+        common/src/quartic_polynomial.cpp
+        common/src/polynomial.cpp
+
+        src/vehicle_state/vehicle_state.cpp
+        src/obstacle_filter/obstacle_filter.cpp
+        src/obstacle_filter/obstacle.cpp
+        src/planning_config.cpp
+        src/reference_line/reference_line.cpp
+        src/reference_line/reference_line_generator.cpp
+        src/reference_line/reference_point.cpp
+        src/reference_line/reference_line_smoother.cpp
+        src/planning_context.cpp
+        src/planning_config.cpp
+        src/reference_line/reference_line.cpp
+        src/reference_line/reference_line_smooth_ipopt_interface.cpp
+        src/reference_line/reference_point.cpp
+        src/reference_line/reference_line_smoother_test.cpp)
+if (TARGET reference_line_smoother_test)
+    target_link_libraries(reference_line_smoother_test
+            Eigen3::Eigen
+            ${catkin_LIBRARIES}
+            ipopt)
+endif ()
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)

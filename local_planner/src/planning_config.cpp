@@ -1,8 +1,8 @@
 #include "planning_config.hpp"
 
-namespace planning{
+namespace planning {
 
-PlanningConfig& PlanningConfig::Instance() {
+PlanningConfig &PlanningConfig::Instance() {
   static PlanningConfig instance;
   return instance;
 }
@@ -12,6 +12,16 @@ void PlanningConfig::UpdateParams(const ros::NodeHandle &nh) {
   nh.param<double>("/local_planner/delta_t", delta_t_, 0.1);
   nh.param<double>("/local_planner/filter_obstacle_length", filter_obstacle_length_, 100);
   nh.param<double>("/local_planner/collison_buffer", collision_buffer_, 5.0);
+  nh.param<double>("/local_planner/reference_smoother_deviation_weight",
+                   reference_smoother_deviation_weight_, 10.0);
+  nh.param<double>("/local_planner/reference_smoother_curvature_weight",
+                   reference_smoother_curvature_weight_, 4.0);
+  nh.param<double>("/local_planner/reference_smoother_heading_weight",
+                   reference_smoother_heading_weight_, 10.0);
+  nh.param<double>("/local_planner/reference_smoother_distance_weight",
+                   reference_smoother_distance_weight_, 5.0);
+  nh.param<double>("/local_planner/reference_smoother_max_curvature",
+                   reference_smoother_max_curvature_, 100);
 }
 
 void PlanningConfig::UpdateVehicleParams(const derived_object_msgs::Object &object,

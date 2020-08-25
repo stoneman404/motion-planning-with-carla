@@ -12,14 +12,30 @@ public:
     PlanningConfig(const PlanningConfig &other) = delete;
     static PlanningConfig &Instance();
     void UpdateParams(const ros::NodeHandle &nh);
-    const VehicleParams& vehicle_params() const {return vehicle_params_;}
-    double collision_buffer() const {return collision_buffer_;}
+    const VehicleParams &vehicle_params() const { return vehicle_params_; }
+    double collision_buffer() const { return collision_buffer_; }
     double obstacle_trajectory_time() const { return obstacle_trajectory_time_; }
     double delta_t() const { return delta_t_; }
-    double filter_obstacle_length() const {return filter_obstacle_length_;}
-    double max_lookahead_distance() const {return max_lookahead_distance_;}
-    void UpdateVehicleParams(const derived_object_msgs::Object& object,
-        const carla_msgs::CarlaEgoVehicleInfo& vehicle_info);
+    double filter_obstacle_length() const { return filter_obstacle_length_; }
+    double max_lookahead_distance() const { return max_lookahead_distance_; }
+    void UpdateVehicleParams(const derived_object_msgs::Object &object,
+                             const carla_msgs::CarlaEgoVehicleInfo &vehicle_info);
+    ////////// reference smoother params /////////////////
+    double reference_smoother_distance_weight() const {
+      return reference_smoother_distance_weight_;
+    }
+    double reference_smoother_curvature_weight() const {
+      return reference_smoother_curvature_weight_;
+    }
+    double reference_smoother_deviation_weight() const {
+      return reference_smoother_deviation_weight_;
+    }
+    double reference_smoother_heading_weight() const {
+      return reference_smoother_heading_weight_;
+    }
+    double reference_smoother_max_curvature() const {
+      return reference_smoother_max_curvature_;
+    }
 private:
     VehicleParams vehicle_params_; // ego_vehicle's params
     double obstacle_trajectory_time_; // the trajectory total time of obstacles
@@ -27,7 +43,11 @@ private:
     double filter_obstacle_length_; // we ignore the obstacles far away this length
     double collision_buffer_; // the buffer to avoid collision
     double max_lookahead_distance_; // the max lookahead distance for ego vehicle
-
+    double reference_smoother_distance_weight_ = 10.0;
+    double reference_smoother_curvature_weight_ = 3.0;
+    double reference_smoother_deviation_weight_ = 6.0;
+    double reference_smoother_heading_weight_ = 8.0;
+    double reference_smoother_max_curvature_ = 100.0;
 
 private:
     PlanningConfig() = default;
