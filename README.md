@@ -63,7 +63,7 @@ I modified the [carla_waypoint_publisher](https://github.com/carla-simulator/ros
 
 [RouteResponse](./planning_srvs/srv/Route.srv): as long as received the RouteRequest, the planner will calculate the route from the start position to end position, the response is a list of [WayPoint](./planning_msgs/msg/WayPoint.msg).
 
-this planner also provided another two services, which can be used to get waypoint by actor id and location, please refer  [carla_waypoint_publisher](https://github.com/carla-simulator/ros-bridge/tree/master/carla_waypoint_publisher).
+this planner also provided another two services, which can be used to get waypoint by actor id and location, please refer to [carla_waypoint_publisher](https://github.com/carla-simulator/ros-bridge/tree/master/carla_waypoint_publisher).
 
 #### 2.3.2 Methods
 
