@@ -32,14 +32,14 @@ bool ReferenceLineSmoother::GetSmoothReferenceLine(
               "the ref points num is 1");
     return false;
   }
-  auto ref_line = raw_ref_line;
+//  auto ref_line = raw_ref_line;
   raw_ref_line_ = raw_ref_line;
-  if (point_num == 2 && !ref_line.RefineReferenceLine()) {
+  if (point_num == 2 && !raw_ref_line_.RefineReferenceLine()) {
     ROS_FATAL("[ReferenceLineSmoother::GetSmoothReferenceLine], "
               "the point_num is 2, and failed to refine");
     return false;
   }
-  ReferenceLineSmoothIpoptInterface smoother_interface(raw_ref_line);
+  ReferenceLineSmoothIpoptInterface smoother_interface(raw_ref_line_);
   SetUpOptions();
   SetUpInitValue();
   if (!this->SetUpConstraint()) {
@@ -65,6 +65,8 @@ bool ReferenceLineSmoother::SetUpConstraint() {
   x_u_.resize(number_of_points * 2);
   g_l_.resize(0);
   g_u_.resize(0);
+   g_l_.resize(number_of_curvature_constraints);
+   g_u_.resize(number_of_curvature_constraints);
   std::cout << "number_of_curvature_constraints: " << number_of_curvature_constraints << std::endl;
   double half_vehicle_width = PlanningConfig::Instance().vehicle_params().width / 2.0;
   for (size_t i = 0; i < number_of_points; ++i) {
@@ -87,7 +89,10 @@ bool ReferenceLineSmoother::SetUpConstraint() {
   x_u_[2 * (number_of_points - 1)] = ref_points.back().x() + 0.2;
   x_l_[2 * (number_of_points - 1) + 1] = ref_points.back().y() - 0.2;
   x_u_[2 * (number_of_points - 1) + 1] = ref_points.back().y() + 0.2;
-
+  for(size_t i = 0; i < number_of_curvature_constraints; ++i){
+    g_l_[i] = -PlanningConfig::Instance().reference_smoother_max_curvature();
+    g_u_[i] = PlanningConfig::Instance().reference_smoother_max_curvature();
+  }
 
   return true;
 }

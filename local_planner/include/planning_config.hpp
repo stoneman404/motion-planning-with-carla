@@ -43,11 +43,11 @@ private:
     double filter_obstacle_length_; // we ignore the obstacles far away this length
     double collision_buffer_; // the buffer to avoid collision
     double max_lookahead_distance_; // the max lookahead distance for ego vehicle
-    double reference_smoother_distance_weight_ = 10.0;
-    double reference_smoother_curvature_weight_ = 3.0;
-    double reference_smoother_deviation_weight_ = 6.0;
-    double reference_smoother_heading_weight_ = 8.0;
-    double reference_smoother_max_curvature_ = 100.0;
+    double reference_smoother_distance_weight_ = 20.0;
+    double reference_smoother_curvature_weight_ = 1.0;
+    double reference_smoother_deviation_weight_ = 8.0;
+    double reference_smoother_heading_weight_ = 50.0;
+    double reference_smoother_max_curvature_ = 100;
 
 private:
     PlanningConfig() = default;
