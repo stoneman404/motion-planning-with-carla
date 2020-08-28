@@ -220,7 +220,7 @@ public:
 
 private:
 
-    bool RebuildReferenceLineWithSpline();
+    bool BuildReferenceLineWithSpline();
     /**
      *
      * @param start

@@ -29,7 +29,7 @@ private:
     double curvature_weight_ ;
     double length_weight_ ;
     double heading_weight_;
-    double max_curvature_ = 0.0;
+    double max_curvature_;
 
 
 };

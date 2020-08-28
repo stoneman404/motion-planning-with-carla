@@ -61,4 +61,20 @@ double lerp(const double &x0, const double &t0,
   double x = x0 + ratio * (x1 - x0);
   return x;
 }
+
+double CalcKappa(double dx, double dy, double ddx, double ddy) {
+  const double u = dx * ddy - dy * ddx;
+  const double v = dx * dx + dy * dy;
+  const double sqrt_v = std::sqrt(v);
+  return u / (v * sqrt_v);
+}
+
+double CalcDKappa(double dx, double dy, double ddx, double ddy, double dddx, double dddy) {
+  const double a = dx * dddy - dy * dddx;
+  const double b = dx * dx + dy * dy;
+  const double c = dx * ddy - dy * ddx;
+  const double d = dx * ddx + dy * ddy;
+  const double sqrt_b = std::sqrt(b);
+  return (a * b - 3 * c * d) / (b * b * sqrt_b);
+}
 }

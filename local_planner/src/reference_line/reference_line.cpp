@@ -5,7 +5,6 @@
 #include "math_utils.hpp"
 #include "coordinate_transformer.hpp"
 #include <boost/math/tools/minima.hpp>
-#include <coin/IpIpoptNLP.hpp>
 namespace planning {
 
 ReferenceLine::ReferenceLine(const planning_srvs::RouteResponse &route_response) {
@@ -242,7 +241,7 @@ ReferencePoint ReferenceLine::GetReferencePoint(double x, double y) const {
   // here we use two lambda functions, too lazy!!
   auto find_min_distance_point = [this](const ReferencePoint &p0, double s0,
                                         const ReferencePoint &p1, double s1, double x, double y) {
-    auto func_dist_square = [this, &p0, &p1, &s0, &s1, &x, &y](double s) {
+    auto func_dist_square = [this, &p0, &p1, &s0, &s1, &x, &y](double s)-> double {
       auto p = Interpolate(p0, p1, s0, s1, s);
       double dx = p.x() - x;
       double dy = p.y() - y;
@@ -529,8 +528,11 @@ bool ReferenceLine::RefineReferenceLine() {
   }
 
 }
-bool ReferenceLine::RebuildReferenceLineWithSpline() {
+bool ReferenceLine::BuildReferenceLineWithSpline() {
 
+
+  return false;
 }
+
 
 }

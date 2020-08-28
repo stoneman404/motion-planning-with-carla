@@ -24,6 +24,8 @@ find_package(catkin REQUIRED COMPONENTS
 find_package(Eigen3 REQUIRED)
 #find_package(Ceres REQUIRED)
 
+set(QPOASES_INLUDE_DIRS /usr/local/include/qpOASES)
+set(QPOASES_LIBRARY_DIRS /usr/local/lib)
 set(IPOPT_LIBRARY_DIRS /usr/local/lib)
 set(IPOPT_INCLUDE_DIRS /usr/local/include/coin)
 ## System dependencies are found with CMake's conventions
@@ -141,6 +143,7 @@ include_directories(
         common/include/
         /usr/include/include/
         ${catkin_INCLUDE_DIRS}
+        ${QPOASES_INCLUDE_DIRS}
         ${IPOPT_INCLUDE_DIRS}
 )
 
@@ -183,7 +186,7 @@ set(planning_SRC
         src/reference_line/reference_line_smoother.cpp
         src/planning_context.cpp
         src/planner.cpp
-        src/reference_line/reference_line_smooth_ipopt_interface.cpp)
+        src/reference_line/reference_line_smooth_ipopt_interface.cpp common/src/spline2d.cpp)
 
 add_executable(${PROJECT_NAME}_node
         ${planning_SRC}
@@ -203,6 +206,7 @@ add_executable(${PROJECT_NAME}_node
 target_link_libraries(${PROJECT_NAME}_node
         ${catkin_LIBRARIES}
         ipopt
+        qpOASES
         )
 
 
@@ -284,6 +288,18 @@ if (TARGET reference_line_smoother_test)
             Eigen3::Eigen
             ${catkin_LIBRARIES}
             ipopt)
+endif ()
+
+catkin_add_gtest(spline2d_test
+        common/src/math_utils.cpp
+        common/src/spline2d.cpp
+        common/src/spline2d_test.cpp
+        )
+if (TARGET spline2d_test)
+    target_link_libraries(spline2d_test
+            Eigen3::Eigen
+            ${catkin_LIBRARIES}
+            )
 endif ()
 
 ## Add folders to be run by python nosetests

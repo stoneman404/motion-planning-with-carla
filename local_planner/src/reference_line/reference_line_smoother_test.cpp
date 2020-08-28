@@ -195,13 +195,13 @@ TEST_F(ReferenceLineSmootherTest, sin_ref_test) {
 //    std::cout << "x: " << way_points[i].pose.position.x << ", y: " << way_points[i].pose.position.y
 //              << " heading: " << tf::getYaw(way_points[i].pose.orientation) << std::endl;
 //  }
-std::cout << xy << std::endl;
-  std::cout << " ========================= " << std::endl;
-  for (size_t i = 0; i < smoothed_ref_line.reference_points().size(); ++i) {
-    const auto ref_point = smoothed_ref_line.reference_points()[i];
-    std::cout << "x: " << ref_point.x() << ", y: " << ref_point.y()
-              << " heading: " << ref_point.heading() << std::endl;
-  }
+//std::cout << xy << std::endl;
+//  std::cout << " ========================= " << std::endl;
+//  for (size_t i = 0; i < smoothed_ref_line.reference_points().size(); ++i) {
+//    const auto ref_point = smoothed_ref_line.reference_points()[i];
+//    std::cout << "x: " << ref_point.x() << ", y: " << ref_point.y()
+//              << " heading: " << ref_point.heading() << std::endl;
+//  }
 }
 
 TEST_F(ReferenceLineSmootherTest, spline_ref_test) {
@@ -327,16 +327,16 @@ TEST_F(ReferenceLineSmootherTest, spline_ref_test) {
   std::cout << "waypoints.size() " << way_points.size() << std::endl;
   auto smoothed_ref_line = ReferenceLine(way_points);
   EXPECT_EQ(smoother_->GetSmoothReferenceLine(way_points, &smoothed_ref_line), true);
-  for (size_t i = 0; i < way_points.size(); ++i) {
-    std::cout << "x: " << way_points[i].pose.position.x << ", y: " << way_points[i].pose.position.y
-              << " heading: " << tf::getYaw(way_points[i].pose.orientation) << std::endl;
-  }
-  std::cout << " ========================= " << std::endl;
-  for (size_t i = 0; i < smoothed_ref_line.reference_points().size(); ++i) {
-    const auto ref_point = smoothed_ref_line.reference_points()[i];
-    std::cout << "x: " << ref_point.x() << ", y: " << ref_point.y()
-              << " heading: " << ref_point.heading() << std::endl;
-  }
+//  for (size_t i = 0; i < way_points.size(); ++i) {
+//    std::cout << "x: " << way_points[i].pose.position.x << ", y: " << way_points[i].pose.position.y
+//              << " heading: " << tf::getYaw(way_points[i].pose.orientation) << std::endl;
+//  }
+//  std::cout << " ========================= " << std::endl;
+//  for (size_t i = 0; i < smoothed_ref_line.reference_points().size(); ++i) {
+//    const auto ref_point = smoothed_ref_line.reference_points()[i];
+//    std::cout << "x: " << ref_point.x() << ", y: " << ref_point.y()
+//              << " heading: " << ref_point.heading() << std::endl;
+//  }
 
 }
 
