@@ -8,6 +8,7 @@ namespace planning {
 
 class Spline2d {
 public:
+    Spline2d() = default;
 
     Spline2d(const std::vector<double> &xs, const std::vector<double> &ys, size_t order);
 

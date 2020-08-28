@@ -174,7 +174,7 @@ TEST_F(Spline2dTest, closed_point) {
 
 TEST_F(Spline2dTest, derivatives){
   double dx, dy, ddx, ddy, dddx, dddy;
-  double s = spline2d_->ArcLength();
+  double s = spline2d_->ArcLength() - 40;
   bool result = spline2d_->EvaluateFirstDerivative(s, &dx, &dy);
   EXPECT_TRUE(result);
   std::cout << "dx: " << dx << ", dy: " << dy << std::endl;

@@ -3,7 +3,7 @@
 #include <planning_srvs/Route.h>
 #include <box2d.hpp>
 #include <planning_msgs/PathPoint.h>
-
+#include "spline2d.hpp"
 #include "reference_point.hpp"
 
 namespace planning {
@@ -246,7 +246,10 @@ private:
     std::vector<double> accumulated_s_;
     std::vector<Eigen::Vector2d> unit_directions_;
     double length_; // the total length of this reference line
-    bool use_spline_curve_ = false;
+    bool use_spline_curve_ = true;
+    std::shared_ptr<Spline2d> ref_line_spline_ = nullptr;
+    std::shared_ptr<Spline2d> left_boundary_spline_ = nullptr;
+    std::shared_ptr<Spline2d> right_boundary_spline_ = nullptr;
 };
 
 }
