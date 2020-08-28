@@ -5,6 +5,7 @@
 #include <planning_msgs/PathPoint.h>
 #include "spline2d.hpp"
 #include "reference_point.hpp"
+#include "reference_line_smoother.hpp"
 
 namespace planning {
 
@@ -60,7 +61,7 @@ public:
      * copy constructor
      * @param other
      */
-    ReferenceLine(const ReferenceLine &other);
+    ReferenceLine(const ReferenceLine &other) = delete;
 
     /**
      * @brief construct the reference line from waypoint
@@ -74,14 +75,7 @@ public:
      */
     explicit ReferenceLine(const planning_srvs::RouteResponse &route_response);
 
-    /**
-     * @brief: update the reference points, which will has
-     * influence on accumulated s and unit directions
-     * @param ref_points
-     * @return
-     */
-    bool UpdateReferencePoints(const std::vector<ReferencePoint> &ref_points);
-
+    bool Smooth();
     /**
      * transform the xy to sl point
      * @param xy
@@ -188,22 +182,6 @@ public:
                                double s1,
                                double s) const;
 
-    bool RefineReferenceLine();
-
-    const std::vector<double> &GetAccumulatedS() const { return accumulated_s_; }
-    std::vector<ReferencePoint> &mutable_reference_points() { return reference_points_; }
-    const std::vector<ReferencePoint> &reference_points() const { return reference_points_; }
-    const std::vector<Eigen::Vector2d> &right_boundary() const { return right_boundary_; }
-    const std::vector<Eigen::Vector2d> &left_boundary() const { return left_boundary_; }
-    // first is left boundary, second is right boundary
-    std::pair<std::vector<Eigen::Vector2d>, std::vector<Eigen::Vector2d>> boundary() const {
-      const auto right_boundary = right_boundary_;
-      const auto left_boundary = left_boundary_;
-      auto boundary_pair = std::make_pair(left_boundary, right_boundary);
-      return boundary_pair;
-    }
-    const std::vector<double> &right_lane_width() const { return lane_right_width_; }
-    const std::vector<double> &left_lane_width() const { return lane_left_width_; }
 
 private:
 
@@ -219,24 +197,26 @@ private:
                                         const Eigen::Vector2d &end,
                                         const Eigen::Vector2d &point) const;
 
-    size_t GetIndex(double s) const;
+//    size_t GetIndex(double s) const;
 
 
 private:
     bool smoothed_ = false;
+    std::vector<planning_msgs::WayPoint> way_points_;
     std::vector<ReferencePoint> reference_points_;
 //    std::vector<SpeedLimit> speed_limits_;
-    std::vector<double> lane_left_width_;
-    std::vector<double> lane_right_width_;
+//    std::vector<double> lane_left_width_;
+//    std::vector<double> lane_right_width_;
     std::vector<Eigen::Vector2d> left_boundary_;
     std::vector<Eigen::Vector2d> right_boundary_;
-    std::vector<double> accumulated_s_;
-    std::vector<Eigen::Vector2d> unit_directions_;
+//    std::vector<double> accumulated_s_;
+//    std::vector<Eigen::Vector2d> unit_directions_;
     double length_; // the total length of this reference line
     bool use_spline_curve_ = true;
     std::shared_ptr<Spline2d> ref_line_spline_ = nullptr;
     std::shared_ptr<Spline2d> left_boundary_spline_ = nullptr;
     std::shared_ptr<Spline2d> right_boundary_spline_ = nullptr;
+    std::unique_ptr<ReferenceLineSmoother> reference_smoother_;
 };
 
 }

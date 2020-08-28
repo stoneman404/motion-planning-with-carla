@@ -12,10 +12,11 @@ public:
     typedef CPPAD_TESTVECTOR(double) DVector;
     ReferenceLineSmoother() = default;
     ~ReferenceLineSmoother() = default;
-    bool GetSmoothReferenceLine(const planning_srvs::RouteResponse &route_response,
-                                ReferenceLine *smoothed_ref_line);
-//    bool GetSmoothReferenceLine(const std::vector<planning_msgs::WayPoint> &waypoints,
-//                                ReferenceLine *smoothed_ref_line);
+    bool SmoothReferenceLine(const planning_srvs::RouteResponse &route_response,
+                                std::vector<ReferencePoint> *const smoothed_ref_points);
+    bool SmoothReferenceLine(const std::vector<planning_msgs::WayPoint> &waypoints,
+                                std::vector<ReferencePoint> *const smoothed_ref_points);
+
 //    bool GetSmoothReferenceLine(const ReferenceLine &raw_ref_line,
 //                                ReferenceLine *smoothed_ref_line);
 
