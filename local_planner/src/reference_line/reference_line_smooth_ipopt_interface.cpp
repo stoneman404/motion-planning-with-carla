@@ -81,10 +81,10 @@ void ReferenceLineSmoothIpoptInterface::operator()(
   }
 }
 
-ReferenceLineSmoothIpoptInterface::ReferenceLineSmoothIpoptInterface(const planning::ReferenceLine &raw_ref) {
-  assert(raw_ref.reference_points().size() >= 3);
-  ref_points_ = raw_ref.reference_points();
-  number_of_points_ = raw_ref.reference_points().size();
+ReferenceLineSmoothIpoptInterface::ReferenceLineSmoothIpoptInterface(const std::vector<ReferencePoint>& ref_points) {
+  assert(ref_points.size() >= 3);
+  ref_points_ = ref_points;
+  number_of_points_ = ref_points.size();
   number_of_variables_ = 2 * number_of_points_;
   number_of_curvature_constraints_ = number_of_points_ - 2;
   number_of_constraints_ = number_of_variables_ + number_of_curvature_constraints_;

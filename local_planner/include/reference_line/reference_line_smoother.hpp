@@ -12,12 +12,12 @@ public:
     typedef CPPAD_TESTVECTOR(double) DVector;
     ReferenceLineSmoother() = default;
     ~ReferenceLineSmoother() = default;
-    bool GetSmoothReferenceLine(const planning_srvs::RouteResponse& route_response,
-        ReferenceLine* smoothed_ref_line);
-    bool GetSmoothReferenceLine(const std::vector<planning_msgs::WayPoint>& waypoints,
-        ReferenceLine* smoothed_ref_line);
-    bool GetSmoothReferenceLine(const ReferenceLine &raw_ref_line,
+    bool GetSmoothReferenceLine(const planning_srvs::RouteResponse &route_response,
                                 ReferenceLine *smoothed_ref_line);
+//    bool GetSmoothReferenceLine(const std::vector<planning_msgs::WayPoint> &waypoints,
+//                                ReferenceLine *smoothed_ref_line);
+//    bool GetSmoothReferenceLine(const ReferenceLine &raw_ref_line,
+//                                ReferenceLine *smoothed_ref_line);
 
 private:
     bool SetUpConstraint();
@@ -25,10 +25,10 @@ private:
     void SetUpInitValue();
     bool TraceSmoothReferenceLine(
         const CppAD::ipopt::solve_result<DVector> &result,
-        ReferenceLine *smoothed_ref_line);
+        std::vector<ReferencePoint> *const smoothed_ref_line);
 
 private:
-    ReferenceLine raw_ref_line_;
+    planning_srvs::RouteResponse route_response_;
     std::string options_;
     DVector x_l_;
     DVector x_u_;

@@ -198,12 +198,12 @@ FrenetFramePoint ReferenceLine::GetFrenetFramePoint(const planning_msgs::PathPoi
   const double theta_ref = ref_point.heading();
   const double kappa_ref = ref_point.kappa();
   const double dkappa_ref = ref_point.dkappa();
-//  const double dl = CoordinateTransformer::CalcLateralDerivative(theta_ref, theta, l, kappa_ref);
-//  const double ddl = CoordinateTransformer::CalcSecondLateralDerivative(theta_ref, theta,
-//                                                                        kappa_ref, kappa,
-//                                                                        dkappa_ref, l);
-//  frenet_frame_point.dl = dl;
-//  frenet_frame_point.ddl = ddl;
+  const double dl = CoordinateTransformer::CalcLateralDerivative(
+      theta_ref, theta, l, kappa_ref);
+  const double ddl = CoordinateTransformer::CalcSecondOrderLateralDerivative(
+      theta_ref, theta, kappa_ref, kappa, dkappa_ref, l);
+  frenet_frame_point.dl = dl;
+  frenet_frame_point.ddl = ddl;
   return frenet_frame_point;
 }
 
@@ -307,10 +307,6 @@ ReferencePoint ReferenceLine::GetReferencePoint(const std::pair<double, double> 
   return GetReferencePoint(x, y);
 }
 
-double ReferenceLine::GetSpeedLimitFromS(double s) const {
-  return 0;
-}
-
 bool ReferenceLine::GetLaneWidth(double s, double *const left_width, double *const right_width) const {
   if (reference_points_.empty()) {
     return false;
@@ -344,10 +340,6 @@ bool ReferenceLine::GetLaneWidth(double s, double *const left_width, double *con
 
 double ReferenceLine::Length() const {
   return length_;
-}
-
-void ReferenceLine::AddSpeedLimit(double start_s, double end_s, double speed_limit) {
-
 }
 
 bool ReferenceLine::IsOnLane(const SLBoundary &sl_boundary) const {

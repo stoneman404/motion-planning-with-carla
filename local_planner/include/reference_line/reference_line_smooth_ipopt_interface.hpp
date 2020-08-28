@@ -11,7 +11,7 @@ class ReferenceLineSmoothIpoptInterface{
 public:
 
     typedef CPPAD_TESTVECTOR(CppAD::AD<double>) ADvector;
-    explicit ReferenceLineSmoothIpoptInterface(const ReferenceLine &raw_ref);
+    explicit ReferenceLineSmoothIpoptInterface(const std::vector<ReferencePoint>& ref_points);
     ~ReferenceLineSmoothIpoptInterface() = default;
     void operator()(ADvector& fg, const ADvector& x);
     void set_ref_deviation_weight(double weight) {this->ref_deviation_weight_ = weight;}

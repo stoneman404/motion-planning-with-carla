@@ -81,6 +81,7 @@ public:
      * @return
      */
     bool UpdateReferencePoints(const std::vector<ReferencePoint> &ref_points);
+
     /**
      * transform the xy to sl point
      * @param xy
@@ -88,6 +89,7 @@ public:
      * @return
      */
     bool XYToSL(const Eigen::Vector2d &xy, SLPoint *sl_point) const;
+
     /**
      *
      * @param x
@@ -118,6 +120,7 @@ public:
      * @return
      */
     ReferencePoint GetReferencePoint(double s) const;
+
     /**
      * get the projection reference point in reference line
      * @param x
@@ -147,26 +150,10 @@ public:
      * @return
      */
     double Length() const;
-    ///////////////////////////////////////////////////////////////
 
-    //todo the next two methods would done or removed in the future
-    /**
-     * @brief: get the speed limit from s
-     * @param s
-     * @return
-     */
-    double GetSpeedLimitFromS(double s) const;
-
-    /**
-     * @brief: add speed limit
-     * @param start_s
-     * @param end_s
-     * @param speed_limit
-     */
-    void AddSpeedLimit(double start_s, double end_s, double speed_limit);
     ///////////////////////////////////////////////////////////////////////////
     /**
-     * @brief: check the object has influnece on this lane
+     * @brief: check the object has influence on this lane
      * @param sl_boundary
      * @return
      */
