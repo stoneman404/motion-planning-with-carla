@@ -5,6 +5,7 @@
 namespace planning{
 class ManeuverPlanner;
 class State{
+
 public:
     virtual void Enter(ManeuverPlanner* maneuver_planner) = 0;
     virtual bool Execute(ManeuverPlanner* maneuver_planner) = 0;
@@ -17,4 +18,4 @@ public:
 
 
 
-#endif //
+#endif

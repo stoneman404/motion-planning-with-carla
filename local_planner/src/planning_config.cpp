@@ -22,7 +22,9 @@ void PlanningConfig::UpdateParams(const ros::NodeHandle &nh) {
                    reference_smoother_distance_weight_, 5.0);
   nh.param<double>("/local_planner/reference_smoother_max_curvature",
                    reference_smoother_max_curvature_, 100);
-  nh.param<int>("/local_planner/spline_order_", spline_order_, 5);
+  nh.param<int>("/local_planner/spline_order_", spline_order_, 3);
+  nh.param<double>("/local_planner/max_lookahead_time", max_lookahead_time_, 8.0);
+  nh.param<double>("/local_planner/safety_buffer", safety_buffer_, 6.0);
 }
 
 void PlanningConfig::UpdateVehicleParams(const derived_object_msgs::Object &object,

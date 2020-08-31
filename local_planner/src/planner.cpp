@@ -139,18 +139,19 @@ bool Planner::UpdateObstacleStatus() {
   int failed_count = 0;
 
   for (auto &obstacle : obstacles) {
-    carla_waypoint_types::CarlaWaypoint waypoint;
-    if (!this->GetWayPoint(obstacle->Id(), waypoint)){
-      ROS_WARN("the obstacle[id: %i] failed to get waypoint.", obstacle->Id());
+    carla_waypoint_types::CarlaWaypoint way_point;
+    if (!this->GetWayPoint(obstacle->Id(), way_point)){
+      ROS_WARN("the obstacle[id: %i] failed to get way_point.", obstacle->Id());
       failed_count++;
       continue;
     }
-    obstacle->set_road_id(waypoint.road_id);
-    obstacle->set_section_id(waypoint.section_id);
-    obstacle->set_lane_id(waypoint.lane_id);
+
+    obstacle->set_road_id(way_point.road_id);
+    obstacle->set_section_id(way_point.section_id);
+    obstacle->set_lane_id(way_point.lane_id);
   }
 
-  // if all obstacles are failed to get waypoint, something going wrong
+  // if all obstacles are failed to get way_point, something going wrong
   return failed_count < ObstacleFilter::Instance().ObstaclesSize();
 }
 
@@ -158,17 +159,17 @@ bool Planner::UpdateVehicleStatus() {
   /// update the vehicle state at each run
   VehicleState::Instance().Update(ego_vehicle_status_, ego_odometry_, ego_vehicle_info_);
   auto ego_id = ego_vehicle_info_.id;
-  carla_waypoint_types::CarlaWaypoint waypoint;
+  carla_waypoint_types::CarlaWaypoint carla_waypoint;
 
-  if (!this->GetWayPoint(ego_id, waypoint)){
+  if (!this->GetWayPoint(ego_id, carla_waypoint)){
     return false;
   }
 
-  VehicleState::Instance().set_lane_id(waypoint.lane_id);
-  VehicleState::Instance().set_section_id(waypoint.section_id);
-  VehicleState::Instance().set_road_id(waypoint.road_id);
-
+  VehicleState::Instance().set_lane_id(carla_waypoint.lane_id);
+  VehicleState::Instance().set_section_id(carla_waypoint.section_id);
+  VehicleState::Instance().set_road_id(carla_waypoint.road_id);
 }
+
 bool Planner::GetWayPoint(const int &object_id,
                           carla_waypoint_types::CarlaWaypoint &carla_waypoint) {
 
@@ -186,4 +187,5 @@ bool Planner::GetWayPoint(const int &object_id,
   carla_waypoint = srv.response.waypoint;
   return true;
 }
+
 }

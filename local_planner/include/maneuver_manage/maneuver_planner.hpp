@@ -1,6 +1,5 @@
 #ifndef CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_MANEUVER_PLANNER_MANEUVER_PLANNER_HPP_
 #define CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_MANEUVER_PLANNER_MANEUVER_PLANNER_HPP_
-
 // this is a simpler version of behavior planner,
 
 #include <carla_msgs/CarlaEgoVehicleStatus.h>
@@ -18,16 +17,14 @@ public:
     void InitPlanner();
     bool Process();
     void SetState(State& new_state);
-    std::shared_ptr<State> GetState() const;
+    std::shared_ptr<State> GetState() const {return current_state_;};
     int GetLaneId() const {return current_lane_id_;}
-    void UpdateLocalGoal();
-
-
 private:
     std::shared_ptr<State> current_state_;
     int current_lane_id_;
+    std::list<std::shared_ptr<ReferenceLine>> reference_line_;
 
 
 };
 };
-#endif //
+#endif //CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_MANEUVER_PLANNER_MANEUVER_PLANNER_HPP_

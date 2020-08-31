@@ -8,16 +8,24 @@
 namespace planning {
 
 ManeuverPlanner::ManeuverPlanner() {
+  current_lane_id_ =
+      VehicleState::Instance().lane_id();
   this->InitPlanner();
 }
 
 void ManeuverPlanner::InitPlanner() {
   this->current_state_.reset(&KeepLaneState::Instance());
 }
+
 void ManeuverPlanner::SetState(State &new_state) {
   this->current_state_->Exit(this);
   this->current_state_.reset(&new_state);
   current_state_->Enter(this);
+}
+
+bool ManeuverPlanner::Process() {
+
+  return true;
 }
 
 }

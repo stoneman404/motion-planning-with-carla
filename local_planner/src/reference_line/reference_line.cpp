@@ -15,7 +15,6 @@ ReferenceLine::ReferenceLine(const planning_srvs::RouteResponse &route_response)
   left_boundary_.reserve(route_response.route.size());
   right_boundary_.reserve(route_response.route.size());
   size_t waypoints_size = route_response.route.size();
-  double s = 0.0;
   for (size_t i = 0; i < route_response.route.size(); ++i) {
     const auto waypoint = route_response.route[i];
     const double left_width = waypoint.lane_width / 2.0;
@@ -44,7 +43,8 @@ ReferenceLine::ReferenceLine(const planning_srvs::RouteResponse &route_response)
   ROS_ASSERT(reference_points_.size() == waypoints_size);
   ROS_ASSERT(left_boundary_.size() == waypoints_size);
   ROS_ASSERT(right_boundary_.size() == waypoints_size);
-  BuildReferenceLineWithSpline();
+  bool result = BuildReferenceLineWithSpline();
+  ROS_ASSERT(result);
   length_ = ref_line_spline_->ArcLength();
 }
 
@@ -84,8 +84,8 @@ ReferenceLine::ReferenceLine(const std::vector<planning_msgs::WayPoint> &waypoin
   ROS_ASSERT(reference_points_.size() == waypoints.size());
   ROS_ASSERT(left_boundary_.size() == waypoints.size());
   ROS_ASSERT(right_boundary_.size() == waypoints.size());
-
-  BuildReferenceLineWithSpline();
+  bool result = BuildReferenceLineWithSpline();
+  ROS_ASSERT(result);
   length_ = ref_line_spline_->ArcLength();
 
 }
@@ -139,7 +139,6 @@ ReferencePoint ReferenceLine::GetReferencePoint(double s) const {
   double ref_kappa = CalcKappa(ref_dx, ref_dy, ref_ddx, ref_ddy);
   double ref_dkappa = CalcDKappa(ref_dx, ref_dy, ref_ddx, ref_ddy, ref_dddx, ref_dddy);
   return ReferencePoint(ref_x, ref_y, ref_heading, ref_kappa, ref_dkappa);
-
 }
 
 ReferencePoint ReferenceLine::GetReferencePoint(double x, double y) const {
@@ -372,8 +371,10 @@ bool ReferenceLine::BuildReferenceLineWithSpline() {
 bool ReferenceLine::Smooth() {
   bool result = reference_smoother_->SmoothReferenceLine(way_points_, &reference_points_);
   if (!result) {
+    smoothed_ = false;
     return false;
   }
+  smoothed_ = true;
   std::vector<double> xs, ys;
   xs.reserve(reference_points_.size());
   ys.reserve(reference_points_.size());
@@ -381,7 +382,7 @@ bool ReferenceLine::Smooth() {
     xs.push_back(reference_point.x());
     ys.push_back(reference_point.y());
   }
-  ref_line_spline_ = std::make_shared<Spline2d>(xs, ys, 3);
+  ref_line_spline_.reset(new Spline2d(xs, ys, 3));
   return true;
 }
 
