@@ -4,16 +4,17 @@
 #include "state.hpp"
 
 namespace planning{
-class StopAtSign : public State{
+class StopAtSignState : public State{
 public:
-    void Enter(ManeuverPlanner* manuever_planner) override ;
+    bool Enter(ManeuverPlanner* manuever_planner) override ;
     bool Execute(ManeuverPlanner* manuever_planner) override ;
     void Exit(ManeuverPlanner* manuvever_planner) override ;
+    std::string Name() const override {return "StopAtSignState";}
     static State& Instance();
 private:
-    StopAtSign() = default;
-    StopAtSign(const StopAtSign& other) ;
-    StopAtSign& operator=(const StopAtSign& other);
+    StopAtSignState() = default;
+    StopAtSignState(const StopAtSignState& other) ;
+    StopAtSignState& operator=(const StopAtSignState& other);
 
 };
 }

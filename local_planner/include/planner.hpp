@@ -29,9 +29,9 @@ public:
         planning_msgs::Trajectory::Ptr trajectory);
 
 protected:
-    bool ReRoute(const geometry_msgs::Pose &start,
-                 const geometry_msgs::Pose &destination,
-                 planning_srvs::RouteResponse &response);
+//    bool ReRoute(const geometry_msgs::Pose &start,
+//                 const geometry_msgs::Pose &destination,
+//                 planning_srvs::RouteResponse &response);
     void InitPublisher();
     void InitSubscriber();
     void InitServiceClient();
@@ -56,7 +56,7 @@ private:
     geometry_msgs::PoseWithCovarianceStamped init_pose_;
 
     ////////////////// ServiceClinet //////////////////////
-    ros::ServiceClient route_service_client_;
+//    ros::ServiceClient route_service_client_;
     ros::ServiceClient get_actor_waypoint_client_;
     ros::ServiceClient get_waypoint_client_;
 

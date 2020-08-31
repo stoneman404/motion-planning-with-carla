@@ -75,7 +75,20 @@ public:
      */
     explicit ReferenceLine(const planning_srvs::RouteResponse &route_response);
 
+    void SetPriority(int priority) {this->priority_ = priority;}
+
+    /**
+     * @brief: get the reference line's priority
+     * @return :the priority of this reference line
+     */
+    int GetPriority() const {return priority_;}
+
+    /**
+     * @brief: smooth the reference line
+     * @return : true if smoothing the reference line is successful, false otherwise
+     */
     bool Smooth();
+
     /**
      * transform the xy to sl point
      * @param xy
@@ -131,11 +144,11 @@ public:
     ReferencePoint GetReferencePoint(const std::pair<double, double> &xy) const;
 
     /**
-     * get the left lane width and right lane width
-     * @param s
-     * @param left_width
-     * @param right_width
-     * @return
+     * @brief: get the left lane width and right lane width
+     * @param: s
+     * @param: left_width
+     * @param: right_width
+     * @return: the left lane width and right lane width
      */
     bool GetLaneWidth(double s, double *left_width, double *right_width) const;
 
@@ -145,7 +158,6 @@ public:
      */
     double Length() const;
 
-    ///////////////////////////////////////////////////////////////////////////
     /**
      * @brief: check the object has influence on this lane
      * @param sl_boundary
@@ -217,6 +229,7 @@ private:
     std::shared_ptr<Spline2d> left_boundary_spline_ = nullptr;
     std::shared_ptr<Spline2d> right_boundary_spline_ = nullptr;
     std::unique_ptr<ReferenceLineSmoother> reference_smoother_;
+    int priority_ = 0;
 };
 
 }

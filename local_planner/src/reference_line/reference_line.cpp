@@ -16,9 +16,9 @@ ReferenceLine::ReferenceLine(const planning_srvs::RouteResponse &route_response)
   right_boundary_.reserve(route_response.route.size());
   size_t waypoints_size = route_response.route.size();
   for (size_t i = 0; i < route_response.route.size(); ++i) {
-    const auto waypoint = route_response.route[i];
-    const double left_width = waypoint.lane_width / 2.0;
-    const double right_width = waypoint.lane_width / 2.0;
+    const auto way_point = route_response.route[i];
+    const double left_width = way_point.lane_width / 2.0;
+    const double right_width = way_point.lane_width / 2.0;
     Eigen::Vector2d heading;
     if (i + 1 >= route_response.route.size()) {
       heading = Eigen::Vector2d(route_response.route[i].pose.position.x -
@@ -31,9 +31,9 @@ ReferenceLine::ReferenceLine(const planning_srvs::RouteResponse &route_response)
                                 route_response.route[i + 1].pose.position.y -
                                     route_response.route[i].pose.position.y);
     }
-    auto ref_point = ReferencePoint(waypoint.pose.position.x, waypoint.pose.position.y);
-    ref_point.set_xy(waypoint.pose.position.x, waypoint.pose.position.y);
-    ref_point.set_heading(NormalizeAngle(tf::getYaw(waypoint.pose.orientation)));
+    auto ref_point = ReferencePoint(way_point.pose.position.x, way_point.pose.position.y);
+    ref_point.set_xy(way_point.pose.position.x, way_point.pose.position.y);
+    ref_point.set_heading(NormalizeAngle(std::atan2(heading(1), heading(0))));
     reference_points_.push_back(ref_point);
     left_boundary_.emplace_back(ref_point.x() - left_width * std::sin(ref_point.heading()),
                                 ref_point.y() + left_width * std::cos(ref_point.heading()));
@@ -56,9 +56,9 @@ ReferenceLine::ReferenceLine(const std::vector<planning_msgs::WayPoint> &waypoin
   left_boundary_.reserve(waypoints.size());
   right_boundary_.reserve(waypoints.size());
   for (size_t i = 0; i < waypoints.size(); ++i) {
-    const auto waypoint = waypoints[i];
-    const double left_width = waypoint.lane_width / 2.0;
-    const double right_width = waypoint.lane_width / 2.0;
+    const auto way_point = waypoints[i];
+    const double left_width = way_point.lane_width / 2.0;
+    const double right_width = way_point.lane_width / 2.0;
     Eigen::Vector2d heading;
     if (i + 1 >= waypoints.size()) {
       heading = Eigen::Vector2d(waypoints[i].pose.position.x -
@@ -71,9 +71,9 @@ ReferenceLine::ReferenceLine(const std::vector<planning_msgs::WayPoint> &waypoin
                                 waypoints[i + 1].pose.position.y -
                                     waypoints[i].pose.position.y);
     }
-    auto ref_point = ReferencePoint(waypoint.pose.position.x, waypoint.pose.position.y);
-    ref_point.set_xy(waypoint.pose.position.x, waypoint.pose.position.y);
-    ref_point.set_heading(NormalizeAngle(tf::getYaw(waypoint.pose.orientation)));
+    auto ref_point = ReferencePoint(way_point.pose.position.x, way_point.pose.position.y);
+    ref_point.set_xy(way_point.pose.position.x, way_point.pose.position.y);
+    ref_point.set_heading(NormalizeAngle(std::atan2(heading(1), heading(0))));
     reference_points_.push_back(ref_point);
     left_boundary_.emplace_back(ref_point.x() - left_width * std::sin(ref_point.heading()),
                                 ref_point.y() + left_width * std::cos(ref_point.heading()));
@@ -90,16 +90,6 @@ ReferenceLine::ReferenceLine(const std::vector<planning_msgs::WayPoint> &waypoin
 
 }
 
-//ReferenceLine::ReferenceLine(const ReferenceLine &other) {
-//  this->length_ = other.length_;
-//  this->right_boundary_ = other.right_boundary_;
-//  this->left_boundary_ = other.left_boundary_;
-//  this->reference_points_ = other.reference_points_;
-//  this->use_spline_curve_ = other.use_spline_curve_;
-//  this->right_boundary_spline_ = other.right_boundary_spline_;
-//  this->left_boundary_spline_ = other.left_boundary_spline_;
-//  this->ref_line_spline_ = other.ref_line_spline_;
-//}
 
 FrenetFramePoint ReferenceLine::GetFrenetFramePoint(const planning_msgs::PathPoint &path_point) const {
   if (reference_points_.empty()) {
@@ -107,13 +97,13 @@ FrenetFramePoint ReferenceLine::GetFrenetFramePoint(const planning_msgs::PathPoi
   }
   SLPoint sl;
   XYToSL(path_point.x, path_point.y, &sl);
-  FrenetFramePoint frenet_frame_point;
-  frenet_frame_point.s = sl.s;
-  frenet_frame_point.l = sl.l;
+  FrenetFramePoint frame_point;
+  frame_point.s = sl.s;
+  frame_point.l = sl.l;
   const double theta = path_point.theta;
   const double kappa = path_point.kappa;
-  const double l = frenet_frame_point.l;
-  ReferencePoint ref_point = GetReferencePoint(frenet_frame_point.s);
+  const double l = frame_point.l;
+  ReferencePoint ref_point = GetReferencePoint(frame_point.s);
   const double theta_ref = ref_point.heading();
   const double kappa_ref = ref_point.kappa();
   const double dkappa_ref = ref_point.dkappa();
@@ -121,9 +111,9 @@ FrenetFramePoint ReferenceLine::GetFrenetFramePoint(const planning_msgs::PathPoi
       theta_ref, theta, l, kappa_ref);
   const double ddl = CoordinateTransformer::CalcSecondOrderLateralDerivative(
       theta_ref, theta, kappa_ref, kappa, dkappa_ref, l);
-  frenet_frame_point.dl = dl;
-  frenet_frame_point.ddl = ddl;
-  return frenet_frame_point;
+  frame_point.dl = dl;
+  frame_point.ddl = ddl;
+  return frame_point;
 }
 
 ReferencePoint ReferenceLine::GetReferencePoint(double s) const {

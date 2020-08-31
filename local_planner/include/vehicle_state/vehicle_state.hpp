@@ -17,7 +17,6 @@ public:
     // getter
     const ros::Time& time_stamp() const;
     const geometry_msgs::Pose& pose() const;
-    double kappa() const;
     double heading() const;
     double linear_vel() const;
     double angular_vel() const;
@@ -46,7 +45,7 @@ private:
     int section_id_ = -1;
     int road_id_ = -1;
     geometry_msgs::Pose pose_;
-    double kappa_;
+//    double kappa_;
     double heading_;
     double linear_vel_;
     double angular_vel_;

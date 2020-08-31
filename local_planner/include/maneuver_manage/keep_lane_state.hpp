@@ -5,9 +5,10 @@ namespace planning {
 
 class KeepLaneState : public State {
 public:
-    void Enter(ManeuverPlanner* maneuver_planner) override;
+    bool Enter(ManeuverPlanner* maneuver_planner) override;
     bool Execute(ManeuverPlanner* maneuver_planner) override;
     void Exit(ManeuverPlanner* maneuver_planner) override;
+    std::string Name() const override {return "KeepLaneState";}
     static State& Instance();
     // get the cost, and decide the next station
     double TransitionFunction();

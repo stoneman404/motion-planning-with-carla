@@ -5,10 +5,11 @@
 namespace planning {
 class EmergencyStopState : public State {
 public:
-    void Enter(ManeuverPlanner *maneuver_planner) override;
+    bool Enter(ManeuverPlanner *maneuver_planner) override;
     void Exit(ManeuverPlanner *maneuver_planner) override;
     bool Execute(ManeuverPlanner *maneuver_planner) override;
     static State &Instance();
+    std::string Name() const override {return "EmergencyStopState";}
 private:
     EmergencyStopState() = default;
     EmergencyStopState(const EmergencyStopState &other);

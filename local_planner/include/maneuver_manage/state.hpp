@@ -7,9 +7,10 @@ class ManeuverPlanner;
 class State{
 
 public:
-    virtual void Enter(ManeuverPlanner* maneuver_planner) = 0;
+    virtual bool Enter(ManeuverPlanner* maneuver_planner) = 0;
     virtual bool Execute(ManeuverPlanner* maneuver_planner) = 0;
     virtual void Exit(ManeuverPlanner* maneuver_planner) = 0;
+    virtual std::string Name() const = 0;
     virtual ~State() = default;
 
 };

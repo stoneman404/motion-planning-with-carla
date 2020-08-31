@@ -1,7 +1,7 @@
 #include "maneuver_manage/emergency_stop_state.hpp"
 namespace planning {
 
-void EmergencyStopState::Enter(ManeuverPlanner *maneuver_planner) {
+bool EmergencyStopState::Enter(ManeuverPlanner *maneuver_planner) {
   ROS_INFO("Oops, something going wrong, we Enter the EmergecyStopState");
 }
 

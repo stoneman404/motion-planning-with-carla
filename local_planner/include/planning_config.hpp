@@ -40,6 +40,8 @@ public:
     int spline_order() const { return spline_order_; }
     double max_lookahead_time() const {return max_lookahead_time_;}
     double safety_buffer() const {return safety_buffer_;}
+    double reference_max_forward_distance() const {return reference_max_forward_distance_;}
+    double reference_max_backward_distance() const {return reference_max_backward_distance_;}
 private:
     VehicleParams vehicle_params_; // ego_vehicle's params
     double obstacle_trajectory_time_; // the trajectory total time of obstacles
@@ -55,6 +57,8 @@ private:
     double reference_smoother_heading_weight_ = 50.0;
     double reference_smoother_max_curvature_ = 100;
     int spline_order_ = 3;
+    double reference_max_forward_distance_ = 400.0;
+    double reference_max_backward_distance_ = 10.0;
 
 private:
     PlanningConfig() = default;

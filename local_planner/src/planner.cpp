@@ -5,6 +5,7 @@
 #include "vehicle_state/vehicle_state.hpp"
 #include "obstacle_filter/obstacle.hpp"
 #include "obstacle_filter/obstacle_filter.hpp"
+#include "planning_context.hpp"
 
 namespace planning {
 Planner::Planner(const ros::NodeHandle &nh) : nh_(nh) {
@@ -37,16 +38,15 @@ void Planner::InitSubscriber() {
   this->ego_vehicle_subscriber_ = nh_.subscribe<carla_msgs::CarlaEgoVehicleStatus>(
       topic::kEgoVehicleStatusName, 10,
       [this](const carla_msgs::CarlaEgoVehicleStatus::ConstPtr ego_vehicle_status) {
-        this->ego_vehicle_status_ =
-            *ego_vehicle_status;
+        this->ego_vehicle_status_ = *ego_vehicle_status;
       });
 
   this->traffic_lights_subscriber_ = nh_.subscribe<carla_msgs::CarlaTrafficLightStatusList>(
       topic::kTrafficLigthsName, 10,
       [this](const carla_msgs::CarlaTrafficLightStatusList::ConstPtr traffic_light_status_list) {
-        this->traffic_light_status_list_ =
-            *traffic_light_status_list;
-        ROS_INFO("the traffic ligth status list size: %zu", traffic_light_status_list_.traffic_lights.size());
+        this->traffic_light_status_list_ = *traffic_light_status_list;
+        ROS_INFO("the traffic ligth status list size: %zu",
+                 traffic_light_status_list_.traffic_lights.size());
       });
 
   this->ego_vehicle_info_subscriber_ = nh_.subscribe<carla_msgs::CarlaEgoVehicleInfo>(
@@ -60,7 +60,6 @@ void Planner::InitSubscriber() {
   this->objects_subscriber_ = nh_.subscribe<derived_object_msgs::ObjectArray>(
       topic::kObjectsName, 10,
       [this](const derived_object_msgs::ObjectArray::ConstPtr object_array) {
-//        this->object_array_ = *object_array;
         this->objects_map_.clear();
         for (const auto &object : object_array->objects) {
           objects_map_.emplace(object.id, object);
@@ -82,6 +81,7 @@ void Planner::InitSubscriber() {
       topic::kInitialPoseName, 10,
       [this](const geometry_msgs::PoseWithCovarianceStamped::ConstPtr init_pose) {
         this->init_pose_ = *init_pose;
+        PlanningContext::Instance().UpdateGlobalInitPose(init_pose_);
         ROS_INFO("the init_pose_: x: %lf, y: %lf",
                  init_pose_.pose.pose.position.x, init_pose_.pose.pose.position.y);
       });
@@ -90,6 +90,7 @@ void Planner::InitSubscriber() {
       topic::kGoalPoseName, 10,
       [this](const geometry_msgs::PoseStamped::ConstPtr goal_pose) {
         this->goal_pose_ = *goal_pose;
+        PlanningContext::Instance().UpdateGlobalGoalPose(goal_pose_);
         ROS_INFO("the goal_pose_ : x: %lf, y: %lf",
                  goal_pose_.pose.position.x, goal_pose_.pose.position.y);
       });
@@ -100,26 +101,26 @@ void Planner::InitServiceClient() {
       service::kGetEgoWaypontServiceName);
   this->get_actor_waypoint_client_ = nh_.serviceClient<carla_waypoint_types::GetActorWaypoint>(
       service::kGetActorWaypointServiceName);
-  this->route_service_client_ = nh_.serviceClient<planning_srvs::Route>(service::kRouteServiceName);
+//  this->route_service_client_ = nh_.serviceClient<planning_srvs::Route>(service::kRouteServiceName);
 
 }
-
-bool Planner::ReRoute(const geometry_msgs::Pose &start,
-                      const geometry_msgs::Pose &destination,
-                      planning_srvs::RouteResponse &response) {
-  planning_srvs::Route srv;
-  srv.request.start_pose = start;
-  srv.request.end_pose = destination;
-  if (!route_service_client_.call(srv)) {
-    ROS_FATAL("[Planner::Reroute], Failed to ReRoute!");
-    return false;
-  } else {
-    response = srv.response;
-    ROS_INFO("[Planner::Reroute], Reroute SUCCESSFUL,"
-             " the route size is %zu", response.route.size());
-    return true;
-  }
-}
+//
+//bool Planner::ReRoute(const geometry_msgs::Pose &start,
+//                      const geometry_msgs::Pose &destination,
+//                      planning_srvs::RouteResponse &response) {
+//  planning_srvs::Route srv;
+//  srv.request.start_pose = start;
+//  srv.request.end_pose = destination;
+//  if (!route_service_client_.call(srv)) {
+//    ROS_FATAL("[Planner::Reroute], Failed to ReRoute!");
+//    return false;
+//  } else {
+//    response = srv.response;
+//    ROS_INFO("[Planner::Reroute], Reroute SUCCESSFUL,"
+//             " the route size is %zu", response.route.size());
+//    return true;
+//  }
+//}
 
 // main loop function
 bool Planner::Plan(const carla_msgs::CarlaEgoVehicleInfo &ego_vehicle_info,
@@ -140,7 +141,7 @@ bool Planner::UpdateObstacleStatus() {
 
   for (auto &obstacle : obstacles) {
     carla_waypoint_types::CarlaWaypoint way_point;
-    if (!this->GetWayPoint(obstacle->Id(), way_point)){
+    if (!this->GetWayPoint(obstacle->Id(), way_point)) {
       ROS_WARN("the obstacle[id: %i] failed to get way_point.", obstacle->Id());
       failed_count++;
       continue;
@@ -159,15 +160,15 @@ bool Planner::UpdateVehicleStatus() {
   /// update the vehicle state at each run
   VehicleState::Instance().Update(ego_vehicle_status_, ego_odometry_, ego_vehicle_info_);
   auto ego_id = ego_vehicle_info_.id;
-  carla_waypoint_types::CarlaWaypoint carla_waypoint;
+  carla_waypoint_types::CarlaWaypoint carla_way_point;
 
-  if (!this->GetWayPoint(ego_id, carla_waypoint)){
+  if (!this->GetWayPoint(ego_id, carla_way_point)) {
     return false;
   }
 
-  VehicleState::Instance().set_lane_id(carla_waypoint.lane_id);
-  VehicleState::Instance().set_section_id(carla_waypoint.section_id);
-  VehicleState::Instance().set_road_id(carla_waypoint.road_id);
+  VehicleState::Instance().set_lane_id(carla_way_point.lane_id);
+  VehicleState::Instance().set_section_id(carla_way_point.section_id);
+  VehicleState::Instance().set_road_id(carla_way_point.road_id);
 }
 
 bool Planner::GetWayPoint(const int &object_id,

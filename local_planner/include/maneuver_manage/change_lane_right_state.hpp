@@ -2,16 +2,17 @@
 #define CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_MANEUVER_PLANNER_CHANGE_LANE_RIGHT_STATE_HPP_
 #include "state.hpp"
 namespace planning{
-class ChangeLaneRight : public State{
+class ChangeLaneRightState : public State{
 public:
-    void Enter(ManeuverPlanner* manuever_planner) override ;
+    bool Enter(ManeuverPlanner* manuever_planner) override ;
     bool Execute(ManeuverPlanner* manuever_planner) override ;
     void Exit(ManeuverPlanner* manuever_planner) override ;
-    State& Instance();
+    std::string Name() const override {return "ChangeLaneRightState";}
+    static State& Instance();
 private:
-    ChangeLaneRight() = default;
-    ChangeLaneRight(const ChangeLaneRight& other);
-    ChangeLaneRight& operator=(const ChangeLaneRight& other);
+    ChangeLaneRightState() = default;
+    ChangeLaneRightState(const ChangeLaneRightState& other);
+    ChangeLaneRightState& operator=(const ChangeLaneRightState& other);
 };
 }
 #endif //
