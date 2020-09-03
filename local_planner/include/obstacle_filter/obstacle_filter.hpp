@@ -11,6 +11,7 @@
 #include <unordered_map>
 #include <nav_msgs/Odometry.h>
 #include <carla_msgs/CarlaEgoVehicleStatus.h>
+#include <vehicle_state/vehicle_state.hpp>
 #include "obstacle.hpp"
 
 
@@ -20,13 +21,13 @@ class ObstacleFilter{
 public:
     static ObstacleFilter& Instance();
     ObstacleFilter(const ObstacleFilter& other) = default;
-    void UpdateObstacles(const std::unordered_map<int,derived_object_msgs::Object>& objects,
-        const nav_msgs::Odometry& ego_vehicle);
+    void UpdateObstacles(const std::list<std::shared_ptr<Obstacle>>& objects);
+    void AddObstacles(const std::shared_ptr<Obstacle>& obstacle_ptr);
     size_t ObstaclesSize() const {return obstacles_.size();}
-    const std::list<std::shared_ptr<Obstacle>>& Obstacles() const {return obstacles_;}
-    std::list<std::shared_ptr<Obstacle>>& multable_obstacles()  {return obstacles_;}
+    const std::unordered_map<int, std::shared_ptr<Obstacle>>& Obstacles() const {return obstacles_;}
+    std::unordered_map<int, std::shared_ptr<Obstacle>>& multable_obstacles()  {return obstacles_;}
 private:
-    std::list<std::shared_ptr<Obstacle>> obstacles_;
+    std::unordered_map<int, std::shared_ptr<Obstacle>> obstacles_;
 private:
     ObstacleFilter() = default;
     ~ObstacleFilter() = default;

@@ -12,28 +12,25 @@ namespace planning {
 class State;
 class ManeuverPlanner {
 public:
+    /**
+     *
+     * @param nh
+     */
     explicit ManeuverPlanner(const ros::NodeHandle &nh);
-    ~ManeuverPlanner() = default;
-    
+
+    /**
+     *
+     */
+    ~ManeuverPlanner();
+
     void InitPlanner();
 
     /**
      *
      * @return
      */
-    bool Process();
+    bool Process(const planning_msgs::TrajectoryPoint &init_trajectory_point);
 
-    /**
-     *
-     * @param new_state
-     */
-    void SetState(State &new_state);
-
-    /**
-     *
-     * @return
-     */
-    std::shared_ptr<State> GetState() const { return current_state_; };
 
     /**
      *
@@ -51,7 +48,21 @@ public:
     bool ReRoute(const geometry_msgs::Pose &start,
                  const geometry_msgs::Pose &destination,
                  planning_srvs::RouteResponse &response);
-    bool UpdateReferenceLine(std::list<std::shared_ptr<ReferenceLine>> *const reference_lines_list) const;
+
+    /**
+     *
+     * @param reference_lines_list
+     * @return
+     */
+    bool UpdateReferenceLine(
+        std::list<std::shared_ptr<ReferenceLine>> *const reference_lines_list) const;
+
+    /**
+     *
+     * @return
+     */
+    const planning_msgs::TrajectoryPoint &init_trajectory_point() const;
+
 private:
 
     /**
@@ -92,14 +103,17 @@ private:
      * @param way_points
      * @return
      */
-    std::vector<planning_msgs::WayPoint> GetWayPointsFromStartToEndIndex(const int start_index,
-                                                                         const int end_index,
-                                                                         const std::vector<planning_msgs::WayPoint> &way_points) const;
+    std::vector<planning_msgs::WayPoint>
+    GetWayPointsFromStartToEndIndex(const int start_index,
+                                    const int end_index,
+                                    const std::vector<planning_msgs::WayPoint> &way_points) const;
+
 private:
     ros::NodeHandle nh_;
+    planning_msgs::TrajectoryPoint init_trajectory_point_;
     ros::ServiceClient route_service_client_;
-    std::shared_ptr<State> current_state_;
-    int current_lane_id_;
+    std::unique_ptr<State> current_state_;
+    int current_lane_id_{};
     std::list<std::shared_ptr<ReferenceLine>> reference_line_;
 
 };

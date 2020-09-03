@@ -9,8 +9,9 @@ public:
     bool Enter(ManeuverPlanner* manuever_planner) override ;
     bool Execute(ManeuverPlanner* manuever_planner) override ;
     void Exit(ManeuverPlanner* manuvever_planner) override ;
-    std::string Name() const override {return "StopAtSignState";}
+    std::string Name() const override;
     static State& Instance();
+    State* NextState(ManeuverPlanner* maneuver_planner) const override ;
 private:
     StopAtSignState() = default;
     StopAtSignState(const StopAtSignState& other) ;

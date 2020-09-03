@@ -14,4 +14,8 @@ State &ChangeLaneRightState::Instance() {
   static ChangeLaneRightState instance;
   return instance;
 }
+std::string ChangeLaneRightState::Name() const {return "ChangeLaneRightState";}
+State *ChangeLaneRightState::NextState(ManeuverPlanner *maneuver_planner) const {
+  return nullptr;
+}
 }

@@ -15,4 +15,12 @@ State &StopAtSignState::Instance() {
   static StopAtSignState instance;
   return instance;
 }
+
+std::string StopAtSignState::Name() const {return "StopAtSignState";}
+
+State *StopAtSignState::NextState(ManeuverPlanner *maneuver_planner) const {
+  return nullptr;
+}
+
+
 }

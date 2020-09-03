@@ -14,34 +14,26 @@ public:
     void UpdateParams(const ros::NodeHandle &nh);
     void UpdateVehicleParams(const derived_object_msgs::Object &object,
                              const carla_msgs::CarlaEgoVehicleInfo &vehicle_info);
-    double collision_buffer() const { return collision_buffer_; }
-    double obstacle_trajectory_time() const { return obstacle_trajectory_time_; }
+    double collision_buffer() const;
+    double obstacle_trajectory_time() const;
     double delta_t() const { return delta_t_; }
-    double filter_obstacle_length() const { return filter_obstacle_length_; }
-    double max_lookahead_distance() const { return max_lookahead_distance_; }
-    const VehicleParams &vehicle_params() const { return vehicle_params_; }
+    double filter_obstacle_length() const;
+    double max_lookahead_distance() const;
+    const VehicleParams &vehicle_params() const;
     ////////// reference smoother params /////////////////
-    double reference_smoother_distance_weight() const {
-      return reference_smoother_distance_weight_;
-    }
-    double reference_smoother_curvature_weight() const {
-      return reference_smoother_curvature_weight_;
-    }
-    double reference_smoother_deviation_weight() const {
-      return reference_smoother_deviation_weight_;
-    }
-    double reference_smoother_heading_weight() const {
-      return reference_smoother_heading_weight_;
-    }
-    double reference_smoother_max_curvature() const {
-      return reference_smoother_max_curvature_;
-    }
+    double reference_smoother_distance_weight() const;
+    double reference_smoother_curvature_weight() const;
+    double reference_smoother_deviation_weight() const;
+    double reference_smoother_heading_weight() const;
+    double reference_smoother_max_curvature() const;
+    double max_acc() const;
+    double max_velocity() const;
 
-    int spline_order() const { return spline_order_; }
-    double max_lookahead_time() const {return max_lookahead_time_;}
-    double safety_buffer() const {return safety_buffer_;}
-    double reference_max_forward_distance() const {return reference_max_forward_distance_;}
-    double reference_max_backward_distance() const {return reference_max_backward_distance_;}
+    int spline_order() const;
+    double max_lookahead_time() const;
+    double safety_buffer() const;
+    double reference_max_forward_distance() const;
+    double reference_max_backward_distance() const;
 private:
     VehicleParams vehicle_params_; // ego_vehicle's params
     double obstacle_trajectory_time_; // the trajectory total time of obstacles
@@ -59,6 +51,8 @@ private:
     int spline_order_ = 3;
     double reference_max_forward_distance_ = 400.0;
     double reference_max_backward_distance_ = 10.0;
+    double max_acc_ = 1.0;
+    double max_velocity_ = 10.0;
 
 private:
     PlanningConfig() = default;

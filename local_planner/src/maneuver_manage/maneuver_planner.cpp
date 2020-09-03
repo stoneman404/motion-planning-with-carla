@@ -20,33 +20,31 @@ void ManeuverPlanner::InitPlanner() {
   this->route_service_client_ = nh_.serviceClient<planning_srvs::Route>(
       service::kRouteServiceName);
   current_lane_id_ = VehicleState::Instance().lane_id();
-  SetState(KeepLaneState::Instance());
+  current_state_.reset(&KeepLaneState::Instance());
+  ROS_ASSERT(current_state_->Enter(this));
 }
 
-void ManeuverPlanner::SetState(State &new_state) {
-  this->current_state_->Exit(this);
-  this->current_state_.reset(&new_state);
-  current_state_->Enter(this);
-
-}
-
-bool ManeuverPlanner::Process() {
+bool ManeuverPlanner::Process(const planning_msgs::TrajectoryPoint &init_trajectory_point) {
   if (current_state_ == nullptr) {
     ROS_FATAL("[ManeuverPlanner::Process], the current state is nullptr");
-//    SetState(EmergencyStopState::Instance());
     return false;
   } else {
     if (!current_state_->Execute(this)) {
       ROS_FATAL("[ManeuverPlanner::Process]");
     }
+    std::unique_ptr<State> state(current_state_->NextState(this));
+    if (state != nullptr){
+      current_state_->Exit(this);
+      current_state_ = std::move(state);
+      current_state_->Enter(this);
+    }
   }
-
   return true;
 }
 
 bool ManeuverPlanner::ReRoute(const geometry_msgs::Pose &start,
                               const geometry_msgs::Pose &destination,
-                              planning_srvs::RouteResponse &response)  {
+                              planning_srvs::RouteResponse &response) {
   planning_srvs::Route srv;
   srv.request.start_pose = start;
   srv.request.end_pose = destination;
@@ -61,7 +59,7 @@ bool ManeuverPlanner::ReRoute(const geometry_msgs::Pose &start,
   }
 }
 
-bool ManeuverPlanner::UpdateReferenceLine(std::list<std::shared_ptr<ReferenceLine>>* const reference_lines_list) const {
+bool ManeuverPlanner::UpdateReferenceLine(std::list<std::shared_ptr<ReferenceLine>> *const reference_lines_list) const {
   const auto vehicle_pose = VehicleState::Instance().pose();
   const auto lane_id = VehicleState::Instance().lane_id();
   const double max_forward_distance = PlanningConfig::Instance().reference_max_forward_distance();
@@ -76,11 +74,11 @@ bool ManeuverPlanner::UpdateReferenceLine(std::list<std::shared_ptr<ReferenceLin
       return false;
     }
     const auto sample_way_points = GetWayPointsFromStartToEndIndex(start_index, end_index, route.route);
-    if (sample_way_points.empty()){
+    if (sample_way_points.empty()) {
       return false;
     }
     auto reference_line = std::make_shared<ReferenceLine>(sample_way_points);
-    if (!reference_line->Smooth()){
+    if (!reference_line->Smooth()) {
       ROS_WARN("[ManeuverPlanner::UpdateReferenceLine], Failed to smooth reference line");
     }
     reference_lines_list->push_back(reference_line);
@@ -158,6 +156,16 @@ std::vector<planning_msgs::WayPoint> ManeuverPlanner::GetWayPointsFromStartToEnd
     sampled_way_points.push_back(way_points[i]);
   }
   return sampled_way_points;
+
+}
+
+const planning_msgs::TrajectoryPoint &ManeuverPlanner::init_trajectory_point() const {
+  return init_trajectory_point_;
+}
+
+ManeuverPlanner::~ManeuverPlanner() {
+  current_state_->Exit(this);
+  current_state_.reset(nullptr);
 
 }
 

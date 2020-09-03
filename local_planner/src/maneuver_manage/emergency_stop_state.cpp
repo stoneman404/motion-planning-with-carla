@@ -17,5 +17,10 @@ State &EmergencyStopState::Instance() {
   static EmergencyStopState instance;
   return instance;
 }
+std::string EmergencyStopState::Name() const {return "EmergencyStopState";}
+
+State *EmergencyStopState::NextState(ManeuverPlanner *maneuver_planner) const {
+  return nullptr;
+}
 
 }

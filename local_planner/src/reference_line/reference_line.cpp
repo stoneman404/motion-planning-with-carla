@@ -181,7 +181,7 @@ double ReferenceLine::Length() const {
 bool ReferenceLine::IsOnLane(const SLBoundary &sl_boundary) const {
 
   // if the obstacle is out of range
-  if (sl_boundary.end_s < 0 || sl_boundary.start_l > Length()) {
+  if (sl_boundary.end_s < 0 || sl_boundary.start_s > Length()) {
     return false;
   }
   double middle_s = 0.5 * (sl_boundary.start_s + sl_boundary.end_s);
@@ -278,12 +278,37 @@ bool ReferenceLine::XYToSL(const Eigen::Vector2d &xy, SLPoint *sl_point) const {
   Eigen::Vector2d vec;
   vec << xy(0) - nearest_x, xy(1) - nearest_y;
   double prod = heading(0) * vec(1) - heading(1) * vec(0);
-  sl_point->l = prod < 0 ?
-                -1.0 * std::hypot(xy(0) - nearest_x, xy(1) - nearest_y)
-                         : std::hypot(xy(0) - nearest_x,
-                                      xy(1) - nearest_y);
+  double proj = heading(0) * vec(0) + heading(1) * vec(1);
+  if (nearest_s > 1e-3 || nearest_s < ref_line_spline_->ArcLength() - 1e-3){
+    sl_point->l = prod < 0 ?
+                  -1.0 * std::hypot(xy(0) - nearest_x, xy(1) - nearest_y)
+                           : std::hypot(xy(0) - nearest_x,
+                                        xy(1) - nearest_y);
 
-  sl_point->s = nearest_s;
+    sl_point->s = nearest_s;
+  }else if (nearest_s < 1e-3){
+    sl_point->s = std::min(proj, nearest_s);
+    if (proj < 0.0){
+      sl_point->l = prod;
+    }else{
+      sl_point->l = prod < 0 ?
+                    -1.0 * std::hypot(xy(0) - nearest_x, xy(1) - nearest_y)
+                             : std::hypot(xy(0) - nearest_x,
+                                          xy(1) - nearest_y);
+    }
+  }else{
+    sl_point->s = nearest_s + std::max(0.0, proj);
+    if (proj > 0){
+      sl_point->l = prod;
+    }else{
+      sl_point->l = prod < 0 ?
+                    -1.0 * std::hypot(xy(0) - nearest_x, xy(1) - nearest_y)
+                             : std::hypot(xy(0) - nearest_x,
+                                          xy(1) - nearest_y);
+    }
+  }
+  return true;
+
 
 }
 
@@ -374,6 +399,17 @@ bool ReferenceLine::Smooth() {
   }
   ref_line_spline_.reset(new Spline2d(xs, ys, 3));
   return true;
+}
+
+double ReferenceLine::GetDrivingWidth(const SLBoundary &sl_boundary) const {
+  double lane_left_width = 0.0;
+  double lane_right_width = 0.0;
+  GetLaneWidth(sl_boundary.start_s, &lane_left_width, &lane_right_width);
+
+  double driving_width = std::max(lane_left_width - sl_boundary.end_l,
+                                  lane_right_width + sl_boundary.start_l);
+  driving_width = std::min(lane_left_width + lane_right_width, driving_width);
+  return driving_width;
 }
 
 }

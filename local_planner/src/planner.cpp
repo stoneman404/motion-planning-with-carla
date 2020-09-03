@@ -24,6 +24,9 @@ void Planner::RunOnce() {
     PlanningConfig::Instance().UpdateVehicleParams(ego_object_, ego_vehicle_info_);
     has_init_vehicle_params_ = true;
   }
+  if ( !UpdateVehicleStatus() || !UpdateObstacleStatus() || !UpdateTrafficLights()) {
+    return;
+  }
 }
 
 void Planner::InitPublisher() {
@@ -47,6 +50,10 @@ void Planner::InitSubscriber() {
         this->traffic_light_status_list_ = *traffic_light_status_list;
         ROS_INFO("the traffic ligth status list size: %zu",
                  traffic_light_status_list_.traffic_lights.size());
+      });
+  this->traffic_lights_info_subscriber_ = nh_.subscribe<carla_msgs::CarlaTrafficLightInfoList>(
+      topic::kTrafficLightsInfoName, 10, [this](const carla_msgs::CarlaTrafficLightInfoList::ConstPtr traffic_lights_info_list){
+       this->traffic_lights_info_list_ = *traffic_lights_info_list;
       });
 
   this->ego_vehicle_info_subscriber_ = nh_.subscribe<carla_msgs::CarlaEgoVehicleInfo>(
@@ -130,28 +137,25 @@ bool Planner::Plan(const carla_msgs::CarlaEgoVehicleInfo &ego_vehicle_info,
     ROS_FATAL("[Planner::Plan], the trajectory ptr is NULL");
     return false;
   }
-
 }
 
 bool Planner::UpdateObstacleStatus() {
   /// update the obstacle at each run
-  ObstacleFilter::Instance().UpdateObstacles(objects_map_, ego_odometry_);
-  auto &obstacles = ObstacleFilter::Instance().multable_obstacles();
   int failed_count = 0;
-
-  for (auto &obstacle : obstacles) {
+  std::list<std::shared_ptr<Obstacle>> obstacles;
+  for (auto &item : objects_map_) {
     carla_waypoint_types::CarlaWaypoint way_point;
-    if (!this->GetWayPoint(obstacle->Id(), way_point)) {
-      ROS_WARN("the obstacle[id: %i] failed to get way_point.", obstacle->Id());
+    if (!this->GetWayPoint(item.first, way_point)) {
       failed_count++;
       continue;
     }
-
+    auto obstacle = std::make_shared<Obstacle>(item.second);
+    obstacle->set_lane_id(way_point.lane_id);
     obstacle->set_road_id(way_point.road_id);
     obstacle->set_section_id(way_point.section_id);
-    obstacle->set_lane_id(way_point.lane_id);
+    obstacles.push_back(obstacle);
   }
-
+  ObstacleFilter::Instance().UpdateObstacles(obstacles);
   // if all obstacles are failed to get way_point, something going wrong
   return failed_count < ObstacleFilter::Instance().ObstaclesSize();
 }
@@ -169,6 +173,7 @@ bool Planner::UpdateVehicleStatus() {
   VehicleState::Instance().set_lane_id(carla_way_point.lane_id);
   VehicleState::Instance().set_section_id(carla_way_point.section_id);
   VehicleState::Instance().set_road_id(carla_way_point.road_id);
+  VehicleState::Instance().set_is_junction(carla_way_point.is_junction);
 }
 
 bool Planner::GetWayPoint(const int &object_id,
@@ -186,6 +191,24 @@ bool Planner::GetWayPoint(const int &object_id,
   }
 
   carla_waypoint = srv.response.waypoint;
+  return true;
+}
+bool Planner::UpdateTrafficLights() {
+  std::vector<std::pair<carla_msgs::CarlaTrafficLightStatus, carla_waypoint_types::CarlaWaypoint>> traffic_lights;
+  for (const auto &traffic_light : traffic_light_status_list_.traffic_lights) {
+    std::pair<carla_msgs::CarlaTrafficLightStatus, carla_waypoint_types::CarlaWaypoint> traffic_light_pair;
+
+    carla_waypoint_types::CarlaWaypoint waypoint;
+    if (!this->GetWayPoint(traffic_light.id, waypoint)) {
+      ROS_ERROR("[Planner::UpdateTrafficLights], cannot get the waypoint of traffic light id: %i", traffic_light.id);
+      return false;
+    }
+    traffic_light_pair.first = traffic_light;
+    traffic_light_pair.second = waypoint;
+    traffic_lights.push_back(traffic_light_pair);
+
+  }
+  PlanningContext::Instance().UpdateTrafficLights(traffic_lights);
   return true;
 }
 

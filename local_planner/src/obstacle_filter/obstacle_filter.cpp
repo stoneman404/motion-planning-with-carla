@@ -5,35 +5,30 @@
 #include <nav_msgs/Odometry.h>
 
 namespace planning{
+
 ObstacleFilter& ObstacleFilter::Instance() {
   static ObstacleFilter instance = ObstacleFilter();
   return instance;
 }
 
-void ObstacleFilter::UpdateObstacles(
-    const std::unordered_map<int, derived_object_msgs::Object> &objects,
-    const nav_msgs::Odometry& ego_vehicle) {
-  obstacles_ = decltype(obstacles_)();
-  if (objects.empty()){
-    ROS_WARN("[ObstacleFilter::UpdateObstacles], the objects is empty");
-    return;
-  }
-  double filter_radius = PlanningConfig::Instance().filter_obstacle_length();
-  for (const auto& object : objects){
-    double dx = object.second.pose.position.x - ego_vehicle.pose.pose.position.x;
-    double dy = object.second.pose.position.y - ego_vehicle.pose.pose.position.y;
-    double distance = std::hypot(dx, dy);
-    if (distance > filter_radius){
-      ROS_INFO("[ObstacleFilter::UpdateObstacles], "
-               "the obstacle is far away from ego vehicle, ignore");
+void ObstacleFilter::AddObstacles(const std::shared_ptr<Obstacle> &obstacle_ptr) {
+  obstacles_.emplace(obstacle_ptr->Id(), obstacle_ptr);
+}
+
+void ObstacleFilter::UpdateObstacles(const std::list<std::shared_ptr<Obstacle>> &obstacles) {
+  obstacles_.clear();
+  for (const auto& obstacle : obstacles){
+    if (obstacle->road_id() != VehicleState::Instance().road_id()){
       continue;
     }
-    obstacles_.emplace_back(new Obstacle(object.second));
-
+//    double dx = obstacle->Object().pose.position.x - VehicleState::Instance().pose().position.x;
+//    double dy = obstacle->Object().pose.position.y - VehicleState::Instance().pose().position.y;
+//    double distance = std::hypot(dx, dy);
+////    if (distance > filter_distance){
+////      continue;
+////    }
+    obstacles_.emplace(obstacle->Id(), obstacle);
   }
-  ROS_INFO("[ObstacleFilter::UpdateObstacles], "
-           "the obstacles's size after updated, %lu",
-           obstacles_.size());
-
 }
+
 }

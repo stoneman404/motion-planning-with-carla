@@ -13,6 +13,7 @@ const std::string kEgoVehicleOdometryName = "/carla/ego_vehicle/odometry";
 const std::string kVisualizedTrajectoryName = "/visualized_trajectory";
 const std::string kInitialPoseName = "/initialpose";
 const std::string kGoalPoseName = "/move_base_simple/goal";
+const std::string kTrafficLightsInfoName = "/carla/"
 ;
 }
 

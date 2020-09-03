@@ -9,7 +9,8 @@ public:
     void Exit(ManeuverPlanner *maneuver_planner) override;
     bool Execute(ManeuverPlanner *maneuver_planner) override;
     static State &Instance();
-    std::string Name() const override {return "EmergencyStopState";}
+    std::string Name() const override;
+    State* NextState(ManeuverPlanner* maneuver_planner) const override ;
 private:
     EmergencyStopState() = default;
     EmergencyStopState(const EmergencyStopState &other);

@@ -165,6 +165,8 @@ public:
      */
     bool IsOnLane(const SLBoundary &sl_boundary) const;
 
+    double GetDrivingWidth(const SLBoundary &sl_boudary) const;
+
     /**
      * @brief : build object sl boundary
      * @param box : the object's bounding box

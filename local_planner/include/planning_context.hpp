@@ -5,9 +5,9 @@
 #include <list>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
+#include <carla_msgs/CarlaTrafficLightStatusList.h>
 #include "planning_context.hpp"
 #include "vehicle_state/vehicle_state.hpp"
-
 
 namespace planning {
 
@@ -23,26 +23,95 @@ class PlanningContext {
 public:
 
     static PlanningContext &Instance();
-    std::list<planning_srvs::RouteResponse>& mutable_route_infos() {return route_infos_;}
-//    void UpdateRouteInfo(const VehicleState &vehicle_state,
-//                         const planning_srvs::RouteResponse &route_response);
+    /**
+     *
+     * @return
+     */
+    std::list<std::shared_ptr<ReferenceLine>> &mutable_reference_lines();
+    /**
+     *
+     * @return
+     */
+    std::list<planning_srvs::RouteResponse> &mutable_route_infos();
+
+    /**
+     *
+     * @param lane_id
+     * @param has_stop_point
+     * @param stop_s
+     * @param cruise_speed
+     */
     void UpdateLocalGoal(int lane_id = 0, bool has_stop_point = false,
                          double stop_s = 0, double cruise_speed = 0);
+    /**
+     *
+     * @param local_goal
+     */
     void UpdateLocalGoal(const LocalGoal &local_goal);
-    void UpdateGlobalGoalPose(const geometry_msgs::PoseStamped& goal_pose) ;
-    void UpdateGlobalInitPose(const geometry_msgs::PoseWithCovarianceStamped& init_pose);
+
+    /**
+     *
+     * @param goal_pose
+     */
+    void UpdateGlobalGoalPose(const geometry_msgs::PoseStamped &goal_pose);
+    /**
+     *
+     * @param init_pose
+     */
+    void UpdateGlobalInitPose(const geometry_msgs::PoseWithCovarianceStamped &init_pose);
+
+    /**
+     *
+     * @param traffic_lights
+     */
+    void UpdateTrafficLights(
+        const std::vector<std::pair<carla_msgs::CarlaTrafficLightStatus,
+                                    carla_waypoint_types::CarlaWaypoint>> &traffic_lights);
     // getter
-    const geometry_msgs::PoseWithCovarianceStamped& global_init_pose() const ;
-    const geometry_msgs::PoseStamped& global_goal_pose() const;
+    /**
+     *
+     * @return
+     */
+    const geometry_msgs::PoseWithCovarianceStamped &global_init_pose() const;
+
+    /**
+     *
+     * @return
+     */
+    const geometry_msgs::PoseStamped &global_goal_pose() const;
+
+    /**
+     *
+     * @return
+     */
     const std::list<planning_srvs::RouteResponse> &route_infos() const;
+
+    /**
+     *
+     * @return
+     */
     const std::list<std::shared_ptr<ReferenceLine>> &reference_lines() const;
+
+    /**
+     *
+     * @return
+     */
     const LocalGoal &local_goal() const;
 
+    /**
+     *
+     * @return
+     */
+    const std::vector<std::pair<carla_msgs::CarlaTrafficLightStatus,
+                                carla_waypoint_types::CarlaWaypoint>> &TrafficLights() const;
 
 private:
 
-    std::list<planning_srvs::RouteResponse> route_infos_{};
+    std::vector<
+        std::pair<carla_msgs::CarlaTrafficLightStatus,
+                  carla_waypoint_types::CarlaWaypoint>> traffic_lights_;
 
+    std::list<planning_srvs::RouteResponse> route_infos_{};
     LocalGoal local_goal_;
     // the reference line info
     std::list<std::shared_ptr<ReferenceLine>> reference_lines_{};
@@ -54,6 +123,7 @@ private:
     PlanningContext(const PlanningContext &other);
     PlanningContext &operator=(const PlanningContext &other);
     ~PlanningContext() = default;
+
 };
 
 }

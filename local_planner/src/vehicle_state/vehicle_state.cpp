@@ -52,7 +52,7 @@ bool VehicleState::Update(const carla_msgs::CarlaEgoVehicleStatus &ego_vehicle_s
 geometry_msgs::Pose VehicleState::PredictNextPose(double t) {
   double v = linear_vel_;
   tf::Vector3 vec_distance(0.0, 0.0, 0.0);
-  if (std::fabs(angular_vel_) < 0.0001) {
+  if (std::fabs(angular_vel_) < 0.01) {
     vec_distance[0] = v * t;
     vec_distance[1] = 0.0;
   } else {
@@ -71,5 +71,18 @@ geometry_msgs::Pose VehicleState::PredictNextPose(double t) {
   future_pose.orientation = tf::createQuaternionMsgFromYaw(future_yaw);
   return future_pose;
 }
+
+const geometry_msgs::Vector3 VehicleState::center_of_mass() const {return center_of_mass_;}
+double VehicleState::steer_percentage() const {return steer_percentage_;}
+double VehicleState::centripential_acc() const { return centripental_acc_;}
+void VehicleState::set_center_of_mass(const geometry_msgs::Vector3 &center_of_mass) {this->center_of_mass_ = center_of_mass;}
+bool VehicleState::is_junction() const {return is_junction_;}
+void VehicleState::set_is_junction(bool is_junction) {this->is_junction_ = is_junction;}
+const planning_msgs::WayPoint &VehicleState::ego_waypoint() const {return ego_waypoint_;}
+const int &VehicleState::lane_id() const {return lane_id_;}
+void VehicleState::set_lane_id(int lane_id) {this->lane_id_ = lane_id;}
+void VehicleState::set_waypoint(const planning_msgs::WayPoint &way_point) {this->ego_waypoint_ = way_point;}
+void VehicleState::set_road_id(int road_id) {this->road_id_ = road_id;}
+void VehicleState::set_section_id(int section_id) {this->section_id_ = section_id;}
 
 }
