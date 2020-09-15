@@ -9,6 +9,7 @@ TrafficLight::TrafficLight(
     : trigger_volume_(traffic_light_info.trigger_volume),
       traffic_light_status_(traffic_light_status),
       transform_(traffic_light_info.transform),
+      waypoint_(carla_waypoint),
       id_(traffic_light_info.id),
       lane_id_(carla_waypoint.lane_id),
       section_id_(carla_waypoint.section_id),
@@ -33,6 +34,11 @@ void TrafficLight::UpdateTrafficLightStatus(const carla_msgs::CarlaTrafficLightS
   lane_id_ = carla_waypoint.lane_id;
   section_id_ = carla_waypoint.section_id;
   road_id_ = carla_waypoint.road_id;
+  waypoint_ = carla_waypoint;
 }
+
+const geometry_msgs::Pose &TrafficLight::Transform() const {return transform_;}
+
+const carla_waypoint_types::CarlaWaypoint &TrafficLight::WayPoint() const {return waypoint_;}
 
 }

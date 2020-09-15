@@ -114,26 +114,8 @@ void Planner::InitServiceClient() {
       service::kGetEgoWaypontServiceName);
   this->get_actor_waypoint_client_ = nh_.serviceClient<carla_waypoint_types::GetActorWaypoint>(
       service::kGetActorWaypointServiceName);
-//  this->route_service_client_ = nh_.serviceClient<planning_srvs::Route>(service::kRouteServiceName);
 
 }
-//
-//bool Planner::ReRoute(const geometry_msgs::Pose &start,
-//                      const geometry_msgs::Pose &destination,
-//                      planning_srvs::RouteResponse &response) {
-//  planning_srvs::Route srv;
-//  srv.request.start_pose = start;
-//  srv.request.end_pose = destination;
-//  if (!route_service_client_.call(srv)) {
-//    ROS_FATAL("[Planner::Reroute], Failed to ReRoute!");
-//    return false;
-//  } else {
-//    response = srv.response;
-//    ROS_INFO("[Planner::Reroute], Reroute SUCCESSFUL,"
-//             " the route size is %zu", response.route.size());
-//    return true;
-//  }
-//}
 
 // main loop function
 bool Planner::Plan(const carla_msgs::CarlaEgoVehicleInfo &ego_vehicle_info,

@@ -1,4 +1,4 @@
-#include "maneuver_manage/emergency_stop_state.hpp"
+#include "maneuver_planner/emergency_stop_state.hpp"
 namespace planning {
 
 bool EmergencyStopState::Enter(ManeuverPlanner *maneuver_planner) {
@@ -17,7 +17,7 @@ State &EmergencyStopState::Instance() {
   static EmergencyStopState instance;
   return instance;
 }
-std::string EmergencyStopState::Name() const {return "EmergencyStopState";}
+std::string EmergencyStopState::Name() const { return "EmergencyStopState"; }
 
 State *EmergencyStopState::NextState(ManeuverPlanner *maneuver_planner) const {
   return nullptr;

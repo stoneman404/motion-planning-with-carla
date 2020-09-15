@@ -24,11 +24,14 @@ class TrafficLight {
   const int& LaneId() const;
   const int& SectionId() const;
   const int& RoadId() const;
+  const geometry_msgs::Pose& Transform() const;
+  const carla_waypoint_types::CarlaWaypoint& WayPoint() const;
 
  private:
   carla_msgs::CarlaBoundingBox trigger_volume_;
   carla_msgs::CarlaTrafficLightStatus traffic_light_status_;
   geometry_msgs::Pose transform_;
+  carla_waypoint_types::CarlaWaypoint waypoint_;
   int id_{-1};
   int lane_id_{-1};
   int section_id_{-1};

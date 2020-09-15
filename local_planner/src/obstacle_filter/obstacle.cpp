@@ -125,15 +125,15 @@ planning_msgs::TrajectoryPoint Obstacle::GetPointAtTime(double relative_time) co
     point.relative_time = 0.0;
     return point;
   } else {
-    auto comp = [](const planning_msgs::TrajectoryPoint& p, const double& relative_time){
+    auto comp = [](const planning_msgs::TrajectoryPoint &p, const double &relative_time) {
       return p.relative_time < relative_time;
     };
     auto it_lower = std::lower_bound(trajectory_points.begin(),
-        trajectory_points.end(), relative_time, comp);
-    if (it_lower == trajectory_points.begin()){
+                                     trajectory_points.end(), relative_time, comp);
+    if (it_lower == trajectory_points.begin()) {
       return *trajectory_points.begin();
     }
-    if (it_lower == trajectory_points.end()){
+    if (it_lower == trajectory_points.end()) {
       return *trajectory_points.rbegin();
     }
     return InterpolateTrajectoryPoint(*(it_lower - 1), *it_lower, relative_time);

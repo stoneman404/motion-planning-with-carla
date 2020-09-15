@@ -140,7 +140,7 @@ catkin_package(
 include_directories(
         include/
         common/include/
-        /usr/include/include/
+        /usr/include/
         ${catkin_INCLUDE_DIRS}
         ${QPOASES_INCLUDE_DIRS}
         ${IPOPT_INCLUDE_DIRS}
@@ -168,12 +168,12 @@ set(planning_SRC
         common/src/quartic_polynomial.cpp
         common/src/polynomial.cpp
 
-        src/maneuver_manage/maneuver_planner.cpp
-        src/maneuver_manage/stop_at_sign.cpp
-        src/maneuver_manage/emergency_stop_state.cpp
-        src/maneuver_manage/keep_lane_state.cpp
-        src/maneuver_manage/change_lane_left_state.cpp
-        src/maneuver_manage/change_lane_right_state.cpp
+        src/maneuver_planner/maneuver_planner.cpp
+        src/maneuver_planner/stop_at_sign.cpp
+        src/maneuver_planner/emergency_stop_state.cpp
+        src/maneuver_planner/keep_lane_state.cpp
+        src/maneuver_planner/change_lane_left_state.cpp
+        src/maneuver_planner/change_lane_right_state.cpp
         src/planner/frenet_lattice_planner/frenet_lattice_planner.cpp
 
         src/vehicle_state/vehicle_state.cpp

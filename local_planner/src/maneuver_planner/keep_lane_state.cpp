@@ -1,10 +1,12 @@
-#include <maneuver_manage/emergency_stop_state.hpp>
+#include "maneuver_planner/emergency_stop_state.hpp"
+#include "maneuver_planner/keep_lane_state.hpp"
+
 #include <obstacle_filter/obstacle_filter.hpp>
 #include <reference_line/reference_line.hpp>
-#include "maneuver_manage/keep_lane_state.hpp"
 #include "planning_config.hpp"
 #include "planning_context.hpp"
 #include "planner/trajectory_planner.hpp"
+#include "traffic_lights/traffic_light_list.hpp"
 namespace planning {
 
 bool KeepLaneState::Enter(ManeuverPlanner *maneuver_planner) {
@@ -41,56 +43,6 @@ bool KeepLaneState::Execute(ManeuverPlanner *maneuver_planner) {
     ROS_ERROR("the ManeuverPlanner is nullptr");
     return false;
   }
-//  const double ego_heading = maneuver_planner->init_trajectory_point().path_point.theta;
-//  const double ego_x = maneuver_planner->init_trajectory_point().path_point.x;
-//  const double ego_y = maneuver_planner->init_trajectory_point().path_point.y;
-//  const double ego_vel = maneuver_planner->init_trajectory_point().vel;
-//  const double ego_acc = maneuver_planner->init_trajectory_point().acc;
-//  const double safety_buffer = PlanningConfig::Instance().safety_buffer();
-//  const double max_lookahead_time = PlanningConfig::Instance().max_lookahead_time();
-//  const double max_lookahed_distance = PlanningConfig::Instance().max_lookahead_distance();
-//  const double lookahed_distance = std::max(
-//      ego_vel * max_lookahead_time + safety_buffer, max_lookahed_distance);
-//  const auto obstacles = ObstacleFilter::Instance().Obstacles();
-//  auto ref_line = PlanningContext::Instance().reference_lines().back();
-//  const double ego_length = PlanningConfig::Instance().vehicle_params().length;
-//  const double ego_width = PlanningConfig::Instance().vehicle_params().width;
-//
-//  SLPoint sl_point;
-//  if (!ref_line->XYToSL({ego_x, ego_y}, &sl_point)) {
-//    return false;
-//  }
-//  bool hazard_by_object = false;
-//  bool is_red_light = false;
-//  std::list<std::shared_ptr<Obstacle>> obstacle_list;
-//  for (const auto &obstacle : obstacles) {
-//
-//    if (obstacle->road_id() != VehicleState::Instance().road_id()
-//        || obstacle->lane_id() != VehicleState::Instance().lane_id()) {
-//      continue;
-//    }
-//
-//    if (obstacle->IsStatic()) {
-//      Box2d bounding_box = obstacle->GetBoundingBox();
-//      SLBoundary sl_boundary;
-//
-//      if (!ref_line->GetSLBoundary(bounding_box, &sl_boundary)) {
-//        return false;
-//      }
-//
-//      if (!ref_line->IsOnLane(sl_boundary)) {
-//        continue;
-//      }
-//
-//      if (sl_boundary.end_s < sl_point.s - ego_length / 2.0
-//          || sl_boundary.start_s > sl_point.s + lookahed_distance) {
-//        continue;
-//      }
-//      double driving_width = ref_line->GetDrivingWidth(sl_boundary);
-//
-//    }
-//
-//  }
 }
 
 void KeepLaneState::Exit(ManeuverPlanner *maneuver_planner) {
@@ -123,28 +75,43 @@ std::vector<StateName> KeepLaneState::GetPosibileNextStates() const {
   possible_states.push_back(StateName::kStopAtSign);
   return possible_states;
 }
+
 bool KeepLaneState::CurrentLaneProhibitedByTrafficLight() const {
   bool prohibited = false;
-  double max_comfort_decel = PlanningConfig::Instance().max_acc() * 0.6;
+  double max_comfort_decel = PlanningConfig::Instance().max_acc() * 0.6; // todo: 0.6 should be parameter
   double comfort_stop_distance = std::pow(VehicleState::Instance().linear_vel(), 2) / max_comfort_decel;
 
   const int ego_lane_id = VehicleState::Instance().lane_id();
   const int ego_road_id = VehicleState::Instance().road_id();
-  for (const auto &traffic_light : PlanningContext::Instance().TrafficLights()) {
-    if (traffic_light.second.road_id != ego_road_id
-        || ego_lane_id != traffic_light.second.lane_id) {
+  const auto traffic_lights = TrafficLightList::Instance().TrafficLights();
+  SLPoint ego_sl;
+  reference_line_->XYToSL(VehicleState::Instance().pose().position.x,
+                          VehicleState::Instance().pose().position.y, &ego_sl);
+  int min_id = -1;
+  double min_dist = std::numeric_limits<double>::max();
+  // get nearest front traffic light in same lane
+  for (const auto &traffic_light : traffic_lights) {
+    if (traffic_light.second.RoadId() != ego_road_id) {
       continue;
     }
-    if (WithInDistanceAhead(traffic_light.second.pose.position.x,
-                             traffic_light.second.pose.position.y,
-                             VehicleState::Instance().heading(),
-                             VehicleState::Instance().pose().position.x,
-                             VehicleState::Instance().pose().position.y,
-                             comfort_stop_distance)){
-      prohibited = true;
-      break;
+    if (traffic_light.second.LaneId() != ego_lane_id) {
+      continue;
+    }
+    SLPoint sl_point;
+    reference_line_->XYToSL(traffic_light.second.WayPoint().pose.position.x,
+                            traffic_light.second.WayPoint().pose.position.y,
+                            &sl_point);
+    if (sl_point.s < ego_sl.s) {
+      continue;
+    }
+    if (std::fabs(sl_point.s - ego_sl.s) < min_dist) {
+      min_dist = std::fabs(sl_point.s - ego_sl.s);
+      min_id = traffic_light.first;
     }
   }
+  const auto traffic_state = traffic_lights.at(min_id).TrafficLightStatus().state;
+  const auto trigger_volume = traffic_lights.at(min_id).TrafficLightBoundingBox();
+
   return prohibited;
 }
 
@@ -210,7 +177,7 @@ bool KeepLaneState::WithInDistanceAhead(double target_x,
                                         double current_x,
                                         double current_y,
                                         double heading,
-                                        double max_distance) const {
+                                        double max_distance) {
   Eigen::Vector2d target_vector;
   target_vector << target_x - current_x, target_y - current_y;
   double norm_target = target_vector.norm();

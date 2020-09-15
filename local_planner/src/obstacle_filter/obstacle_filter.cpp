@@ -3,9 +3,9 @@
 #include <memory>
 #include <nav_msgs/Odometry.h>
 
-namespace planning{
+namespace planning {
 
-ObstacleFilter& ObstacleFilter::Instance() {
+ObstacleFilter &ObstacleFilter::Instance() {
   static ObstacleFilter instance = ObstacleFilter();
   return instance;
 }
@@ -16,8 +16,8 @@ void ObstacleFilter::AddObstacle(const std::shared_ptr<Obstacle> &obstacle_ptr) 
 
 void ObstacleFilter::UpdateObstacles(const std::list<std::shared_ptr<Obstacle>> &obstacles) {
   obstacles_.clear();
-  for (const auto& obstacle : obstacles){
-    if (obstacle->road_id() != VehicleState::Instance().road_id()){
+  for (const auto &obstacle : obstacles) {
+    if (obstacle->road_id() != VehicleState::Instance().road_id()) {
       continue;
     }
     obstacles_.emplace(obstacle->Id(), obstacle);

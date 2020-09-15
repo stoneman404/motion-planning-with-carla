@@ -74,14 +74,14 @@ void ReferenceLineSmoothIpoptInterface::operator()(
     CppAD::AD<double> dxy_ip1_norm = CppAD::sqrt(dx_ip1 * dx_ip1 + dy_ip1 * dy_ip1) + 0.01;
     CppAD::AD<double> d_theta_i = CppAD::acos(dxy_i_dot_dxy_ip1 / (dxy_i_norm * dxy_ip1_norm)) + 0.01;
     fg[i + 1] = d_theta_i / dxy_i_norm;
-      fg[i + 1] = (((x[findex] + x[lindex]) - 2.0 * x[mindex]) *
-          ((x[findex] + x[lindex]) - 2.0 * x[mindex]) +
-          ((x[findex + 1] + x[lindex + 1]) - 2.0 * x[mindex + 1]) *
-              ((x[findex + 1] + x[lindex + 1]) - 2.0 * x[mindex + 1]));
+    fg[i + 1] = (((x[findex] + x[lindex]) - 2.0 * x[mindex]) *
+        ((x[findex] + x[lindex]) - 2.0 * x[mindex]) +
+        ((x[findex + 1] + x[lindex + 1]) - 2.0 * x[mindex + 1]) *
+            ((x[findex + 1] + x[lindex + 1]) - 2.0 * x[mindex + 1]));
   }
 }
 
-ReferenceLineSmoothIpoptInterface::ReferenceLineSmoothIpoptInterface(const std::vector<ReferencePoint>& ref_points) {
+ReferenceLineSmoothIpoptInterface::ReferenceLineSmoothIpoptInterface(const std::vector<ReferencePoint> &ref_points) {
   assert(ref_points.size() >= 3);
   ref_points_ = ref_points;
   number_of_points_ = ref_points.size();
@@ -98,7 +98,6 @@ ReferenceLineSmoothIpoptInterface::ReferenceLineSmoothIpoptInterface(const std::
   std::cout << "heading_weight_ : " << heading_weight_ << std::endl;
   std::cout << "length_weight_ : " << length_weight_ << std::endl;
   std::cout << "ref_deviation_weight_ : " << ref_deviation_weight_ << std::endl;
-
 
 }
 }

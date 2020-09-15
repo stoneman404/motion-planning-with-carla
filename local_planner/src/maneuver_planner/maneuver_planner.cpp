@@ -1,12 +1,12 @@
 #include <planning_srvs/Route.h>
 #include <reference_line/reference_line.hpp>
-#include "maneuver_manage/maneuver_planner.hpp"
-#include "maneuver_manage/state.hpp"
-#include "maneuver_manage/keep_lane_state.hpp"
-#include "maneuver_manage/change_lane_left_state.hpp"
-#include "maneuver_manage/change_lane_right_state.hpp"
-#include "maneuver_manage/stop_at_sign.hpp"
-#include "maneuver_manage/emergency_stop_state.hpp"
+#include "maneuver_planner/maneuver_planner.hpp"
+#include "maneuver_planner/state.hpp"
+#include "maneuver_planner/keep_lane_state.hpp"
+#include "maneuver_planner/change_lane_left_state.hpp"
+#include "maneuver_planner/change_lane_right_state.hpp"
+#include "maneuver_planner/stop_at_sign.hpp"
+#include "maneuver_planner/emergency_stop_state.hpp"
 #include "string_name.hpp"
 #include "planning_context.hpp"
 #include "planning_config.hpp"
@@ -33,7 +33,7 @@ bool ManeuverPlanner::Process(const planning_msgs::TrajectoryPoint &init_traject
       ROS_FATAL("[ManeuverPlanner::Process]");
     }
     std::unique_ptr<State> state(current_state_->NextState(this));
-    if (state != nullptr){
+    if (state != nullptr) {
       current_state_->Exit(this);
       current_state_ = std::move(state);
       current_state_->Enter(this);

@@ -1,4 +1,4 @@
-#include "maneuver_manage/change_lane_right_state.hpp"
+#include "maneuver_planner/change_lane_right_state.hpp"
 namespace planning {
 
 bool ChangeLaneRightState::Enter(ManeuverPlanner *manuever_planner) {
@@ -14,7 +14,7 @@ State &ChangeLaneRightState::Instance() {
   static ChangeLaneRightState instance;
   return instance;
 }
-std::string ChangeLaneRightState::Name() const {return "ChangeLaneRightState";}
+std::string ChangeLaneRightState::Name() const { return "ChangeLaneRightState"; }
 State *ChangeLaneRightState::NextState(ManeuverPlanner *maneuver_planner) const {
   return nullptr;
 }

@@ -14,29 +14,25 @@
 #include <vehicle_state/vehicle_state.hpp>
 #include "obstacle.hpp"
 
-
-namespace planning{
+namespace planning {
 // we only process walkers and vehicles
-class ObstacleFilter{
-public:
-    static ObstacleFilter& Instance();
-    ObstacleFilter(const ObstacleFilter& other) = default;
-    void UpdateObstacles(const std::list<std::shared_ptr<Obstacle>>& objects);
-    void AddObstacle(const std::shared_ptr<Obstacle>& obstacle_ptr);
-    size_t ObstaclesSize() const {return obstacles_.size();}
-    const std::unordered_map<int, std::shared_ptr<Obstacle>>& Obstacles() const {return obstacles_;}
-    std::unordered_map<int, std::shared_ptr<Obstacle>>& multable_obstacles()  {return obstacles_;}
-private:
-    std::unordered_map<int, std::shared_ptr<Obstacle>> obstacles_;
-private:
-    ObstacleFilter() = default;
-    ~ObstacleFilter() = default;
+class ObstacleFilter {
+ public:
+  static ObstacleFilter &Instance();
+  ObstacleFilter(const ObstacleFilter &other) = default;
+  void UpdateObstacles(const std::list<std::shared_ptr<Obstacle>> &objects);
+  void AddObstacle(const std::shared_ptr<Obstacle> &obstacle_ptr);
+  size_t ObstaclesSize() const { return obstacles_.size(); }
+  const std::unordered_map<int, std::shared_ptr<Obstacle>> &Obstacles() const { return obstacles_; }
+  std::unordered_map<int, std::shared_ptr<Obstacle>> &multable_obstacles() { return obstacles_; }
+ private:
+  std::unordered_map<int, std::shared_ptr<Obstacle>> obstacles_;
+ private:
+  ObstacleFilter() = default;
+  ~ObstacleFilter() = default;
 
 };
 
-
 }
-
-
 
 #endif

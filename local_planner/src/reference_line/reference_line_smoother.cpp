@@ -52,7 +52,7 @@ bool ReferenceLineSmoother::SmoothReferenceLine(
 }
 
 bool ReferenceLineSmoother::SmoothReferenceLine(const std::vector<planning_msgs::WayPoint> &waypoints,
-                                                   std::vector<ReferencePoint> *const smoothed_ref_points) {
+                                                std::vector<ReferencePoint> *const smoothed_ref_points) {
   if (smoothed_ref_points == nullptr) {
     ROS_FATAL("[ReferenceLineSmoother::GetSmoothReferenceLine],"
               " the smoothed_ref_line is nullptr");
