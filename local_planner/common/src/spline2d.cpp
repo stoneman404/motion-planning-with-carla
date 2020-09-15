@@ -259,9 +259,9 @@ bool Spline2d::GetNearestPointOnSpline(double x, double y,
     auto xy1 = spline2d_(ts[0]);
     auto xy2 = spline2d_(ts[1]);
     auto xy3 = spline2d_(ts[2]);
-    double d1 = SquaredPointToPointDistance(xy1(0, 0), xy1(1, 0), x, y);
-    double d2 = SquaredPointToPointDistance(xy2(0, 0), xy2(1, 0), x, y);
-    double d3 = SquaredPointToPointDistance(xy3(0, 0), xy3(1, 0), x, y);
+    double d1 = PointToPointSquaredDistance(xy1(0, 0), xy1(1, 0), x, y);
+    double d2 = PointToPointSquaredDistance(xy2(0, 0), xy2(1, 0), x, y);
+    double d3 = PointToPointSquaredDistance(xy3(0, 0), xy3(1, 0), x, y);
 
     t_opt = 0.5 * (y23 * d1 + y31 * d2 + y12 * d3) /
         (t23 * d1 + t31 * d2 + t12 * d3);
@@ -321,7 +321,7 @@ bool Spline2d::GetNearestPointOnSpline(double x, double y,
   return true;
 }
 
-double Spline2d::SquaredPointToPointDistance(double x1, double y1,
+double Spline2d::PointToPointSquaredDistance(double x1, double y1,
                                              double x2, double y2) const {
   return (x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2);
 }
@@ -374,7 +374,7 @@ int Spline2d::CalcNearestIndex(double x, double y) const {
   double min_dist = std::numeric_limits<double>::max();
   int min_index = 0;
   for (size_t i = 0; i < xs_.size(); ++i){
-    const double sqrt_dist = SquaredPointToPointDistance(x, y, xs_[i], ys_[i]);
+    const double sqrt_dist = PointToPointSquaredDistance(x, y, xs_[i], ys_[i]);
     if (sqrt_dist < min_dist){
       min_dist = sqrt_dist;
       min_index = i;

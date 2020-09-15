@@ -130,6 +130,7 @@ double CoordinateTransformer::CalcTheta(double rtheta, double rkappa,
 
 double CoordinateTransformer::CalcKappa(double rkappa, double rdkappa,
                                         double l, double dl, double ddl) {
+
   double denominator = (dl * dl + (1 - l * rkappa) * (1 - l * rkappa));
   if (std::fabs(denominator) < 1e-8) {
     return 0.0;
@@ -155,13 +156,9 @@ double CoordinateTransformer::CalcLateralDerivative(double rtheta, double theta,
   return (1 - rkappa * l) * std::tan(theta - rtheta);
 
 }
-double CoordinateTransformer::CalcSecondOrderLateralDerivative(double rtheta,
-                                                               double theta,
-                                                               double rkappa,
-                                                               double kappa,
-                                                               double rdkappa,
-                                                               double dkappa,
-                                                               double l) {
+double CoordinateTransformer::CalcSecondOrderLateralDerivative(double rtheta, double theta,
+                                                               double rkappa, double kappa,
+                                                               double rdkappa, double l) {
   const double dl = CalcLateralDerivative(rtheta, theta, l, rkappa);
   const double theta_diff = theta - rtheta;
   const double cos_theta_diff = std::cos(theta_diff);

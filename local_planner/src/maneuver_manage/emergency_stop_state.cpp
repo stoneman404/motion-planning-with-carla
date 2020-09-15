@@ -22,5 +22,8 @@ std::string EmergencyStopState::Name() const {return "EmergencyStopState";}
 State *EmergencyStopState::NextState(ManeuverPlanner *maneuver_planner) const {
   return nullptr;
 }
+std::vector<StateName> EmergencyStopState::GetPosibileNextStates() const {
+  return std::vector<StateName>();
+}
 
 }

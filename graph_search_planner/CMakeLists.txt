@@ -1,20 +1,21 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(graph_search_planner)
 
- add_compile_options(-std=c++14)
+add_compile_options(-std=c++14)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
-    geometry_msgs
-    nav_msgs
-    roscpp
-    rospy
-    std_msgs
-    tf
-    )
-find_package(ompl REQUIRED)
+        geometry_msgs
+        nav_msgs
+        roscpp
+        rospy
+        std_msgs
+        tf
+#        ompl
+        )
+find_package(OMPL REQUIRED)
 find_package(Eigen3 REQUIRED)
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -105,10 +106,10 @@ find_package(Eigen3 REQUIRED)
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-    #  INCLUDE_DIRS include
-    #  LIBRARIES graph_search_planner
-    #  CATKIN_DEPENDS geometry_msgs nav_msgs roscpp rospy std_msgs
-    #  DEPENDS system_lib
+        #  INCLUDE_DIRS include
+        #  LIBRARIES graph_search_planner
+        #  CATKIN_DEPENDS geometry_msgs nav_msgs roscpp rospy std_msgs
+        #  DEPENDS system_lib
 )
 
 ###########
@@ -118,10 +119,10 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
-    include
-    ${catkin_INCLUDE_DIRS}
-    ${ompl_INCLUDE_DIRS}
-    ${Eigen3_INCLUDE_DIRS}
+        include
+        ${catkin_INCLUDE_DIRS}
+        ${OMPL_INCLUDE_DIRS}
+        ${Eigen3_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
@@ -138,11 +139,11 @@ include_directories(
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 add_executable(${PROJECT_NAME}_node
-    src/graph_search_utils.cpp
-    src/hybrid_a_star.cpp
-    src/hybrid_a_star_node.cpp
-    src/a_star.cpp
-    )
+        src/graph_search_utils.cpp
+        src/hybrid_a_star.cpp
+        src/hybrid_a_star_node.cpp
+        src/a_star.cpp
+        )
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -156,10 +157,10 @@ add_executable(${PROJECT_NAME}_node
 
 ## Specify libraries to link a library or executable target against
 target_link_libraries(${PROJECT_NAME}_node
-    ${catkin_LIBRARIES}
-    ompl
-    Eigen3::Eigen
-    )
+        ${catkin_LIBRARIES}
+        ompl
+        Eigen3::Eigen
+        )
 
 #############
 ## Install ##

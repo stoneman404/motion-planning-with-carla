@@ -116,7 +116,7 @@ protected:
 
     // 分割路径
     bool TrajectoryPartition(const HybridAStarResult *result,
-                             std::vector<HybridAStarResult> *parition_results);
+                             std::vector<HybridAStarResult> *parition_results) const;
 
     // anlytic expansion node
     bool AnalyticExpansion(std::shared_ptr<Node3d> current_node);
@@ -132,7 +132,7 @@ protected:
     double HoloWithObstacleHeuristic(std::shared_ptr<Node3d> next_node);
 
     // non holonmoic heuristic without obstacle
-    double NonHoloWithoutObstacleHeuristic(std::shared_ptr<Node3d> next_node);
+    double NonHoloWithoutObstacleHeuristic(std::shared_ptr<Node3d> next_node) const;
 
     // calculate edge cost
     double EdgeCost(std::shared_ptr<Node3d> current_node,

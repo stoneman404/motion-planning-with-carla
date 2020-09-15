@@ -3,10 +3,14 @@
 // this is a simpler version of behavior planner,
 
 #include <carla_msgs/CarlaEgoVehicleStatus.h>
+#include <planning_srvs/Route.h>
+#include <planning_msgs/TrajectoryPoint.h>
 #include <Eigen/Core>
 #include <vector>
 #include "state.hpp"
 #include "vehicle_state/vehicle_state.hpp"
+#include "reference_line/reference_line.hpp"
+
 
 namespace planning {
 class State;

@@ -10,6 +10,7 @@ public:
     std::string Name() const override;
     static State& Instance();
     State* NextState(ManeuverPlanner* maneuver_planner) const override ;
+    std::vector<StateName> GetPosibileNextStates() const override;
 private:
     ChangeLaneRightState() = default;
     ChangeLaneRightState(const ChangeLaneRightState& other);

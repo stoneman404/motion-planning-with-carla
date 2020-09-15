@@ -8,6 +8,8 @@
 #include <carla_msgs/CarlaTrafficLightStatusList.h>
 #include "planning_context.hpp"
 #include "vehicle_state/vehicle_state.hpp"
+#include <carla_waypoint_types/CarlaWaypoint.h>
+#include "reference_line/reference_line.hpp"
 
 namespace planning {
 

@@ -33,12 +33,15 @@ ReferenceLine::ReferenceLine(const planning_srvs::RouteResponse &route_response)
     }
     auto ref_point = ReferencePoint(way_point.pose.position.x, way_point.pose.position.y);
     ref_point.set_xy(way_point.pose.position.x, way_point.pose.position.y);
-    ref_point.set_heading(NormalizeAngle(std::atan2(heading(1), heading(0))));
+    ref_point.set_heading(
+        NormalizeAngle(std::atan2(heading(1), heading(0))));
     reference_points_.push_back(ref_point);
-    left_boundary_.emplace_back(ref_point.x() - left_width * std::sin(ref_point.heading()),
-                                ref_point.y() + left_width * std::cos(ref_point.heading()));
-    right_boundary_.emplace_back(ref_point.x() + right_width * std::sin(ref_point.heading()),
-                                 ref_point.y() + right_width * std::cos(ref_point.heading()));
+    left_boundary_.emplace_back(
+        ref_point.x() - left_width * std::sin(ref_point.heading()),
+        ref_point.y() + left_width * std::cos(ref_point.heading()));
+    right_boundary_.emplace_back(
+        ref_point.x() + right_width * std::sin(ref_point.heading()),
+        ref_point.y() + right_width * std::cos(ref_point.heading()));
   }
   ROS_ASSERT(reference_points_.size() == waypoints_size);
   ROS_ASSERT(left_boundary_.size() == waypoints_size);
@@ -75,10 +78,12 @@ ReferenceLine::ReferenceLine(const std::vector<planning_msgs::WayPoint> &waypoin
     ref_point.set_xy(way_point.pose.position.x, way_point.pose.position.y);
     ref_point.set_heading(NormalizeAngle(std::atan2(heading(1), heading(0))));
     reference_points_.push_back(ref_point);
-    left_boundary_.emplace_back(ref_point.x() - left_width * std::sin(ref_point.heading()),
-                                ref_point.y() + left_width * std::cos(ref_point.heading()));
-    right_boundary_.emplace_back(ref_point.x() + right_width * std::sin(ref_point.heading()),
-                                 ref_point.y() + right_width * std::cos(ref_point.heading()));
+    left_boundary_.emplace_back(
+        ref_point.x() - left_width * std::sin(ref_point.heading()),
+        ref_point.y() + left_width * std::cos(ref_point.heading()));
+    right_boundary_.emplace_back(
+        ref_point.x() + right_width * std::sin(ref_point.heading()),
+        ref_point.y() + right_width * std::cos(ref_point.heading()));
   }
 
   ROS_ASSERT(reference_points_.size() == waypoints.size());
@@ -90,8 +95,8 @@ ReferenceLine::ReferenceLine(const std::vector<planning_msgs::WayPoint> &waypoin
 
 }
 
-
-FrenetFramePoint ReferenceLine::GetFrenetFramePoint(const planning_msgs::PathPoint &path_point) const {
+FrenetFramePoint ReferenceLine::GetFrenetFramePoint(
+    const planning_msgs::PathPoint &path_point) const {
   if (reference_points_.empty()) {
     return FrenetFramePoint();
   }
@@ -160,11 +165,13 @@ bool ReferenceLine::GetLaneWidth(double s, double *const left_width, double *con
   auto matched_ref_point = GetReferencePoint(s);
   const double x = matched_ref_point.x();
   const double y = matched_ref_point.y();
-  double left_nearest_x, left_nearest_y, right_nearest_x, right_nearest_y;
-  if (!left_boundary_spline_->GetNearestPointOnSpline(x, y, &left_nearest_x, &left_nearest_y)){
+  double left_nearest_x, left_nearest_y, right_nearest_x, right_nearest_y, nearest_s;
+  if (!left_boundary_spline_->GetNearestPointOnSpline(
+      x, y, &left_nearest_x, &left_nearest_y, &nearest_s)) {
     return false;
   }
-  if (!right_boundary_spline_->GetNearestPointOnSpline(x, y, &right_nearest_x, &right_nearest_y)){
+  if (!right_boundary_spline_->GetNearestPointOnSpline(
+      x, y, &right_nearest_x, &right_nearest_y, &nearest_s)) {
     return false;
   }
 
@@ -279,28 +286,28 @@ bool ReferenceLine::XYToSL(const Eigen::Vector2d &xy, SLPoint *sl_point) const {
   vec << xy(0) - nearest_x, xy(1) - nearest_y;
   double prod = heading(0) * vec(1) - heading(1) * vec(0);
   double proj = heading(0) * vec(0) + heading(1) * vec(1);
-  if (nearest_s > 1e-3 || nearest_s < ref_line_spline_->ArcLength() - 1e-3){
+  if (nearest_s > 1e-3 || nearest_s < ref_line_spline_->ArcLength() - 1e-3) {
     sl_point->l = prod < 0 ?
                   -1.0 * std::hypot(xy(0) - nearest_x, xy(1) - nearest_y)
                            : std::hypot(xy(0) - nearest_x,
                                         xy(1) - nearest_y);
 
     sl_point->s = nearest_s;
-  }else if (nearest_s < 1e-3){
+  } else if (nearest_s < 1e-3) {
     sl_point->s = std::min(proj, nearest_s);
-    if (proj < 0.0){
+    if (proj < 0.0) {
       sl_point->l = prod;
-    }else{
+    } else {
       sl_point->l = prod < 0 ?
                     -1.0 * std::hypot(xy(0) - nearest_x, xy(1) - nearest_y)
                              : std::hypot(xy(0) - nearest_x,
                                           xy(1) - nearest_y);
     }
-  }else{
+  } else {
     sl_point->s = nearest_s + std::max(0.0, proj);
-    if (proj > 0){
+    if (proj > 0) {
       sl_point->l = prod;
-    }else{
+    } else {
       sl_point->l = prod < 0 ?
                     -1.0 * std::hypot(xy(0) - nearest_x, xy(1) - nearest_y)
                              : std::hypot(xy(0) - nearest_x,
@@ -308,7 +315,6 @@ bool ReferenceLine::XYToSL(const Eigen::Vector2d &xy, SLPoint *sl_point) const {
     }
   }
   return true;
-
 
 }
 

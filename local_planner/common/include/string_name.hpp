@@ -3,7 +3,7 @@
 #include <string>
 namespace planning{
 namespace topic{
-const std::string kEgoVehicleStatusName = "/carla/ego_vehicle/vehicle_stauts";
+const std::string kEgoVehicleStatusName = "/carla/ego_vehicle/vehicle_status";
 const std::string kTrafficLigthsName = "/carla/traffic_lights";
 const std::string kCarlaActorListName = "/carla/actor_list";
 const std::string kObjectsName = "/carla/objects";  // contains the ego vehicle
@@ -13,7 +13,7 @@ const std::string kEgoVehicleOdometryName = "/carla/ego_vehicle/odometry";
 const std::string kVisualizedTrajectoryName = "/visualized_trajectory";
 const std::string kInitialPoseName = "/initialpose";
 const std::string kGoalPoseName = "/move_base_simple/goal";
-const std::string kTrafficLightsInfoName = "/carla/"
+const std::string kTrafficLightsInfoName = "/carla/traffic_lights_infos"
 ;
 }
 

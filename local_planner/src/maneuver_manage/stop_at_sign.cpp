@@ -21,6 +21,8 @@ std::string StopAtSignState::Name() const {return "StopAtSignState";}
 State *StopAtSignState::NextState(ManeuverPlanner *maneuver_planner) const {
   return nullptr;
 }
-
+std::vector<StateName> StopAtSignState::GetPosibileNextStates() const {
+  return std::vector<StateName>();
+}
 
 }

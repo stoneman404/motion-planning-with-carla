@@ -22,7 +22,6 @@ find_package(catkin REQUIRED COMPONENTS
         carla_waypoint_types
         )
 find_package(Eigen3 REQUIRED)
-#find_package(Ceres REQUIRED)
 
 set(QPOASES_INLUDE_DIRS /usr/local/include/qpOASES)
 set(QPOASES_LIBRARY_DIRS /usr/local/lib)
@@ -186,7 +185,8 @@ set(planning_SRC
         src/reference_line/reference_line_smoother.cpp
         src/planning_context.cpp
         src/planner.cpp
-        src/reference_line/reference_line_smooth_ipopt_interface.cpp common/src/spline2d.cpp)
+        src/reference_line/reference_line_smooth_ipopt_interface.cpp
+        common/src/spline2d.cpp src/traffic_lights/traffic_light.cpp)
 
 add_executable(${PROJECT_NAME}_node
         ${planning_SRC}
@@ -295,6 +295,7 @@ catkin_add_gtest(spline2d_test
         common/src/spline2d.cpp
         common/src/spline2d_test.cpp
         )
+
 if (TARGET spline2d_test)
     target_link_libraries(spline2d_test
             Eigen3::Eigen

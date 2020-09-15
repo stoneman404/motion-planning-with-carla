@@ -24,7 +24,7 @@ void Planner::RunOnce() {
     PlanningConfig::Instance().UpdateVehicleParams(ego_object_, ego_vehicle_info_);
     has_init_vehicle_params_ = true;
   }
-  if ( !UpdateVehicleStatus() || !UpdateObstacleStatus() || !UpdateTrafficLights()) {
+  if (!UpdateVehicleStatus() || !UpdateObstacleStatus() || !UpdateTrafficLights()) {
     return;
   }
 }
@@ -52,8 +52,10 @@ void Planner::InitSubscriber() {
                  traffic_light_status_list_.traffic_lights.size());
       });
   this->traffic_lights_info_subscriber_ = nh_.subscribe<carla_msgs::CarlaTrafficLightInfoList>(
-      topic::kTrafficLightsInfoName, 10, [this](const carla_msgs::CarlaTrafficLightInfoList::ConstPtr traffic_lights_info_list){
-       this->traffic_lights_info_list_ = *traffic_lights_info_list;
+      topic::kTrafficLightsInfoName,
+      10,
+      [this](const carla_msgs::CarlaTrafficLightInfoList::ConstPtr traffic_lights_info_list) {
+        this->traffic_lights_info_list_ = *traffic_lights_info_list;
       });
 
   this->ego_vehicle_info_subscriber_ = nh_.subscribe<carla_msgs::CarlaEgoVehicleInfo>(

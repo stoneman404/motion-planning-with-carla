@@ -18,4 +18,7 @@ std::string ChangeLaneRightState::Name() const {return "ChangeLaneRightState";}
 State *ChangeLaneRightState::NextState(ManeuverPlanner *maneuver_planner) const {
   return nullptr;
 }
+std::vector<StateName> ChangeLaneRightState::GetPosibileNextStates() const {
+  return std::vector<StateName>();
+}
 }

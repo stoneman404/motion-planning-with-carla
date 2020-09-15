@@ -15,6 +15,7 @@ enum class StateName : uint32_t {
 class State{
 
 public:
+    State() = default;
     virtual bool Enter(ManeuverPlanner* maneuver_planner) = 0;
     virtual bool Execute(ManeuverPlanner* maneuver_planner) = 0;
     virtual void Exit(ManeuverPlanner* maneuver_planner) = 0;
