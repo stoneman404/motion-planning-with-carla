@@ -48,16 +48,9 @@ const geometry_msgs::PoseWithCovarianceStamped &PlanningContext::global_init_pos
 const geometry_msgs::PoseStamped &PlanningContext::global_goal_pose() const {
   return global_goal_pose_;
 }
-const std::vector<std::pair<carla_msgs::CarlaTrafficLightStatus,
-                            carla_waypoint_types::CarlaWaypoint>> &PlanningContext::TrafficLights() const {
-  return traffic_lights_;
-}
-void PlanningContext::UpdateTrafficLights(
-    const std::vector<std::pair<carla_msgs::CarlaTrafficLightStatus,
-                                carla_waypoint_types::CarlaWaypoint>> &traffic_lights) {
-  this->traffic_lights_ = traffic_lights;
-}
+
 std::list<std::shared_ptr<ReferenceLine>> &PlanningContext::mutable_reference_lines() { return reference_lines_; }
+
 std::list<planning_srvs::RouteResponse> &PlanningContext::mutable_route_infos() { return route_infos_; }
 
 }

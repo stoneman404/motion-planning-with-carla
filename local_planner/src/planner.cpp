@@ -6,6 +6,7 @@
 #include "obstacle_filter/obstacle.hpp"
 #include "obstacle_filter/obstacle_filter.hpp"
 #include "planning_context.hpp"
+#include "traffic_lights/traffic_light_list.hpp"
 
 namespace planning {
 Planner::Planner(const ros::NodeHandle &nh) : nh_(nh) {
@@ -55,7 +56,10 @@ void Planner::InitSubscriber() {
       topic::kTrafficLightsInfoName,
       10,
       [this](const carla_msgs::CarlaTrafficLightInfoList::ConstPtr traffic_lights_info_list) {
-        this->traffic_lights_info_list_ = *traffic_lights_info_list;
+        traffic_lights_info_list_ = decltype(traffic_lights_info_list_)();
+        for (const auto &traffic_light_info : traffic_lights_info_list->traffic_lights) {
+          traffic_lights_info_list_.emplace(traffic_light_info.id, traffic_light_info);
+        }
       });
 
   this->ego_vehicle_info_subscriber_ = nh_.subscribe<carla_msgs::CarlaEgoVehicleInfo>(
@@ -196,21 +200,17 @@ bool Planner::GetWayPoint(const int &object_id,
   return true;
 }
 bool Planner::UpdateTrafficLights() {
-  std::vector<std::pair<carla_msgs::CarlaTrafficLightStatus, carla_waypoint_types::CarlaWaypoint>> traffic_lights;
-  for (const auto &traffic_light : traffic_light_status_list_.traffic_lights) {
-    std::pair<carla_msgs::CarlaTrafficLightStatus, carla_waypoint_types::CarlaWaypoint> traffic_light_pair;
+  auto &instance = TrafficLightList::Instance();
 
+  for (const auto &traffic_light : traffic_light_status_list_.traffic_lights) {
     carla_waypoint_types::CarlaWaypoint waypoint;
     if (!this->GetWayPoint(traffic_light.id, waypoint)) {
       ROS_ERROR("[Planner::UpdateTrafficLights], cannot get the waypoint of traffic light id: %i", traffic_light.id);
       return false;
     }
-    traffic_light_pair.first = traffic_light;
-    traffic_light_pair.second = waypoint;
-    traffic_lights.push_back(traffic_light_pair);
-
+    carla_msgs::CarlaTrafficLightInfo traffic_light_info = traffic_lights_info_list_[traffic_light.id];
+    instance.AddTrafficLight(traffic_light, traffic_light_info, waypoint);
   }
-  PlanningContext::Instance().UpdateTrafficLights(traffic_lights);
   return true;
 }
 

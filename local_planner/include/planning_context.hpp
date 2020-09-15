@@ -62,13 +62,6 @@ public:
      */
     void UpdateGlobalInitPose(const geometry_msgs::PoseWithCovarianceStamped &init_pose);
 
-    /**
-     *
-     * @param traffic_lights
-     */
-    void UpdateTrafficLights(
-        const std::vector<std::pair<carla_msgs::CarlaTrafficLightStatus,
-                                    carla_waypoint_types::CarlaWaypoint>> &traffic_lights);
     // getter
     /**
      *
@@ -100,18 +93,11 @@ public:
      */
     const LocalGoal &local_goal() const;
 
-    /**
-     *
-     * @return
-     */
-    const std::vector<std::pair<carla_msgs::CarlaTrafficLightStatus,
-                                carla_waypoint_types::CarlaWaypoint>> &TrafficLights() const;
+
 
 private:
 
-    std::vector<
-        std::pair<carla_msgs::CarlaTrafficLightStatus,
-                  carla_waypoint_types::CarlaWaypoint>> traffic_lights_;
+
 
     std::list<planning_srvs::RouteResponse> route_infos_{};
     LocalGoal local_goal_;

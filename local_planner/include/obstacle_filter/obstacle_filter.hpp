@@ -22,7 +22,7 @@ public:
     static ObstacleFilter& Instance();
     ObstacleFilter(const ObstacleFilter& other) = default;
     void UpdateObstacles(const std::list<std::shared_ptr<Obstacle>>& objects);
-    void AddObstacles(const std::shared_ptr<Obstacle>& obstacle_ptr);
+    void AddObstacle(const std::shared_ptr<Obstacle>& obstacle_ptr);
     size_t ObstaclesSize() const {return obstacles_.size();}
     const std::unordered_map<int, std::shared_ptr<Obstacle>>& Obstacles() const {return obstacles_;}
     std::unordered_map<int, std::shared_ptr<Obstacle>>& multable_obstacles()  {return obstacles_;}

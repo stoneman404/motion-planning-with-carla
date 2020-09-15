@@ -102,7 +102,8 @@ private:
     carla_msgs::CarlaEgoVehicleInfo ego_vehicle_info_;
     carla_msgs::CarlaEgoVehicleStatus ego_vehicle_status_;
     carla_msgs::CarlaTrafficLightStatusList traffic_light_status_list_;
-    carla_msgs::CarlaTrafficLightInfoList traffic_lights_info_list_;
+    std::unordered_map<int, carla_msgs::CarlaTrafficLightInfo> traffic_lights_info_list_;
+//    carla_msgs::CarlaTrafficLightInfoList traffic_lights_info_list_;
     carla_msgs::CarlaActorList actor_list_;
     std::unordered_map<int, derived_object_msgs::Object> objects_map_;
     derived_object_msgs::Object ego_object_;
