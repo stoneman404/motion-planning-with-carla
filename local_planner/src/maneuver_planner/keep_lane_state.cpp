@@ -3,6 +3,7 @@
 
 #include <obstacle_filter/obstacle_filter.hpp>
 #include <reference_line/reference_line.hpp>
+#include <tf/transform_datatypes.h>
 #include "planning_config.hpp"
 #include "planning_context.hpp"
 #include "planner/trajectory_planner.hpp"
@@ -78,8 +79,8 @@ std::vector<StateName> KeepLaneState::GetPosibileNextStates() const {
 
 bool KeepLaneState::CurrentLaneProhibitedByTrafficLight() const {
   bool prohibited = false;
-  double max_comfort_decel = PlanningConfig::Instance().max_acc() * 0.6; // todo: 0.6 should be parameter
-  double comfort_stop_distance = std::pow(VehicleState::Instance().linear_vel(), 2) / max_comfort_decel;
+  double max_comfort_decel = PlanningConfig::Instance().max_acc() * 0.6;  // todo: 0.6 should be parameter
+  double comfort_stop_distance = std::pow(VehicleState::Instance().linear_vel(), 2); // max_comfort_decel
 
   const int ego_lane_id = VehicleState::Instance().lane_id();
   const int ego_road_id = VehicleState::Instance().road_id();
