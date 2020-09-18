@@ -1,3 +1,4 @@
-[submodule "planning_msgs"]
-	path = planning_msgs
-	url = https://github.com/stoneman404/planning-msgs.git
+
+[submodule "planning-common"]
+	path = planning-common
+	url = https://github.com/stoneman404/planning-common.git
