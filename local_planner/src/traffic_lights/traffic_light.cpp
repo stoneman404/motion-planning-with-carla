@@ -1,3 +1,4 @@
+#include <tf/transform_datatypes.h>
 #include "traffic_lights/traffic_light.hpp"
 
 namespace planning {
@@ -9,11 +10,17 @@ TrafficLight::TrafficLight(
     : trigger_volume_(traffic_light_info.trigger_volume),
       traffic_light_status_(traffic_light_status),
       transform_(traffic_light_info.transform),
-      waypoint_(carla_waypoint),
       id_(traffic_light_info.id),
       lane_id_(carla_waypoint.lane_id),
       section_id_(carla_waypoint.section_id),
-      road_id_(carla_waypoint.road_id) {}
+      road_id_(carla_waypoint.road_id) {
+  const geometry_msgs::Point light_location = transform_.position;
+  const double light_yaw = tf::getYaw(transform_.orientation);
+  const geometry_msgs::Vector3 relative_center = trigger_volume_.center;
+  Eigen::Vector2d center;
+  center << light_location.x + relative_center.x, light_location.y + relative_center.y;
+  traffic_light_box_ = Box2d(center, light_yaw, trigger_volume_.size.x, trigger_volume_.size.y);
+}
 
 const carla_msgs::CarlaTrafficLightStatus &TrafficLight::TrafficLightStatus() const {
   return traffic_light_status_;
@@ -34,11 +41,9 @@ void TrafficLight::UpdateTrafficLightStatus(const carla_msgs::CarlaTrafficLightS
   lane_id_ = carla_waypoint.lane_id;
   section_id_ = carla_waypoint.section_id;
   road_id_ = carla_waypoint.road_id;
-  waypoint_ = carla_waypoint;
+//  waypoint_ = carla_waypoint;
 }
 
-const geometry_msgs::Pose &TrafficLight::Transform() const {return transform_;}
-
-const carla_waypoint_types::CarlaWaypoint &TrafficLight::WayPoint() const {return waypoint_;}
+const geometry_msgs::Pose &TrafficLight::Transform() const { return transform_; }
 
 }

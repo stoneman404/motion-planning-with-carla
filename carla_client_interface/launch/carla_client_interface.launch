@@ -9,7 +9,7 @@
   <param name="/carla/port" value="$(arg port)" />
   <param name="/carla/timeout" value="$(arg timeout)" />
 
-  <node pkg="carla_route_planner" type="carla_route_planner.py" name="carla_route_planner" output="screen">
+  <node pkg="carla_client_interface" type="carla_client_interface.py" name="carla_client_interface" output="screen">
     <param name="role_name" value="$(arg role_name)" />
   </node>
 

@@ -13,7 +13,7 @@ const std::string kEgoVehicleOdometryName = "/carla/ego_vehicle/odometry";     /
 const std::string kVisualizedTrajectoryName = "/visualized_trajectory";        //NOLINT
 const std::string kInitialPoseName = "/initialpose";                           //NOLINT
 const std::string kGoalPoseName = "/move_base_simple/goal";                    //NOLINT
-const std::string kTrafficLightsIfoName = "/carla/traffic_lights_infos";        //NOLINT
+const std::string kTrafficLightsInfoName = "/carla/traffic_lights_infos";        //NOLINT
 
 }
 

@@ -1,1 +1,0 @@
-WayPoint[] way_points

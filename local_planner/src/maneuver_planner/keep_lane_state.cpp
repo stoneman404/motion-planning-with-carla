@@ -79,17 +79,20 @@ std::vector<StateName> KeepLaneState::GetPosibileNextStates() const {
 
 bool KeepLaneState::CurrentLaneProhibitedByTrafficLight() const {
   bool prohibited = false;
-  double max_comfort_decel = PlanningConfig::Instance().max_acc() * 0.6;  // todo: 0.6 should be parameter
-  double comfort_stop_distance = std::pow(VehicleState::Instance().linear_vel(), 2); // max_comfort_decel
-
+  const double max_comfort_decel = PlanningConfig::Instance().max_acc() * 0.6;  // todo: 0.6 should be parameter
+  const double max_decel = PlanningConfig::Instance().max_acc();
+  const double comfort_stop_distance =
+      std::pow(VehicleState::Instance().linear_vel(), 2) / (2 * max_comfort_decel); // max_comfort_decel
+  const double min_stop_distance = std::pow(VehicleState::Instance().linear_vel(), 2) / (2 * max_decel);
   const int ego_lane_id = VehicleState::Instance().lane_id();
   const int ego_road_id = VehicleState::Instance().road_id();
   const auto traffic_lights = TrafficLightList::Instance().TrafficLights();
-  SLPoint ego_sl;
-  reference_line_->XYToSL(VehicleState::Instance().pose().position.x,
-                          VehicleState::Instance().pose().position.y, &ego_sl);
+  const auto ego_box = VehicleState::Instance().GetEgoBox();
+  SLBoundary ego_sl_boundary;
+  reference_line_->GetSLBoundary(ego_box, &ego_sl_boundary);
   int min_id = -1;
   double min_dist = std::numeric_limits<double>::max();
+  SLBoundary nearest_traffic_light_sl_boundary;
   // get nearest front traffic light in same lane
   for (const auto &traffic_light : traffic_lights) {
     if (traffic_light.second.RoadId() != ego_road_id) {
@@ -98,20 +101,32 @@ bool KeepLaneState::CurrentLaneProhibitedByTrafficLight() const {
     if (traffic_light.second.LaneId() != ego_lane_id) {
       continue;
     }
-    SLPoint sl_point;
-    reference_line_->XYToSL(traffic_light.second.WayPoint().pose.position.x,
-                            traffic_light.second.WayPoint().pose.position.y,
-                            &sl_point);
-    if (sl_point.s < ego_sl.s) {
+    SLBoundary sl_boundary;
+    Box2d light_box = traffic_light.second.GetBox2d();
+    reference_line_->GetSLBoundary(light_box, &sl_boundary);
+    if (sl_boundary.end_s < ego_sl_boundary.start_s) {
       continue;
     }
-    if (std::fabs(sl_point.s - ego_sl.s) < min_dist) {
-      min_dist = std::fabs(sl_point.s - ego_sl.s);
+
+    double dist = sl_boundary.start_s - ego_sl_boundary.end_s;
+    if (dist < min_dist) {
+      min_dist = dist;
       min_id = traffic_light.first;
+      nearest_traffic_light_sl_boundary = sl_boundary;
     }
   }
   const auto traffic_state = traffic_lights.at(min_id).TrafficLightStatus().state;
-  const auto trigger_volume = traffic_lights.at(min_id).TrafficLightBoundingBox();
+  if (traffic_state == carla_msgs::CarlaTrafficLightStatus::GREEN
+      || traffic_state == carla_msgs::CarlaTrafficLightStatus::OFF
+      || traffic_state == carla_msgs::CarlaTrafficLightStatus::UNKNOWN) {
+    prohibited = false;
+  } else if (min_dist < min_stop_distance) {
+    prohibited = false; // it is too late to stop at stop line, continue driving
+  } else if (min_dist > PlanningConfig::Instance().max_lookahead_distance()) {
+    prohibited = false;
+  } else {
+    prohibited = true;
+  }
 
   return prohibited;
 }

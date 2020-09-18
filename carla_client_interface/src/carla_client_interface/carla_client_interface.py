@@ -1,7 +1,7 @@
+#!/usr/bin/env python
 import math
 import sys
 import threading
-
 import carla
 import rospy
 import tf
@@ -19,15 +19,9 @@ from planning_srvs.srv import Route, RouteResponse
 from tf.transformations import euler_from_quaternion
 
 
-class CarlaToRosWaypointConverter(object):
-    """
-    This class generates a plan of waypoints to follow.
 
-    The calculation is done whenever:
-    - the hero vehicle appears
-    - a new goal is set
-    """
-    WAYPOINT_DISTANCE = 2.0
+class ClinetInterface(object):
+    WAYPOINT_DISTANCE = 1.0
 
     def __init__(self, carla_world):
         """
@@ -38,9 +32,10 @@ class CarlaToRosWaypointConverter(object):
         self.ego_vehicle = None
         self.ego_vehicle_location = None
         self.on_tick = None
+        self.goal = None
         self.role_name = rospy.get_param("~role_name", 'ego_vehicle')
-        self.waypoint_publisher = rospy.Publisher(
-            '/carla/{}/waypoints'.format(self.role_name), Path, queue_size=1, latch=True)
+        # self.waypoint_publisher = rospy.Publisher(
+        #     '/carla/{}/waypoints'.format(self.role_name), Path, queue_size=1, latch=True)
 
         # initialize ros services
         self.getWaypointService = rospy.Service(
@@ -49,20 +44,10 @@ class CarlaToRosWaypointConverter(object):
         self.getActorWaypointService = rospy.Service(
             '/carla_waypoint_publisher/{}/get_actor_waypoint'.format(self.role_name),
             GetActorWaypoint, self.get_actor_waypoint)
-        self.getRouteService = rospy.Service('/carla_route_planner/{}/get_route'.format(self.role_name),
+        self.getRouteService = rospy.Service('/carla_client_interface/{}/get_route'.format(self.role_name),
                                              Route, self.get_route)
-        # set initial goal
-        # self.goal = self.world.get_map().get_spawn_points()[0]
-
-        self.current_route = None
-        self.goal_subscriber = rospy.Subscriber(
-            "/carla/{}/goal".format(self.role_name), PoseStamped, self.on_goal)
-
         self._update_lock = threading.Lock()
 
-        # use callback to wait for ego vehicle
-        rospy.loginfo("Waiting for ego vehicle...")
-        self.on_tick = self.world.on_tick(self.find_ego_vehicle_actor)
 
     def destroy(self):
         """
@@ -84,6 +69,7 @@ class CarlaToRosWaypointConverter(object):
         carla_waypoint = self.map.get_waypoint(carla_position)
 
         response = GetWaypointResponse()
+
         response.waypoint.pose.position.x = carla_waypoint.transform.location.x
         response.waypoint.pose.position.y = -carla_waypoint.transform.location.y
         response.waypoint.pose.position.z = carla_waypoint.transform.location.z
@@ -91,7 +77,7 @@ class CarlaToRosWaypointConverter(object):
         response.waypoint.road_id = carla_waypoint.road_id
         response.waypoint.section_id = carla_waypoint.section_id
         response.waypoint.lane_id = carla_waypoint.lane_id
-        # rospy.logwarn("Get waypoint {}".format(response.waypoint.pose.position))
+        rospy.logwarn("Get waypoint {}".format(response.waypoint.pose.position))
         return response
 
     def get_actor_waypoint(self, req):
@@ -117,7 +103,6 @@ class CarlaToRosWaypointConverter(object):
 
     def get_route(self, req):
         """
-
         :return:
         """
         rospy.loginfo("has received request, handling request")
@@ -149,9 +134,9 @@ class CarlaToRosWaypointConverter(object):
         carla_start.rotation.yaw = -math.degrees(start_yaw)
 
         rospy.loginfo("Calculating route to x={}, y={}, z={}".format(
-            goal.location.x,
-            goal.location.y,
-            goal.location.z))
+            carla_goal.location.x,
+            carla_goal.location.y,
+            carla_goal.location.z))
         dao = GlobalRoutePlannerDAO(self.world.get_map(), sampling_resolution=1)
         grp = GlobalRoutePlanner(dao)
         grp.setup()
@@ -190,7 +175,7 @@ class CarlaToRosWaypointConverter(object):
                 waypoint.has_left_lane = True
                 waypoint.left_lane_width = wp[0].get_left_lane().lane_width
             if right_lane is None:
-                waypoint.left_right_width = -1.0
+                waypoint.right_lane_width = -1.0
                 waypoint.has_right_lane = False
             else:
                 waypoint.right_lane_width = wp[0].get_right_lane().lane_width
@@ -208,8 +193,6 @@ class CarlaToRosWaypointConverter(object):
             elif lane_change_type == carla.LaneChange.Right:
                 waypoint.lane_change = LaneChangeType.RIGHT
 
-            waypoint.right_lane_marking = self.set_right_lane_marking(wp[0])
-            waypoint.left_lane_marking = self.set_left_lane_marking(wp[0])
             waypoint.road_option = self.set_road_option()
             if waypoint.is_junction:
                 waypoint.junction.id = wp[0].junction.id
@@ -248,102 +231,6 @@ class CarlaToRosWaypointConverter(object):
             waypoint_road_option = CarlaRoadOption.VOID
 
         return waypoint_road_option
-
-    def set_right_lane_marking(self, wp):
-        right_lane_marking = LaneMarking()
-        lane_marking = wp[0].right_lane_marking
-        if lane_marking.lane_change == carla.LaneChange.Right:
-            right_lane_marking.lane_change = LaneChangeType.RIGHT
-        elif lane_marking.lane_change == carla.LaneChange.Left:
-            right_lane_marking.lane_change = LaneChangeType.LEFT
-        elif lane_marking.lane_change == carla.LaneChange.Both:
-            right_lane_marking.lane_change = LaneChangeType.Both
-        elif lane_marking.lane_change == carla.LaneChange.NONE:
-            right_lane_marking.lane_change = LaneChangeType.FORWARD
-        if lane_marking.color == carla.LaneMarkingColor.Blue:
-            right_lane_marking.color = LaneMarkingColor.BLUE
-        elif lane_marking.color == carla.LaneMarkingColor.Green:
-            right_lane_marking.color = LaneMarkingColor.GREEN
-        elif lane_marking.color == carla.LaneMarkingColor.Other:
-            right_lane_marking.color = LaneMarkingColor.OTHER
-        elif lane_marking.color == carla.LaneMarkingColor.Red:
-            right_lane_marking.color = LaneMarkingColor.RED
-        elif lane_marking.color == carla.LaneMarkingColor.Standard:
-            right_lane_marking.color = LaneMarkingColor.STANDARD
-
-        if lane_marking.type == carla.LaneMarkingType.Other:
-            right_lane_marking.type = LaneMarkingType.OTHER
-        elif lane_marking.type == carla.LaneMarkingType.NONE:
-            right_lane_marking.type = LaneMarkingType.NONE
-        elif lane_marking.type == carla.LaneMarkingType.BottsDots:
-            right_lane_marking.type = LaneMarkingType.BOTTSDOTS
-        elif lane_marking.type == carla.LaneMarkingType.Broken:
-            right_lane_marking.type = LaneMarkingType.BROKEN
-        elif lane_marking.type == carla.LaneMarkingType.BrokenBroken:
-            right_lane_marking.type = LaneMarkingType.BROKENBROKEN
-        elif lane_marking.type == carla.LaneMarkingType.BrokenSolid:
-            right_lane_marking.type = LaneMarkingType.BROKENSOLID
-        elif lane_marking.type == carla.LaneMarkingType.Curb:
-            right_lane_marking.type = LaneMarkingType.CURB
-        elif lane_marking.type == carla.LaneMarkingType.Grass:
-            right_lane_marking.type = LaneMarkingType.GRASS
-        elif lane_marking.type == carla.LaneMarkingType.Solid:
-            right_lane_marking.type = LaneMarkingType.SOLID
-        elif lane_marking.type == carla.LaneMarkingType.SolidBroken:
-            right_lane_marking.type = LaneMarkingType.SOLIDBROKEN
-        elif lane_marking.type == carla.LaneMarkingType.SolidSolid:
-            right_lane_marking.type = LaneMarkingType.SOLIDSOLID
-
-        right_lane_marking.width = lane_marking.width
-        return right_lane_marking
-
-    def set_left_lane_marking(self, wp):
-        left_lane_marking = LaneMarking()
-        lane_marking = wp[0].left_lane_marking
-        if lane_marking.lane_change == carla.LaneChange.Right:
-            left_lane_marking.lane_change = LaneChangeType.RIGHT
-        elif lane_marking.lane_change == carla.LaneChange.Left:
-            left_lane_marking.lane_change = LaneChangeType.LEFT
-        elif lane_marking.lane_change == carla.LaneChange.Both:
-            left_lane_marking.lane_change = LaneChangeType.Both
-        elif lane_marking.lane_change == carla.LaneChange.NONE:
-            left_lane_marking.lane_change = LaneChangeType.FORWARD
-        if lane_marking.color == carla.LaneMarkingColor.Blue:
-            left_lane_marking.color = LaneMarkingColor.BLUE
-        elif lane_marking.color == carla.LaneMarkingColor.Green:
-            left_lane_marking.color = LaneMarkingColor.GREEN
-        elif lane_marking.color == carla.LaneMarkingColor.Other:
-            left_lane_marking.color = LaneMarkingColor.OTHER
-        elif lane_marking.color == carla.LaneMarkingColor.Red:
-            left_lane_marking.color = LaneMarkingColor.RED
-        elif lane_marking.color == carla.LaneMarkingColor.Standard:
-            left_lane_marking.color = LaneMarkingColor.STANDARD
-
-        if lane_marking.type == carla.LaneMarkingType.Other:
-            left_lane_marking.type = LaneMarkingType.OTHER
-        elif lane_marking.type == carla.LaneMarkingType.NONE:
-            left_lane_marking.type = LaneMarkingType.NONE
-        elif lane_marking.type == carla.LaneMarkingType.BottsDots:
-            left_lane_marking.type = LaneMarkingType.BOTTSDOTS
-        elif lane_marking.type == carla.LaneMarkingType.Broken:
-            left_lane_marking.type = LaneMarkingType.BROKEN
-        elif lane_marking.type == carla.LaneMarkingType.BrokenBroken:
-            left_lane_marking.type = LaneMarkingType.BROKENBROKEN
-        elif lane_marking.type == carla.LaneMarkingType.BrokenSolid:
-            left_lane_marking.type = LaneMarkingType.BROKENSOLID
-        elif lane_marking.type == carla.LaneMarkingType.Curb:
-            left_lane_marking.type = LaneMarkingType.CURB
-        elif lane_marking.type == carla.LaneMarkingType.Grass:
-            left_lane_marking.type = LaneMarkingType.GRASS
-        elif lane_marking.type == carla.LaneMarkingType.Solid:
-            left_lane_marking.type = LaneMarkingType.SOLID
-        elif lane_marking.type == carla.LaneMarkingType.SolidBroken:
-            left_lane_marking.type = LaneMarkingType.SOLIDBROKEN
-        elif lane_marking.type == carla.LaneMarkingType.SolidSolid:
-            left_lane_marking.type = LaneMarkingType.SOLIDSOLID
-
-        left_lane_marking.width = lane_marking.width
-        return left_lane_marking
 
     def set_lane_type(self, wp):
 
@@ -402,7 +289,7 @@ def main():
     main function
     """
     try:
-        rospy.init_node("carla_route_planner", anonymous=True)
+        rospy.init_node("carla_client_interface", anonymous=True)
         # wait for ros-bridge to set up CARLA world
         rospy.loginfo("Waiting for CARLA world (topic: /carla/world_info)...")
         rospy.wait_for_message("/carla/world_info", CarlaWorldInfo, timeout=10.0)
@@ -425,7 +312,7 @@ def main():
 
         rospy.loginfo("Connected to Carla.")
 
-        waypointConverter = CarlaToRosWaypointConverter(carla_world)
+        waypointConverter = ClinetInterface(carla_world)
 
         rospy.spin()
         waypointConverter.destroy()

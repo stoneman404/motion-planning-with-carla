@@ -5,6 +5,7 @@
 #include <carla_msgs/CarlaTrafficLightStatus.h>
 #include <geometry_msgs/Pose.h>
 #include <carla_waypoint_types/CarlaWaypoint.h>
+#include "box2d.hpp"
 
 namespace planning {
 class TrafficLight {
@@ -19,19 +20,21 @@ class TrafficLight {
                                 const carla_waypoint_types::CarlaWaypoint& carla_waypoint);
 
   const carla_msgs::CarlaTrafficLightStatus &TrafficLightStatus() const;
+  Box2d GetBox2d() const { return traffic_light_box_;};
   const carla_msgs::CarlaBoundingBox& TrafficLightBoundingBox() const;
   const int& Id() const;
   const int& LaneId() const;
   const int& SectionId() const;
   const int& RoadId() const;
   const geometry_msgs::Pose& Transform() const;
-  const carla_waypoint_types::CarlaWaypoint& WayPoint() const;
+//  const carla_waypoint_types::CarlaWaypoint& WayPoint() const;
 
  private:
+  Box2d traffic_light_box_;
   carla_msgs::CarlaBoundingBox trigger_volume_;
   carla_msgs::CarlaTrafficLightStatus traffic_light_status_;
   geometry_msgs::Pose transform_;
-  carla_waypoint_types::CarlaWaypoint waypoint_;
+//  carla_waypoint_types::CarlaWaypoint waypoint_;
   int id_{-1};
   int lane_id_{-1};
   int section_id_{-1};

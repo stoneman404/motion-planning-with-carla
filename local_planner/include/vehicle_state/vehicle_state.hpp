@@ -6,6 +6,7 @@
 #include <nav_msgs/Odometry.h>
 #include <carla_msgs/CarlaEgoVehicleInfo.h>
 #include <planning_msgs/WayPoint.h>
+#include "box2d.hpp"
 
 namespace planning {
 class VehicleState {
@@ -16,6 +17,7 @@ class VehicleState {
               const nav_msgs::Odometry &odometry,
               const carla_msgs::CarlaEgoVehicleInfo &vehicle_info);
   // getter
+  Box2d GetEgoBox() const;
   const ros::Time &time_stamp() const;
   const geometry_msgs::Pose &pose() const;
   double heading() const;

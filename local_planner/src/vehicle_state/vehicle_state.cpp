@@ -1,6 +1,7 @@
 #include "vehicle_state/vehicle_state.hpp"
 #include <tf/transform_datatypes.h>
 #include <Eigen/Core>
+#include <planning_config.hpp>
 namespace planning {
 // the vehicle's coordinate, x--->forward, y-->left, z--->up
 
@@ -86,5 +87,14 @@ void VehicleState::set_lane_id(int lane_id) { this->lane_id_ = lane_id; }
 void VehicleState::set_waypoint(const planning_msgs::WayPoint &way_point) { this->ego_waypoint_ = way_point; }
 void VehicleState::set_road_id(int road_id) { this->road_id_ = road_id; }
 void VehicleState::set_section_id(int section_id) { this->section_id_ = section_id; }
+Box2d VehicleState::GetEgoBox() const {
+  Eigen::Vector2d ego_center;
+  ego_center << pose_.position.x, pose_.position.y;
+  const double ego_heading = heading_;
+  const double length = PlanningConfig::Instance().vehicle_params().length;
+  const double width = PlanningConfig::Instance().vehicle_params().width;
+  Box2d ego_box = Box2d(ego_center, ego_heading, length, width);
+  return ego_box;
+}
 
 }

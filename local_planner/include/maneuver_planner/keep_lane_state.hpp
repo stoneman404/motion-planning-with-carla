@@ -21,6 +21,7 @@ class KeepLaneState : public State {
   std::vector<StateName> GetPosibileNextStates() const override;
 
  private:
+
   bool CurrentLaneProhibitedByObstacles() const;
   bool CurrentLaneProhibitedByTrafficLight() const;
   static bool WithInDistanceAhead(double target_x,

@@ -1,2 +1,0 @@
-Header header
-TrajectoryPoint[] trajectory_points

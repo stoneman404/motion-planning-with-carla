@@ -31,6 +31,10 @@ struct FrenetFramePoint {
 
 struct SLPoint {
   SLPoint() = default;
+  SLPoint(const SLPoint& other) {
+    s = other.s;
+    l = other.l;
+  }
   ~SLPoint() = default;
   SLPoint(double _s, double _l) : s(_s), l(_l) {}
   double s = 0.0;
@@ -40,6 +44,13 @@ struct SLPoint {
 struct SLBoundary {
 
   SLBoundary() = default;
+  SLBoundary(const SLBoundary& other){
+    start_s = other.start_s;
+    end_s = other.end_s;
+    start_l = other.start_l;
+    end_l = other.end_l;
+    boundary_points = other.boundary_points;
+  }
   SLBoundary(double _start_s, double _end_s,
              double _start_l, double _end_l)
       : start_s(_start_s), end_s(_end_s),
