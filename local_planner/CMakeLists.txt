@@ -186,7 +186,9 @@ set(planning_SRC
         src/planning_context.cpp
         src/planner.cpp
         src/reference_line/reference_line_smooth_ipopt_interface.cpp
-        common/src/spline2d.cpp src/traffic_lights/traffic_light.cpp src/traffic_lights/traffic_light_list.cpp)
+        common/src/spline2d.cpp
+        src/traffic_lights/traffic_light.cpp
+        src/traffic_lights/traffic_light_list.cpp)
 
 add_executable(${PROJECT_NAME}_node
         ${planning_SRC}
@@ -207,6 +209,7 @@ target_link_libraries(${PROJECT_NAME}_node
         ${catkin_LIBRARIES}
         ipopt
         qpOASES
+        Eigen3::Eigen
         )
 
 

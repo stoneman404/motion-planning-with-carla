@@ -6,14 +6,21 @@ namespace planning {
 class TrafficLightList {
  public:
   static TrafficLightList &Instance();
-  const std::unordered_map<int, TrafficLight> &TrafficLights() const { return traffic_lights_; }
-  void AddTrafficLight(const TrafficLight &traffic_light);
+  const std::unordered_map<int, std::shared_ptr<TrafficLight>> &TrafficLights() const { return traffic_lights_; }
   void AddTrafficLight(const carla_msgs::CarlaTrafficLightStatus &traffic_light_status,
                        const carla_msgs::CarlaTrafficLightInfo &traffic_light_info,
-                       const carla_waypoint_types::CarlaWaypoint &carla_waypoint);
+                       const carla_waypoint_types::CarlaWaypoint &carla_waypoint) {
+  int traffic_light_id = traffic_light_info.id;
+  if (traffic_lights_.find(traffic_light_id) != traffic_lights_.end()) {
+    traffic_lights_[traffic_light_id]->UpdateTrafficLightStatus(traffic_light_status, carla_waypoint);
+  } else {
+    auto traffic_light = std::make_shared<TrafficLight>(traffic_light_info, traffic_light_status, carla_waypoint);
+    traffic_lights_.emplace(traffic_light_id, traffic_light);
+  }
+  }
 
  private:
-  std::unordered_map<int, TrafficLight> traffic_lights_{};
+  std::unordered_map<int, std::shared_ptr<TrafficLight>> traffic_lights_{};
 
  private:
   TrafficLightList() = default;

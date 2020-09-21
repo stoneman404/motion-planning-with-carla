@@ -3,17 +3,17 @@
 
 namespace planning {
 
-bool ChangeLaneLeftState::Execute(ManeuverPlanner *manuever_planner) {
+bool ChangeLaneLeftState::Execute(ManeuverPlanner *maneuver_planner) {
 
   return false;
 }
 
-bool ChangeLaneLeftState::Enter(ManeuverPlanner *manuever_planner) {
+bool ChangeLaneLeftState::Enter(ManeuverPlanner *maneuver_planner) {
   ROS_INFO("We are current enter the ChangeLaneLeft State");
 
 }
 
-void ChangeLaneLeftState::Exit(ManeuverPlanner *manuever_planner) {
+void ChangeLaneLeftState::Exit(ManeuverPlanner *maneuver_planner) {
   ROS_INFO("We are current exit the ChangeLaneLeft State");
 
 }

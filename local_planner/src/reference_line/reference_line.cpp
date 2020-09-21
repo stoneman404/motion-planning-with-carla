@@ -4,7 +4,6 @@
 #include "reference_line/reference_line.hpp"
 #include "math_utils.hpp"
 #include "coordinate_transformer.hpp"
-#include <boost/math/tools/minima.hpp>
 namespace planning {
 
 ReferenceLine::ReferenceLine(const planning_srvs::RouteResponse &route_response)
@@ -34,7 +33,7 @@ ReferenceLine::ReferenceLine(const planning_srvs::RouteResponse &route_response)
     auto ref_point = ReferencePoint(way_point.pose.position.x, way_point.pose.position.y);
     ref_point.set_xy(way_point.pose.position.x, way_point.pose.position.y);
     ref_point.set_heading(
-        NormalizeAngle(std::atan2(heading(1), heading(0))));
+        MathUtil::NormalizeAngle(std::atan2(heading(1), heading(0))));
     reference_points_.push_back(ref_point);
     left_boundary_.emplace_back(
         ref_point.x() - left_width * std::sin(ref_point.heading()),
@@ -76,7 +75,7 @@ ReferenceLine::ReferenceLine(const std::vector<planning_msgs::WayPoint> &waypoin
     }
     auto ref_point = ReferencePoint(way_point.pose.position.x, way_point.pose.position.y);
     ref_point.set_xy(way_point.pose.position.x, way_point.pose.position.y);
-    ref_point.set_heading(NormalizeAngle(std::atan2(heading(1), heading(0))));
+    ref_point.set_heading(MathUtil::NormalizeAngle(std::atan2(heading(1), heading(0))));
     reference_points_.push_back(ref_point);
     left_boundary_.emplace_back(
         ref_point.x() - left_width * std::sin(ref_point.heading()),
@@ -130,9 +129,9 @@ ReferencePoint ReferenceLine::GetReferencePoint(double s) const {
   ref_line_spline_->EvaluateFirstDerivative(s, &ref_dx, &ref_dy);
   ref_line_spline_->EvaluateSecondDerivative(s, &ref_ddx, &ref_ddy);
   ref_line_spline_->EvaluateThirdDerivative(s, &ref_dddx, &ref_dddy);
-  double ref_heading = NormalizeAngle(std::atan2(ref_dy, ref_dx));
-  double ref_kappa = CalcKappa(ref_dx, ref_dy, ref_ddx, ref_ddy);
-  double ref_dkappa = CalcDKappa(ref_dx, ref_dy, ref_ddx, ref_ddy, ref_dddx, ref_dddy);
+  double ref_heading = MathUtil::NormalizeAngle(std::atan2(ref_dy, ref_dx));
+  double ref_kappa = MathUtil::CalcKappa(ref_dx, ref_dy, ref_ddx, ref_ddy);
+  double ref_dkappa = MathUtil::CalcDKappa(ref_dx, ref_dy, ref_ddx, ref_ddy, ref_dddx, ref_dddy);
   return ReferencePoint(ref_x, ref_y, ref_heading, ref_kappa, ref_dkappa);
 }
 
@@ -146,9 +145,9 @@ ReferencePoint ReferenceLine::GetReferencePoint(double x, double y) const {
   ref_line_spline_->EvaluateFirstDerivative(nearest_s, &ref_dx, &ref_dy);
   ref_line_spline_->EvaluateSecondDerivative(nearest_s, &ref_ddx, &ref_ddy);
   ref_line_spline_->EvaluateThirdDerivative(nearest_s, &ref_dddx, &ref_dddy);
-  double heading = NormalizeAngle(std::atan2(ref_dy, ref_dx));
-  double kappa = CalcKappa(ref_dx, ref_dy, ref_ddx, ref_ddy);
-  double dkappa = CalcDKappa(ref_dx, ref_dy, ref_ddx, ref_ddy, ref_dddx, ref_dddy);
+  double heading = MathUtil::NormalizeAngle(std::atan2(ref_dy, ref_dx));
+  double kappa = MathUtil::CalcKappa(ref_dx, ref_dy, ref_ddx, ref_ddy);
+  double dkappa = MathUtil::CalcDKappa(ref_dx, ref_dy, ref_ddx, ref_ddy, ref_dddx, ref_dddy);
   return ReferencePoint(nearest_x, nearest_y, heading, kappa, dkappa);
 
 }
@@ -260,12 +259,12 @@ ReferencePoint ReferenceLine::Interpolate(const ReferencePoint &p0,
                                           const ReferencePoint &p1,
                                           double s0,
                                           double s1,
-                                          double s) const {
-  double x = lerp(p0.x(), s0, p1.x(), s1, s);
-  double y = lerp(p0.y(), s0, p1.y(), s1, s);
-  double heading = slerp(p0.heading(), s0, p1.heading(), s1, s);
-  double kappa = lerp(p0.kappa(), s0, p1.kappa(), s1, s);
-  double dkappa = lerp(p0.dkappa(), s0, p1.dkappa(), s1, s);
+                                          double s) {
+  double x = MathUtil::lerp(p0.x(), s0, p1.x(), s1, s);
+  double y = MathUtil::lerp(p0.y(), s0, p1.y(), s1, s);
+  double heading = MathUtil::slerp(p0.heading(), s0, p1.heading(), s1, s);
+  double kappa = MathUtil::lerp(p0.kappa(), s0, p1.kappa(), s1, s);
+  double dkappa = MathUtil::lerp(p0.dkappa(), s0, p1.dkappa(), s1, s);
   auto ref_point = ReferencePoint(x, y, heading, kappa, dkappa);
 
   return ref_point;
@@ -340,7 +339,7 @@ bool ReferenceLine::SLToXY(const SLPoint &sl_point, Eigen::Vector2d *xy_point) c
 
 double ReferenceLine::DistanceToLineSegment(const Eigen::Vector2d &start,
                                             const Eigen::Vector2d &end,
-                                            const Eigen::Vector2d &point) const {
+                                            const Eigen::Vector2d &point) {
   double length = (end - start).norm();
   if (length < 1e-6) {
     return (point - start).norm();

@@ -103,7 +103,7 @@ Obstacle::Obstacle(const Obstacle &other) {
   this->heading_ = other.Heading();
 }
 
-Box2d Obstacle::GetBoundingBoxAtPoint(const planning_msgs::TrajectoryPoint &point) {
+Box2d Obstacle::GetBoundingBoxAtPoint(const planning_msgs::TrajectoryPoint &point) const {
   Eigen::Vector2d center = Eigen::Vector2d(point.path_point.x, point.path_point.y);
   return Box2d(center, point.path_point.theta, length_, width_);
 }
@@ -138,6 +138,39 @@ planning_msgs::TrajectoryPoint Obstacle::GetPointAtTime(double relative_time) co
     }
     return InterpolateTrajectoryPoint(*(it_lower - 1), *it_lower, relative_time);
   }
+}
+planning_msgs::TrajectoryPoint Obstacle::InterpolateTrajectoryPoint(const planning_msgs::TrajectoryPoint &point,
+                                                                    const planning_msgs::TrajectoryPoint &point_1,
+                                                                    double time) {
+  planning_msgs::TrajectoryPoint interpolated_traj_point;
+  interpolated_traj_point.path_point.x =
+      MathUtil::lerp(point.path_point.x, point.relative_time, point_1.path_point.x, point_1.relative_time, time);
+  interpolated_traj_point.path_point.y =
+      MathUtil::lerp(point.path_point.y, point.relative_time, point_1.path_point.y, point_1.relative_time, time);
+  interpolated_traj_point.path_point.s =
+      MathUtil::lerp(point.path_point.s, point.relative_time, point_1.path_point.s, point_1.relative_time, time);
+  interpolated_traj_point.path_point.theta =
+      MathUtil::slerp(point.path_point.theta, point.relative_time, point_1.path_point.theta, point_1.relative_time, time);
+  interpolated_traj_point.path_point.kappa =
+      MathUtil::lerp(point.path_point.kappa, point.relative_time, point_1.path_point.kappa, point_1.relative_time, time);
+  interpolated_traj_point.path_point.dkappa =
+      MathUtil::lerp(point.path_point.dkappa, point.relative_time, point_1.path_point.dkappa, point_1.relative_time, time);
+  interpolated_traj_point.vel =
+      MathUtil::lerp(point.vel, point.relative_time, point_1.vel, point_1.relative_time, time);
+  interpolated_traj_point.acc =
+      MathUtil::lerp(point.acc, point.relative_time, point_1.acc, point_1.relative_time, time);
+  interpolated_traj_point.jerk =
+      MathUtil::lerp(point.jerk, point.relative_time, point_1.jerk, point_1.relative_time, time);
+  interpolated_traj_point.steer_angle =
+      MathUtil::slerp(point.steer_angle, point.relative_time, point_1.steer_angle, point_1.relative_time, time);
+  return interpolated_traj_point;
+
+
+
+
+
+
+
 }
 
 }

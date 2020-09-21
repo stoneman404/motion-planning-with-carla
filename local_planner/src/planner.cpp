@@ -49,7 +49,7 @@ void Planner::InitSubscriber() {
       topic::kTrafficLigthsName, 10,
       [this](const carla_msgs::CarlaTrafficLightStatusList::ConstPtr traffic_light_status_list) {
         this->traffic_light_status_list_ = *traffic_light_status_list;
-        ROS_INFO("the traffic ligth status list size: %zu",
+        ROS_INFO("the traffic light status list size: %zu",
                  traffic_light_status_list_.traffic_lights.size());
       });
   this->traffic_lights_info_subscriber_ = nh_.subscribe<carla_msgs::CarlaTrafficLightInfoList>(
@@ -87,7 +87,6 @@ void Planner::InitSubscriber() {
       topic::kEgoVehicleOdometryName, 10,
       [this](const nav_msgs::Odometry::ConstPtr ego_odometry) {
         this->ego_odometry_ = *ego_odometry;
-
       });
 
   this->init_pose_subscriber_ = nh_.subscribe<geometry_msgs::PoseWithCovarianceStamped>(

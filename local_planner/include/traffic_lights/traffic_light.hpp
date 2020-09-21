@@ -14,31 +14,32 @@ class TrafficLight {
   TrafficLight() = default;
   TrafficLight(const carla_msgs::CarlaTrafficLightInfo &traffic_light_info,
                const carla_msgs::CarlaTrafficLightStatus &traffic_light_status,
-               const carla_waypoint_types::CarlaWaypoint& carla_waypoint);
+               const carla_waypoint_types::CarlaWaypoint &carla_waypoint);
   ~TrafficLight() = default;
-  void UpdateTrafficLightStatus(const carla_msgs::CarlaTrafficLightStatus& traffic_light_status,
-                                const carla_waypoint_types::CarlaWaypoint& carla_waypoint);
+  TrafficLight(const TrafficLight &other);
+  void UpdateTrafficLightStatus(const carla_msgs::CarlaTrafficLightStatus &traffic_light_status,
+                                const carla_waypoint_types::CarlaWaypoint &carla_waypoint);
 
-  const carla_msgs::CarlaTrafficLightStatus &TrafficLightStatus() const;
-  Box2d GetBox2d() const { return traffic_light_box_;};
-  const carla_msgs::CarlaBoundingBox& TrafficLightBoundingBox() const;
-  const int& Id() const;
-  const int& LaneId() const;
-  const int& SectionId() const;
-  const int& RoadId() const;
-  const geometry_msgs::Pose& Transform() const;
-//  const carla_waypoint_types::CarlaWaypoint& WayPoint() const;
+  const carla_msgs::CarlaTrafficLightStatus &TrafficLightStatus() const {
+    return traffic_light_status_;
+  }
+  const Box2d& GetBox2d() const;;
+  const uint32_t &Id() const;
+  const uint32_t &LaneId() const;
+  const uint32_t &SectionId() const;
+  const uint32_t &RoadId() const;
+  const geometry_msgs::Pose &Transform() const;
 
  private:
+  uint32_t id_{};
+  uint32_t lane_id_{};
+  uint32_t section_id_{};
+  uint32_t road_id_{};
   Box2d traffic_light_box_;
   carla_msgs::CarlaBoundingBox trigger_volume_;
   carla_msgs::CarlaTrafficLightStatus traffic_light_status_;
   geometry_msgs::Pose transform_;
-//  carla_waypoint_types::CarlaWaypoint waypoint_;
-  int id_{-1};
-  int lane_id_{-1};
-  int section_id_{-1};
-  int road_id_{-1};
+
 };
 }
 #endif //CATKIN_WS_SRC_MOTION_PLANNING_WITH_CARLA_LOCAL_PLANNER_INCLUDE_TRAFFIC_LIGHTS_TRAFFIC_LIGHT_HPP_

@@ -41,8 +41,12 @@ class Obstacle {
   const double &Length() const { return length_; }
   const double &Width() const { return width_; }
   const Box2d &BoundingBox() const { return bounding_box_; }
-  Box2d GetBoundingBoxAtPoint(const planning_msgs::TrajectoryPoint &point);
-
+  Box2d GetBoundingBoxAtPoint(const planning_msgs::TrajectoryPoint &point) const;
+ private:
+  static planning_msgs::TrajectoryPoint
+  InterpolateTrajectoryPoint(const planning_msgs::TrajectoryPoint &point,
+                             const planning_msgs::TrajectoryPoint &point_1,
+                             double time) ;
  private:
   int lane_id_ = -1;
   int road_id_ = -1;
@@ -60,6 +64,7 @@ class Obstacle {
   double length_;
   double width_;
   Box2d bounding_box_;
+
 };
 }
 #endif

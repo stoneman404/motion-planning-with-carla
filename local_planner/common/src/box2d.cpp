@@ -118,7 +118,7 @@ bool Box2d::HasOverlapWithBox2d(const planning::Box2d &box) const {
 }
 
 void Box2d::RotateFromCenter(const double rotate_angle) {
-  heading_ = NormalizeAngle(heading_ + rotate_angle);
+  heading_ = MathUtil::NormalizeAngle(heading_ + rotate_angle);
   cos_heading_ = std::cos(heading_);
   sin_heading_ = std::sin(heading_);
   InitCorners();
@@ -129,7 +129,6 @@ void Box2d::Shift(const Eigen::Vector2d &shift_vec) {
   InitCorners();
 
 }
-
 
 void Box2d::LongitudinalExtend(const double extension_length) {
   length_ += extension_length;
@@ -142,21 +141,21 @@ void Box2d::LateralExtend(const double extension_length) {
   half_width_ += extension_length / 2.0;
   InitCorners();
 }
-const Eigen::Vector2d &Box2d::Center() const { return center_;}
-double Box2d::center_x() const {return center_.x();}
-double Box2d::center_y() const {return center_.y();}
-double Box2d::length() const {return length_;}
-double Box2d::width() const {return width_;}
-double Box2d::half_length() const {return half_length_;}
-double Box2d::half_width() const {return half_width_;}
-double Box2d::heading() const {return heading_;}
-double Box2d::cos_heading() const {return cos_heading_;}
-double Box2d::sin_heading() const {return sin_heading_;}
-double Box2d::area() const {return length_ * width_;}
-double Box2d::diagonal() const {return std::hypot(length_, width_);}
-double Box2d::max_x() const {return max_x_;}
-double Box2d::min_x() const {return min_x_;}
-double Box2d::max_y() const {return max_x_;}
-double Box2d::min_y() const {return min_y_;}
+const Eigen::Vector2d &Box2d::Center() const { return center_; }
+double Box2d::center_x() const { return center_.x(); }
+double Box2d::center_y() const { return center_.y(); }
+double Box2d::length() const { return length_; }
+double Box2d::width() const { return width_; }
+double Box2d::half_length() const { return half_length_; }
+double Box2d::half_width() const { return half_width_; }
+double Box2d::heading() const { return heading_; }
+double Box2d::cos_heading() const { return cos_heading_; }
+double Box2d::sin_heading() const { return sin_heading_; }
+double Box2d::area() const { return length_ * width_; }
+double Box2d::diagonal() const { return std::hypot(length_, width_); }
+double Box2d::max_x() const { return max_x_; }
+double Box2d::min_x() const { return min_x_; }
+double Box2d::max_y() const { return max_x_; }
+double Box2d::min_y() const { return min_y_; }
 
 }

@@ -12,7 +12,7 @@ namespace planning {
 struct SpeedLimit {
   SpeedLimit() = default;
   SpeedLimit(double _start_s, double _end_s, double _speed_limit)
-      : start_s(_speed_limit), end_s(_end_s), speed_limit(_speed_limit) {}
+      : start_s(_start_s), end_s(_end_s), speed_limit(_speed_limit) {}
   double start_s = 0.0;
   double end_s = 0.0;
   double speed_limit = 0.0;
@@ -201,11 +201,11 @@ class ReferenceLine {
   * @param s
   * @return
   */
-  ReferencePoint Interpolate(const ReferencePoint &p0,
+  static ReferencePoint Interpolate(const ReferencePoint &p0,
                              const ReferencePoint &p1,
                              double s0,
                              double s1,
-                             double s) const;
+                             double s) ;
 
  private:
 
@@ -217,9 +217,9 @@ class ReferenceLine {
    * @param point
    * @return
    */
-  inline double DistanceToLineSegment(const Eigen::Vector2d &start,
+  static inline double DistanceToLineSegment(const Eigen::Vector2d &start,
                                       const Eigen::Vector2d &end,
-                                      const Eigen::Vector2d &point) const;
+                                      const Eigen::Vector2d &point) ;
 
 //    size_t GetIndex(double s) const;
 

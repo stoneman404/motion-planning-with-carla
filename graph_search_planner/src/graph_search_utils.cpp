@@ -2,6 +2,8 @@
 // Created by ldh on 20-7-17.
 //
 #include "graph_search_utils.hpp"
+#include "../../local_planner/common/include/math_utils.hpp"
+
 namespace planning{
 bool InBoudary(int index_x, int index_y,  nav_msgs::OccupancyGrid::Ptr grid_map) {
     return index_x >= 0 && index_x < grid_map->info.width && index_y >= 0
@@ -62,7 +64,6 @@ double NormalizeAngle(const double &angle) {
 double CalcAngleDist(double from, double to) {
     return NormalizeAngle(to - from);
 }
-
 
 bool CheckPose3d(double base_x, double base_y, double base_phi,
 

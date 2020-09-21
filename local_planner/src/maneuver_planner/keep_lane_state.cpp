@@ -95,14 +95,14 @@ bool KeepLaneState::CurrentLaneProhibitedByTrafficLight() const {
   SLBoundary nearest_traffic_light_sl_boundary;
   // get nearest front traffic light in same lane
   for (const auto &traffic_light : traffic_lights) {
-    if (traffic_light.second.RoadId() != ego_road_id) {
+    if (traffic_light.second->RoadId() != ego_road_id) {
       continue;
     }
-    if (traffic_light.second.LaneId() != ego_lane_id) {
+    if (traffic_light.second->LaneId() != ego_lane_id) {
       continue;
     }
     SLBoundary sl_boundary;
-    Box2d light_box = traffic_light.second.GetBox2d();
+    const Box2d light_box = traffic_light.second->GetBox2d();
     reference_line_->GetSLBoundary(light_box, &sl_boundary);
     if (sl_boundary.end_s < ego_sl_boundary.start_s) {
       continue;
@@ -115,7 +115,7 @@ bool KeepLaneState::CurrentLaneProhibitedByTrafficLight() const {
       nearest_traffic_light_sl_boundary = sl_boundary;
     }
   }
-  const auto traffic_state = traffic_lights.at(min_id).TrafficLightStatus().state;
+  const auto traffic_state = traffic_lights.at(min_id)->TrafficLightStatus().state;
   if (traffic_state == carla_msgs::CarlaTrafficLightStatus::GREEN
       || traffic_state == carla_msgs::CarlaTrafficLightStatus::OFF
       || traffic_state == carla_msgs::CarlaTrafficLightStatus::UNKNOWN) {
@@ -205,7 +205,7 @@ bool KeepLaneState::WithInDistanceAhead(double target_x,
   }
   Eigen::Vector2d forward_vector;
   forward_vector << std::cos(heading), std::sin(heading);
-  double d_angle = NormalizeAngle(
+  double d_angle = MathUtil::NormalizeAngle(
       std::acos(forward_vector.dot(target_vector)));
   return d_angle < M_PI / 2.0;
 }

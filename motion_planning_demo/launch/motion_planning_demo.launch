@@ -73,7 +73,7 @@
         <param name="role_name" value="$(arg role_name)"/>
     </node>
 
-    <node pkg="rviz" type="rviz" name="rviz" args="-d $(find carla_ad_demo)/config/carla_ad_demo.rviz" required="true"
+    <node pkg="rviz" type="rviz" name="rviz" args="-d $(find motion_planning_demo)/config/motion_planning_demo.rviz" required="true"
           output="screen"/>
 
 </launch>

@@ -5,9 +5,9 @@
 namespace planning {
 class ChangeLaneLeftState : public State {
  public:
-  bool Enter(ManeuverPlanner *manuever_planner) override;
-  bool Execute(ManeuverPlanner *manuever_planner) override;
-  void Exit(ManeuverPlanner *manuever_planner) override;
+  bool Enter(ManeuverPlanner *maneuver_planner) override;
+  bool Execute(ManeuverPlanner *maneuver_planner) override;
+  void Exit(ManeuverPlanner *maneuver_planner) override;
   std::string Name() const override;
   static State &Instance();
   State *NextState(ManeuverPlanner *maneuver_planner) const override;

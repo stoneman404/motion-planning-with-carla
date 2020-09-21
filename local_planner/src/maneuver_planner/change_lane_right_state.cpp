@@ -1,13 +1,13 @@
 #include "maneuver_planner/change_lane_right_state.hpp"
 namespace planning {
 
-bool ChangeLaneRightState::Enter(ManeuverPlanner *manuever_planner) {
+bool ChangeLaneRightState::Enter(ManeuverPlanner *maneuver_planner) {
 
 }
-bool ChangeLaneRightState::Execute(ManeuverPlanner *manuever_planner) {
+bool ChangeLaneRightState::Execute(ManeuverPlanner *maneuver_planner) {
   return false;
 }
-void ChangeLaneRightState::Exit(ManeuverPlanner *manuever_planner) {
+void ChangeLaneRightState::Exit(ManeuverPlanner *maneuver_planner) {
 
 }
 State &ChangeLaneRightState::Instance() {
