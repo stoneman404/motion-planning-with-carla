@@ -34,10 +34,9 @@ class CoordinateTransformer {
                                 double rkappa, double rdkappa,
                                 const std::array<double, 3> &s_condition,
                                 const std::array<double, 3> &d_condition,
-                                double *const ptr_x, double *const ptr_y,
-                                double *const ptr_theta, double *const ptr_kappa,
-                                double *const ptr_dkappa, double *const ptr_v,
-                                double *const ptr_a);
+                                double *ptr_x, double *ptr_y,
+                                double *ptr_theta, double *ptr_kappa,
+                                double *ptr_v, double *ptr_a);
 
   static double CalcTheta(double rtheta, double rkappa,
                           double l, double dl);

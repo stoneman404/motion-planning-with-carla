@@ -2,7 +2,6 @@
 // Created by ldh on 20-7-17.
 //
 #include "graph_search_utils.hpp"
-#include "../../local_planner/common/include/math_utils.hpp"
 
 namespace planning{
 bool InBoudary(int index_x, int index_y,  nav_msgs::OccupancyGrid::Ptr grid_map) {

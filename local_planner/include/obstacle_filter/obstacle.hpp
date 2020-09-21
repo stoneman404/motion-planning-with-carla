@@ -43,26 +43,23 @@ class Obstacle {
   const Box2d &BoundingBox() const { return bounding_box_; }
   Box2d GetBoundingBoxAtPoint(const planning_msgs::TrajectoryPoint &point) const;
  private:
-  static planning_msgs::TrajectoryPoint
-  InterpolateTrajectoryPoint(const planning_msgs::TrajectoryPoint &point,
-                             const planning_msgs::TrajectoryPoint &point_1,
-                             double time) ;
+
  private:
-  int lane_id_ = -1;
-  int road_id_ = -1;
-  int section_id_ = -1;
-  ros::Time time_stamp_;
-  derived_object_msgs::Object object_;
-  double heading_;
-  Eigen::Vector2d center_;
+  int id_{};
+  int lane_id_{};
+  int road_id_{};
+  int section_id_{};
+  ros::Time time_stamp_{};
+  derived_object_msgs::Object object_{};
+  double heading_{};
+  Eigen::Vector2d center_{};
   bool is_static_ = false;
-  bool is_valid_obstacle_;
+  bool is_valid_obstacle_{};
   planning_msgs::Trajectory trajectory_;
-  int id_;
-  double speed_;
-  double angular_speed_;
-  double length_;
-  double width_;
+  double speed_{};
+  double angular_speed_{};
+  double length_{};
+  double width_{};
   Box2d bounding_box_;
 
 };
