@@ -118,11 +118,11 @@ set(planning_SRC
         common/src/polynomial.cpp
 
         src/maneuver_planner/maneuver_planner.cpp
-        src/maneuver_planner/stop_at_sign.cpp
+        src/maneuver_planner/stop_state.cpp
         src/maneuver_planner/emergency_stop_state.cpp
-        src/maneuver_planner/keep_lane_state.cpp
-        src/maneuver_planner/change_lane_left_state.cpp
-        src/maneuver_planner/change_lane_right_state.cpp
+        src/maneuver_planner/follow_lane_state.cpp
+        src/maneuver_planner/tailgating_state.cpp
+        src/maneuver_planner/overtake_state.cpp
         src/planner/frenet_lattice_planner/frenet_lattice_planner.cpp
 
         src/vehicle_state/vehicle_state.cpp

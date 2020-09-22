@@ -4,14 +4,6 @@
 #include <memory>
 namespace planning {
 class ManeuverPlanner;
-enum class StateName : uint32_t {
-  kKeepLane = 1u,
-  kEmergencyStop = 2u,
-  kChangeLaneLeft = 3u,
-  kChangeLaneRight = 4u,
-  kStopAtSign = 5u
-};
-
 class State {
 
  public:
@@ -22,7 +14,6 @@ class State {
   virtual std::string Name() const = 0;
   virtual State *NextState(ManeuverPlanner *maneuver_planner) const = 0;
   virtual ~State() = default;
-  virtual std::vector<StateName> GetPosibileNextStates() const = 0;
 
 };
 

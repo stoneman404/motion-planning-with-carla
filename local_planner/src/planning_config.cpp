@@ -29,6 +29,8 @@ void PlanningConfig::UpdateParams(const ros::NodeHandle &nh) {
   nh.param<double>("/local_planner/reference_max_backward_distance", reference_max_backward_distance_, 30.0);
   nh.param<double>("/local_planner/max_acc", max_acc_, 2.0);
   nh.param<double>("/local_planner/max_velocity", max_velocity_, 10.0);
+  nh.param<double>("/target_speed", target_speed_, 8.333);
+
 
 }
 
@@ -77,4 +79,5 @@ double PlanningConfig::safety_buffer() const { return safety_buffer_; }
 double PlanningConfig::reference_max_backward_distance() const { return reference_max_backward_distance_; }
 double PlanningConfig::reference_max_forward_distance() const { return reference_max_forward_distance_; }
 double PlanningConfig::max_velocity() const { return max_velocity_; }
+double PlanningConfig::target_speed() const {return target_speed_;}
 }

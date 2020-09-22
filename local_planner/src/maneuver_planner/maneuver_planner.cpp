@@ -2,10 +2,10 @@
 #include <reference_line/reference_line.hpp>
 #include "maneuver_planner/maneuver_planner.hpp"
 #include "maneuver_planner/state.hpp"
-#include "maneuver_planner/keep_lane_state.hpp"
-#include "maneuver_planner/change_lane_left_state.hpp"
-#include "maneuver_planner/change_lane_right_state.hpp"
-#include "maneuver_planner/stop_at_sign.hpp"
+#include "maneuver_planner/follow_lane_state.hpp"
+#include "maneuver_planner/tailgating_state.hpp"
+#include "maneuver_planner/overtake_state.hpp"
+#include "maneuver_planner/stop_state.hpp"
 #include "maneuver_planner/emergency_stop_state.hpp"
 #include "string_name.hpp"
 #include "planning_context.hpp"
@@ -20,7 +20,7 @@ void ManeuverPlanner::InitPlanner() {
   this->route_service_client_ = nh_.serviceClient<planning_srvs::Route>(
       service::kRouteServiceName);
   current_lane_id_ = VehicleState::Instance().lane_id();
-  current_state_.reset(&KeepLaneState::Instance());
+  current_state_.reset(&FollowLaneState::Instance());
   ROS_ASSERT(current_state_->Enter(this));
 }
 
@@ -127,7 +127,7 @@ int ManeuverPlanner::GetStartIndex(const int matched_index,
 
 int ManeuverPlanner::GetEndIndex(const int matched_index,
                                  double forward_distance,
-                                 const std::vector<planning_msgs::WayPoint> &way_points) const {
+                                 const std::vector<planning_msgs::WayPoint> &way_points) {
   int current_index = matched_index;
   const auto matched_way_point = way_points[current_index];
   double s = 0;
@@ -147,7 +147,7 @@ int ManeuverPlanner::GetEndIndex(const int matched_index,
 std::vector<planning_msgs::WayPoint> ManeuverPlanner::GetWayPointsFromStartToEndIndex(
     const int start_index,
     const int end_index,
-    const std::vector<planning_msgs::WayPoint> &way_points) const {
+    const std::vector<planning_msgs::WayPoint> &way_points) {
   if (start_index >= end_index) {
     return {};
   }
@@ -167,6 +167,9 @@ ManeuverPlanner::~ManeuverPlanner() {
   current_state_->Exit(this);
   current_state_.reset(nullptr);
 
+}
+void ManeuverPlanner::SetManeuverGoal(const ManeuverGoal &maneuver_goal) {
+  this->maneuver_goal_ = maneuver_goal;
 }
 
 }

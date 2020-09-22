@@ -56,12 +56,12 @@ class VehicleState {
   bool is_junction_ = false;
   geometry_msgs::Pose pose_;
 //    double kappa_;
-  double heading_;
-  double linear_vel_;
-  double angular_vel_;
-  double linear_acc_;
-  double centripental_acc_;
-  double steer_percentage_;
+  double heading_{};
+  double linear_vel_{};
+  double angular_vel_{};
+  double linear_acc_{};
+  double centripental_acc_{};
+  double steer_percentage_{};
   bool reverse_ = false;
   geometry_msgs::Vector3 center_of_mass_;
   ros::Time time_stamp_;

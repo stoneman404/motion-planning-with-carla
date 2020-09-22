@@ -23,7 +23,8 @@ class MathUtil {
   static double slerp(double a0, double t0, double a1, double t1,
                       double t);
   static double lerp(const double &x0, const double &t0,
-                     const double &x1, const double &t1, const double &t);
+                     const double &x1, const double &t1,
+                     const double &t);
 
 };
 

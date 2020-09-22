@@ -34,13 +34,14 @@ class PlanningConfig {
   double safety_buffer() const;
   double reference_max_forward_distance() const;
   double reference_max_backward_distance() const;
+  double target_speed() const;
  private:
   VehicleParams vehicle_params_; // ego_vehicle's params
-  double obstacle_trajectory_time_; // the trajectory total time of obstacles
-  double delta_t_; // the trajectory delta time
-  double filter_obstacle_length_; // we ignore the obstacles far away this length
-  double collision_buffer_; // the buffer to avoid collision
-  double max_lookahead_distance_; // the max lookahead distance for ego vehicle
+  double obstacle_trajectory_time_{}; // the trajectory total time of obstacles
+  double delta_t_{}; // the trajectory delta time
+  double filter_obstacle_length_{}; // we ignore the obstacles far away this length
+  double collision_buffer_{}; // the buffer to avoid collision
+  double max_lookahead_distance_{}; // the max lookahead distance for ego vehicle
   double max_lookahead_time_ = 8.0; // max lookahead time
   double safety_buffer_ = 6.0; // safety_buffer_
   double reference_smoother_distance_weight_ = 20.0;
@@ -53,7 +54,7 @@ class PlanningConfig {
   double reference_max_backward_distance_ = 10.0;
   double max_acc_ = 1.0;
   double max_velocity_ = 10.0;
-
+  double target_speed_{};
  private:
   PlanningConfig() = default;
   ~PlanningConfig() = default;

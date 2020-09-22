@@ -9,6 +9,8 @@
 
 namespace planning {
 
+typedef planning_msgs::CarlaRoadOption RoadOption;
+
 struct SpeedLimit {
   SpeedLimit() = default;
   SpeedLimit(double _start_s, double _end_s, double _speed_limit)
@@ -207,6 +209,7 @@ class ReferenceLine {
                              double s1,
                              double s) ;
 
+
  private:
 
   bool BuildReferenceLineWithSpline();
@@ -221,22 +224,18 @@ class ReferenceLine {
                                       const Eigen::Vector2d &end,
                                       const Eigen::Vector2d &point) ;
 
-//    size_t GetIndex(double s) const;
+  planning_msgs::WayPoint GetNearestWayPoint(double x, double y) const;
+
+
 
 
  private:
   bool smoothed_ = false;
   std::vector<planning_msgs::WayPoint> way_points_;
   std::vector<ReferencePoint> reference_points_;
-//    std::vector<SpeedLimit> speed_limits_;
-//    std::vector<double> lane_left_width_;
-//    std::vector<double> lane_right_width_;
   std::vector<Eigen::Vector2d> left_boundary_;
   std::vector<Eigen::Vector2d> right_boundary_;
-//    std::vector<double> accumulated_s_;
-//    std::vector<Eigen::Vector2d> unit_directions_;
-  double length_; // the total length of this reference line
-  bool use_spline_curve_ = true;
+  double length_{}; // the total length of this reference line
   std::shared_ptr<Spline2d> ref_line_spline_ = nullptr;
   std::shared_ptr<Spline2d> left_boundary_spline_ = nullptr;
   std::shared_ptr<Spline2d> right_boundary_spline_ = nullptr;

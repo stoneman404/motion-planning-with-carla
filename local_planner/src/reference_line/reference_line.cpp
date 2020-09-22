@@ -4,16 +4,18 @@
 #include "reference_line/reference_line.hpp"
 #include "math_utils.hpp"
 #include "coordinate_transformer.hpp"
-namespace planning {
+
+namespace planning {;
 
 ReferenceLine::ReferenceLine(const planning_srvs::RouteResponse &route_response)
     : way_points_(route_response.route) {
   ROS_ASSERT(route_response.route.size() >= 3);
   reference_smoother_ = std::make_unique<ReferenceLineSmoother>();
-  reference_points_.reserve(route_response.route.size());
-  left_boundary_.reserve(route_response.route.size());
-  right_boundary_.reserve(route_response.route.size());
+
   size_t waypoints_size = route_response.route.size();
+  reference_points_.reserve(waypoints_size);
+  left_boundary_.reserve(waypoints_size);
+  right_boundary_.reserve(waypoints_size);
   for (size_t i = 0; i < route_response.route.size(); ++i) {
     const auto way_point = route_response.route[i];
     const double left_width = way_point.lane_width / 2.0;
@@ -54,10 +56,11 @@ ReferenceLine::ReferenceLine(const std::vector<planning_msgs::WayPoint> &waypoin
     : way_points_(waypoints) {
   ROS_ASSERT(waypoints.size() >= 3);
   reference_smoother_ = std::make_unique<ReferenceLineSmoother>();
-  reference_points_.reserve(waypoints.size());
-  left_boundary_.reserve(waypoints.size());
-  right_boundary_.reserve(waypoints.size());
-  for (size_t i = 0; i < waypoints.size(); ++i) {
+  size_t waypoints_size = waypoints.size();
+  reference_points_.reserve(waypoints_size);
+  left_boundary_.reserve(waypoints_size);
+  right_boundary_.reserve(waypoints_size);
+  for (size_t i = 0; i < waypoints_size; ++i) {
     const auto way_point = waypoints[i];
     const double left_width = way_point.lane_width / 2.0;
     const double right_width = way_point.lane_width / 2.0;
@@ -415,6 +418,20 @@ double ReferenceLine::GetDrivingWidth(const SLBoundary &sl_boundary) const {
                                   lane_right_width + sl_boundary.start_l);
   driving_width = std::min(lane_left_width + lane_right_width, driving_width);
   return driving_width;
+}
+
+planning_msgs::WayPoint ReferenceLine::GetNearestWayPoint(double x, double y) const {
+  size_t way_point_size = way_points_.size();
+  double min_dist = std::numeric_limits<double>::infinity();
+  size_t min_index = 0;
+  for (size_t i = 0; i < way_point_size; ++i){
+    double dist = std::hypot(x - way_points_[i].pose.position.x, y - way_points_[i].pose.position.y);
+    if (dist < min_dist){
+      min_dist = dist;
+      min_index = i;
+    }
+  }
+  return way_points_[min_index];
 }
 
 }

@@ -1,5 +1,5 @@
 #include "maneuver_planner/emergency_stop_state.hpp"
-#include "maneuver_planner/keep_lane_state.hpp"
+#include "maneuver_planner/follow_lane_state.hpp"
 
 #include <obstacle_filter/obstacle_filter.hpp>
 #include <reference_line/reference_line.hpp>
@@ -10,15 +10,15 @@
 #include "traffic_lights/traffic_light_list.hpp"
 namespace planning {
 
-bool KeepLaneState::Enter(ManeuverPlanner *maneuver_planner) {
-  ROS_INFO("We are current switching to **KeepLaneState**...");
+bool FollowLaneState::Enter(ManeuverPlanner *maneuver_planner) {
+  ROS_INFO("We are current switching to **FollowLaneState**...");
   const auto ego_pose = VehicleState::Instance().pose();
   const auto lane_id = VehicleState::Instance().lane_id();
   const auto goal_pose = PlanningContext::Instance().global_goal_pose().pose;
   planning_srvs::RouteResponse route_response;
   bool result = maneuver_planner->ReRoute(ego_pose, goal_pose, route_response);
   if (!result) {
-    ROS_FATAL("Failed to enter **KeepLaneState** state");
+    ROS_FATAL("Failed to enter **FollowLaneState** state");
     return false;
   }
   auto &route_infos = PlanningContext::Instance().mutable_route_infos();
@@ -38,52 +38,48 @@ bool KeepLaneState::Enter(ManeuverPlanner *maneuver_planner) {
   ROS_ASSERT(reference_line_list.size() == 1);
 }
 
-bool KeepLaneState::Execute(ManeuverPlanner *maneuver_planner) {
+bool FollowLaneState::Execute(ManeuverPlanner *maneuver_planner) {
 
   if (maneuver_planner == nullptr) {
     ROS_ERROR("the ManeuverPlanner is nullptr");
     return false;
   }
+
 }
 
-void KeepLaneState::Exit(ManeuverPlanner *maneuver_planner) {
-  ROS_INFO("We are currently Exiting the KeepLaneState...");
+void FollowLaneState::Exit(ManeuverPlanner *maneuver_planner) {
+  ROS_INFO("We are currently Exiting the FollowLaneState...");
 }
 
-State &KeepLaneState::Instance() {
-  static KeepLaneState instance;
+State &FollowLaneState::Instance() {
+  static FollowLaneState instance;
   return instance;
 }
 
-std::string KeepLaneState::Name() const { return "KeepLaneState"; }
+std::string FollowLaneState::Name() const { return "FollowLaneState"; }
 
-State *KeepLaneState::NextState(ManeuverPlanner *maneuver_planner) const {
+State *FollowLaneState::NextState(ManeuverPlanner *maneuver_planner) const {
 
   if (maneuver_planner == nullptr) {
     ROS_ERROR("the ManeuverPlanner is nullptr");
     return nullptr;
   }
-  auto next_states = GetPosibileNextStates();
+  ManeuverGoal traffic_maneuver_goal;
+  ManeuverGoal obstacle_maneuver_goal;
+  // traffic decision
+  this->CurrentLaneIsProhibitedByTrafficLights(&traffic_maneuver_goal);
+  this->CurrentLaneIsProhibitedByObstacles(&obstacle_maneuver_goal);
   return nullptr;
 }
 
-std::vector<StateName> KeepLaneState::GetPosibileNextStates() const {
-  std::vector<StateName> possible_states;
-  possible_states.push_back(StateName::kEmergencyStop);
-  possible_states.push_back(StateName::kChangeLaneLeft);
-  possible_states.push_back(StateName::kChangeLaneRight);
-  possible_states.push_back(StateName::kKeepLane);
-  possible_states.push_back(StateName::kStopAtSign);
-  return possible_states;
-}
-
-bool KeepLaneState::CurrentLaneProhibitedByTrafficLight() const {
+bool FollowLaneState::CurrentLaneIsProhibitedByTrafficLights(ManeuverGoal *maneuver_goal) const {
   bool prohibited = false;
-  const double max_comfort_decel = PlanningConfig::Instance().max_acc() * 0.6;  // todo: 0.6 should be parameter
+
   const double max_decel = PlanningConfig::Instance().max_acc();
-  const double comfort_stop_distance =
-      std::pow(VehicleState::Instance().linear_vel(), 2) / (2 * max_comfort_decel); // max_comfort_decel
   const double min_stop_distance = std::pow(VehicleState::Instance().linear_vel(), 2) / (2 * max_decel);
+  const double max_comfort_decel = PlanningConfig::Instance().max_acc() * 0.6;
+  double min_comfor_stop_distance = std::pow(VehicleState::Instance().linear_vel(), 2) / (2.0 * max_comfort_decel);
+  min_comfor_stop_distance = std::max(min_comfor_stop_distance, 5.0);
   const int ego_lane_id = VehicleState::Instance().lane_id();
   const int ego_road_id = VehicleState::Instance().road_id();
   const auto traffic_lights = TrafficLightList::Instance().TrafficLights();
@@ -93,7 +89,6 @@ bool KeepLaneState::CurrentLaneProhibitedByTrafficLight() const {
   int min_id = -1;
   double min_dist = std::numeric_limits<double>::max();
   SLBoundary nearest_traffic_light_sl_boundary;
-  // get nearest front traffic light in same lane
   for (const auto &traffic_light : traffic_lights) {
     if (traffic_light.second->RoadId() != ego_road_id) {
       continue;
@@ -116,84 +111,104 @@ bool KeepLaneState::CurrentLaneProhibitedByTrafficLight() const {
     }
   }
   const auto traffic_state = traffic_lights.at(min_id)->TrafficLightStatus().state;
+  double ego_s = 0.5 * (ego_sl_boundary.start_s + ego_sl_boundary.end_s);
+
   if (traffic_state == carla_msgs::CarlaTrafficLightStatus::GREEN
       || traffic_state == carla_msgs::CarlaTrafficLightStatus::OFF
       || traffic_state == carla_msgs::CarlaTrafficLightStatus::UNKNOWN) {
     prohibited = false;
   } else if (min_dist < min_stop_distance) {
-    prohibited = false; // it is too late to stop at stop line, continue driving
-  } else if (min_dist > PlanningConfig::Instance().max_lookahead_distance()) {
+    prohibited = true;
+    maneuver_goal->has_stop_point = true;
+    maneuver_goal->decision_type = DecisionType::kEmergencyStop;
+    maneuver_goal->lane_id = VehicleState::Instance().lane_id();
+    maneuver_goal->target_s = std::max(nearest_traffic_light_sl_boundary.start_s, ego_s + min_stop_distance);
+    maneuver_goal->target_speed = 0.0;
+
+  } else if (min_dist > min_comfor_stop_distance) {
     prohibited = false;
   } else {
     prohibited = true;
+    maneuver_goal->target_speed = 0.0;
+    maneuver_goal->has_stop_point = true;
+    maneuver_goal->target_s = std::max(nearest_traffic_light_sl_boundary.start_s, ego_s + min_stop_distance);
+    maneuver_goal->lane_id = VehicleState::Instance().lane_id();
+    maneuver_goal->decision_type = DecisionType::kStop;
   }
+  if (!prohibited) {
+    maneuver_goal->target_speed = PlanningConfig::Instance().target_speed();
+    maneuver_goal->has_stop_point = false;
+    maneuver_goal->target_s = std::min(reference_line_->Length(),
+                                       ego_s + PlanningConfig::Instance().max_lookahead_distance());
+    maneuver_goal->lane_id = VehicleState::Instance().lane_id();
+    maneuver_goal->decision_type = DecisionType::kFollowLane;
+  }
+
 
   return prohibited;
 }
 
-bool KeepLaneState::CurrentLaneProhibitedByObstacles() const {
+bool FollowLaneState::CurrentLaneIsProhibitedByObstacles(ManeuverGoal* maneuver_goal) const {
   const int current_lane_id = VehicleState::Instance().lane_id();
   const int current_road_id = VehicleState::Instance().road_id();
   auto obstacles = ObstacleFilter::Instance().Obstacles();
   const double ego_vel = VehicleState::Instance().linear_vel();
 
-  const double ego_width = PlanningConfig::Instance().vehicle_params().width;
-  const double safe_buffer = 1.0;
   const double lookahead_distance = std::max(
       PlanningConfig::Instance().max_lookahead_distance(),
       PlanningConfig::Instance().max_lookahead_time() * ego_vel);
-  SLPoint ego_sl;
-  reference_line_->XYToSL(VehicleState::Instance().pose().position.x,
-                          VehicleState::Instance().pose().position.y, &ego_sl);
-
+  SLBoundary ego_sl_boundary;
+  reference_line_->GetSLBoundary(VehicleState::Instance().GetEgoBox(), &ego_sl_boundary);
   bool prohibited = false;
   double min_ds = std::numeric_limits<double>::max();
-  int min_obstacle_id = 0;
+  int min_obstacle_id = -1;
+  SLBoundary nearest_sl_boundary;
   // get nearest front obstacles
   for (const auto &obstacle : obstacles) {
     if (obstacle.second->road_id() != current_road_id) {
       continue;
     }
-    if (obstacle.second->lane_id() != current_lane_id) {
-      continue;
-    }
-    SLPoint sl_point;
-    reference_line_->XYToSL(obstacle.second->Center().x(),
-                            obstacle.second->Center().y(), &sl_point);
-    if (sl_point.s < ego_sl.s) {
-      continue;
-    }
-
-    if (sl_point.s - ego_sl.s < min_ds) {
-      min_obstacle_id = obstacle.first;
-    }
-  }
-
-  const auto nearest_obstacle = obstacles[min_obstacle_id];
-  if (nearest_obstacle->IsStatic()) {
     SLBoundary sl_boundary;
-    reference_line_->GetSLBoundary(nearest_obstacle->BoundingBox(), &sl_boundary);
+    reference_line_->GetSLBoundary(obstacle.second->BoundingBox(), &sl_boundary);
     if (!reference_line_->IsOnLane(sl_boundary)) {
-      prohibited = false;
-    } else if (sl_boundary.start_s < ego_sl.s
-        || sl_boundary.end_s > ego_sl.s + lookahead_distance) {
-      prohibited = false;
-    } else {
-      prohibited = reference_line_->GetDrivingWidth(sl_boundary) <= ego_width + safe_buffer;
+      continue;
     }
-  } else {
-    // for dynamic obstacles
-    prohibited = nearest_obstacle->Speed() < 0.3 * ego_vel;
+    if (ego_sl_boundary.start_s > sl_boundary.end_s + 1e-1) {
+      continue;
+    }
+    if (ego_sl_boundary.end_s
+        + lookahead_distance < sl_boundary.start_s) {
+      continue;
+    }
+    double dist = ego_sl_boundary.start_s - ego_sl_boundary.end_s;
+    if (dist < min_ds) {
+      min_ds = dist;
+      min_obstacle_id = obstacle.first;
+      nearest_sl_boundary = sl_boundary;
+    }
   }
+  double ego_s = 0.5 * (ego_sl_boundary.start_s + ego_sl_boundary.end_s);
+
+  if (min_obstacle_id == -1) {
+    prohibited = false;
+    maneuver_goal->target_s = std::min(ego_s + lookahead_distance, reference_line_->Length());
+    maneuver_goal->has_stop_point = false;
+    maneuver_goal->target_speed = PlanningConfig::Instance().target_speed();
+    maneuver_goal->lane_id = VehicleState::Instance().lane_id();
+    maneuver_goal->decision_type = DecisionType::kFollowLane;
+  } else {
+
+  }
+
   return prohibited;
 }
 
-bool KeepLaneState::WithInDistanceAhead(double target_x,
-                                        double target_y,
-                                        double current_x,
-                                        double current_y,
-                                        double heading,
-                                        double max_distance) {
+bool FollowLaneState::WithInDistanceAhead(double target_x,
+                                          double target_y,
+                                          double current_x,
+                                          double current_y,
+                                          double heading,
+                                          double max_distance) {
   Eigen::Vector2d target_vector;
   target_vector << target_x - current_x, target_y - current_y;
   double norm_target = target_vector.norm();
