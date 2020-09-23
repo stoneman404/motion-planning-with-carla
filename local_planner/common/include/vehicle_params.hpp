@@ -2,11 +2,11 @@
 #define CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_VEHICLE_PARAMS_HPP_
 #include <Eigen/Core>
 namespace planning{
-struct VehicleParams{
+struct VehicleParams {
   double length;
   double width;
-  double back_rear_to_center_length;
-  double front_rear_to_center_length;
+  double back_axle_to_center_length;
+  double front_axle_to_center_length;
   double axle_length_;
   double max_steer_angle_;
   double min_r_;

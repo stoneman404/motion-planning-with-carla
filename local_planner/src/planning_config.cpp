@@ -55,12 +55,12 @@ void PlanningConfig::UpdateVehicleParams(const derived_object_msgs::Object &obje
 
   this->vehicle_params_.length = object.shape.dimensions[0];
   this->vehicle_params_.width = object.shape.dimensions[1];
-  this->vehicle_params_.back_rear_to_center_length = std::fabs(
+  this->vehicle_params_.back_axle_to_center_length = std::fabs(
       vehicle_info.wheels[3].position.x);
-  this->vehicle_params_.front_rear_to_center_length = std::fabs(
+  this->vehicle_params_.front_axle_to_center_length = std::fabs(
       vehicle_info.wheels[0].position.x);
-  this->vehicle_params_.axle_length_ = this->vehicle_params_.front_rear_to_center_length +
-      this->vehicle_params_.back_rear_to_center_length;
+  this->vehicle_params_.axle_length_ = this->vehicle_params_.front_axle_to_center_length +
+      this->vehicle_params_.back_axle_to_center_length;
   this->vehicle_params_.max_steer_angle_ = vehicle_info.wheels.front().max_steer_angle;
   this->vehicle_params_.min_r_ = this->vehicle_params_.axle_length_ /
       std::tan(this->vehicle_params_.max_steer_angle_);
