@@ -167,9 +167,9 @@ DecisionType FollowLaneState::ObstaclesDecision(ManeuverGoal *maneuver_goal) con
   SLBoundary ego_sl_boundary;
   int forward_obstacle_id, backward_obstacle_id;
   this->GetLaneClearDistance(0, &forward_clear_distance,
-                       &backward_clear_distance,
-                       &forward_obstacle_id,
-                       &backward_obstacle_id);
+                             &backward_clear_distance,
+                             &forward_obstacle_id,
+                             &backward_obstacle_id);
   const auto &forward_obstacle = obstacles.at(forward_obstacle_id);
   if (forward_clear_distance > PlanningConfig::Instance().max_lookahead_distance()) {
     if (ego_sl.s + forward_clear_distance > reference_line_->Length()) {
@@ -196,10 +196,10 @@ int FollowLaneState::SelectLane() const {
 }
 
 void FollowLaneState::GetLaneClearDistance(int lane_offset,
-                                           double *const forward_clear_distance,
-                                           double *const backward_clear_distance,
-                                           int *const forward_obstacle_id,
-                                           int *const backward_obstacle_id) const {
+                                           double *forward_clear_distance,
+                                           double *backward_clear_distance,
+                                           int *forward_obstacle_id,
+                                           int *backward_obstacle_id) const {
   double maneuver_forward_distance = PlanningConfig::Instance().max_lookahead_distance();
   double maneuver_backward_distance = PlanningConfig::Instance().max_lookback_distance();
   int front_obstacle_id = -1;

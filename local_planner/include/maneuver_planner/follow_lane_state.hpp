@@ -13,20 +13,81 @@ namespace planning {
 class FollowLaneState : public State {
 
  public:
+
+  /**
+   * @brief: enter action
+   * @param maneuver_planner
+   * @return
+   */
   bool Enter(ManeuverPlanner *maneuver_planner) override;
+
+  /**
+   * @brief: execute action
+   * @param maneuver_planner
+   * @return
+   */
   bool Execute(ManeuverPlanner *maneuver_planner) override;
+
+  /**
+   * @brief: exit action
+   * @param maneuver_planner
+   */
   void Exit(ManeuverPlanner *maneuver_planner) override;
+
+  /**
+   * @brief: get the name of current state
+   * @return the name of this state
+   */
   std::string Name() const override;
+
+  /**
+   * @brief:
+   * @return
+   */
   static State &Instance();
+
+  /**
+   *
+   * @param[in, out] maneuver_planner
+   * @return : return the next state if current state transition
+   */
   State *NextState(ManeuverPlanner *maneuver_planner) const override;
 
  private:
+
+  /**
+   * @brief: calc the target lane clear distance,
+   * both front and rear clear distance as well as leading and following obstacle id
+   * @param[in] lane_offset : lane offset, -1: offset to left, +1 offset to rigth, 0 no offset
+   * @param[out] forward_clear_distance: the front clear distance at thr target lane
+   * @param[out] backward_clear_distance: the rear clear distance at the target lane
+   * @param[out] forward_obstacle_id : the front obstacle id, -1: means has no front obstacle
+   * @param[out] backward_obstacle_id: the rear obstacle id,  -1: means has no rear obstacle
+   */
   void GetLaneClearDistance(int lane_offset,
-                            double *const forward_clear_distance,
-                            double *const backward_clear_distance,
-                            int* const forward_obstacle_id, int* const backward_obstacle_id) const;
-  DecisionType TrafficLightsDecision(ManeuverGoal* maneuver_goal) const;
-  DecisionType ObstaclesDecision(ManeuverGoal* maneuver_goal) const;
+                            double *forward_clear_distance,
+                            double *backward_clear_distance,
+                            int *forward_obstacle_id,
+                            int *backward_obstacle_id) const;
+
+  /**
+   * @brief: the traffic light decision
+   * @param[in,out] maneuver_goal: the maneuver goal determined by traffic decision
+   * @return : the decision type
+   */
+  DecisionType TrafficLightsDecision(ManeuverGoal *maneuver_goal) const;
+
+  /**
+   * @brief: the obstacle decision
+   * @param[in, out] maneuver_goal: the maneuver goal determined by obstacles
+   * @return : the decision type
+   */
+  DecisionType ObstaclesDecision(ManeuverGoal *maneuver_goal) const;
+
+  /**
+   * @brief: select the target lane
+   * @return : the target lane id
+   */
   int SelectLane() const;
   FollowLaneState() = default;
   FollowLaneState(const FollowLaneState &other);
