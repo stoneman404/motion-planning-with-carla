@@ -389,7 +389,7 @@ void FollowLaneState::GetLaneClearDistance(int lane_offset,
       }
       case 1: {
         // right lane check
-        // the obstacle is on right lane, and the driving width on right lane is not safety
+        // the obstacle is on right lane, and the driving width on right lane is not safe
         if (obstacle_sl_boundary.end_l < -right_lane_width && std::fabs(obstacle_sl_boundary.end_l) <
             right_lane_width + ego_width + PlanningConfig::Instance().lat_safety_buffer()) {
           double forward_dist = obstacle_sl_boundary.start_s - ego_sl_boundary.end_s;
@@ -407,7 +407,7 @@ void FollowLaneState::GetLaneClearDistance(int lane_offset,
       }
       case -1: {
         // left lane check
-        // the obstacle is on left lane, and the driving width on left lane is not safety
+        // the obstacle is on left lane, and the driving width on left lane is not safe
         if (obstacle_sl_boundary.start_l > left_lane_width && obstacle_sl_boundary.start_l <
             left_lane_width + ego_width + PlanningConfig::Instance().lat_safety_buffer()) {
           double forward_dist = obstacle_sl_boundary.start_s - ego_sl_boundary.end_s;
