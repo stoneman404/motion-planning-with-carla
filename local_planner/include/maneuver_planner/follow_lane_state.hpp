@@ -85,7 +85,7 @@ class FollowLaneState : public State {
   void ObstaclesDecision(ManeuverGoal *maneuver_goal) const;
 
   /**
-   *
+   * @brief: change lane decision process, used by obstacle decision
    * @param current_lane_forward_clear_distance
    * @param current_lane_backward_clear_distance
    * @param current_lane_forward_obstacle_id

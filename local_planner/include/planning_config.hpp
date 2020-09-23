@@ -40,6 +40,7 @@ class PlanningConfig {
   double min_lookahead_distance() const;
   double maneuver_forward_clear_threshold() const;
   double maneuver_backward_clear_threshold() const;
+  double maneuver_change_lane_speed_discount_factor() const;
 
  private:
   VehicleParams vehicle_params_; // ego_vehicle's params
@@ -66,6 +67,7 @@ class PlanningConfig {
   double max_lookback_distance_{};
   double maneuver_forward_clear_threshold_{};
   double maneuver_backward_clear_threshold_{};
+  double maneuver_change_lane_speed_discount_factor_{};
  private:
   PlanningConfig() = default;
   ~PlanningConfig() = default;

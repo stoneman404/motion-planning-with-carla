@@ -233,7 +233,7 @@ void FollowLaneState::ObstaclesDecision(ManeuverGoal *maneuver_goal) const {
       // 2.2.1 check to left and right lane
       if (0.3 * ego_vel > forward_obstacle->Speed()) {
         if (incoming_way_point.road_option.option == planning_msgs::CarlaRoadOption::LANEFOLLOW) {
-          // todo: change lane decsion
+          // todo: change lane decision
 
         } else {
           // follow the leading vehicle
