@@ -370,7 +370,7 @@ bool ReferenceLine::BuildReferenceLineWithSpline() {
     xs.push_back(ref_point.x());
     ys.push_back(ref_point.y());
   }
-  ref_line_spline_ = std::make_shared<Spline2d>(xs, ys, 3);
+  ref_line_spline_ = std::make_shared<Spline2d>(xs, ys, PlanningConfig::Instance().spline_order());
   std::vector<double> xs_left, ys_left;
   xs_left.reserve(left_boundary_.size());
   ys_left.reserve(left_boundary_.size());
@@ -378,7 +378,7 @@ bool ReferenceLine::BuildReferenceLineWithSpline() {
     xs_left.push_back(left.x());
     ys_left.push_back(left.y());
   }
-  left_boundary_spline_ = std::make_shared<Spline2d>(xs_left, ys_left, 3);
+  left_boundary_spline_ = std::make_shared<Spline2d>(xs_left, ys_left, PlanningConfig::Instance().spline_order());
 
   std::vector<double> xs_right, ys_right;
   xs_right.reserve(right_boundary_.size());
@@ -387,7 +387,7 @@ bool ReferenceLine::BuildReferenceLineWithSpline() {
     xs_right.push_back(right.x());
     ys_right.push_back(right.y());
   }
-  right_boundary_spline_ = std::make_shared<Spline2d>(xs_right, ys_right, 3);
+  right_boundary_spline_ = std::make_shared<Spline2d>(xs_right, ys_right, PlanningConfig::Instance().spline_order());
   return true;
 }
 
