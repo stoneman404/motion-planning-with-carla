@@ -9,7 +9,7 @@ namespace planning {;
 
 ReferenceLine::ReferenceLine(const planning_srvs::RouteResponse &route_response)
     : way_points_(route_response.route) {
-  ROS_ASSERT(route_response.route.size() >= 3);
+  ROS_ASSERT(route_response.route.size() >= PlanningConfig::Instance().spline_order());
   reference_smoother_ = std::make_unique<ReferenceLineSmoother>();
 
   size_t waypoints_size = route_response.route.size();
@@ -54,7 +54,7 @@ ReferenceLine::ReferenceLine(const planning_srvs::RouteResponse &route_response)
 
 ReferenceLine::ReferenceLine(const std::vector<planning_msgs::WayPoint> &waypoints)
     : way_points_(waypoints) {
-  ROS_ASSERT(waypoints.size() >= 3);
+  ROS_ASSERT(waypoints.size() >= PlanningConfig::Instance().spline_order());
   reference_smoother_ = std::make_unique<ReferenceLineSmoother>();
   size_t waypoints_size = waypoints.size();
   reference_points_.reserve(waypoints_size);
