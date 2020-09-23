@@ -35,6 +35,10 @@ class PlanningConfig {
   double reference_max_forward_distance() const;
   double reference_max_backward_distance() const;
   double target_speed() const;
+  double max_lookback_distance() const {return max_lookback_distance_;}
+  double maneuver_forward_clear_threshold() const {return maneuver_forward_clear_threshold_;}
+  double maneuver_backward_clear_threshold() const {return maneuver_backward_clear_threshold_;}
+
  private:
   VehicleParams vehicle_params_; // ego_vehicle's params
   double obstacle_trajectory_time_{}; // the trajectory total time of obstacles
@@ -55,6 +59,9 @@ class PlanningConfig {
   double max_acc_ = 1.0;
   double max_velocity_ = 10.0;
   double target_speed_{};
+  double max_lookback_distance_{};
+  double maneuver_forward_clear_threshold_{};
+  double maneuver_backward_clear_threshold_{};
  private:
   PlanningConfig() = default;
   ~PlanningConfig() = default;

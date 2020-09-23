@@ -21,14 +21,13 @@ class FollowLaneState : public State {
   State *NextState(ManeuverPlanner *maneuver_planner) const override;
 
  private:
-  bool CurrentLaneIsProhibitedByTrafficLights(ManeuverGoal* maneuver_goal) const;
-  bool CurrentLaneIsProhibitedByObstacles(ManeuverGoal* maneuver_goal) const;
-  static bool WithInDistanceAhead(double target_x,
-                                  double target_y,
-                                  double current_x,
-                                  double current_y,
-                                  double heading,
-                                  double max_distance);
+  void GetLaneClearDistance(int lane_offset,
+                            double *const forward_clear_distance,
+                            double *const backward_clear_distance,
+                            int* const forward_obstacle_id, int* const backward_obstacle_id) const;
+  DecisionType TrafficLightsDecision(ManeuverGoal* maneuver_goal) const;
+  DecisionType ObstaclesDecision(ManeuverGoal* maneuver_goal) const;
+  int SelectLane() const;
   FollowLaneState() = default;
   FollowLaneState(const FollowLaneState &other);
   FollowLaneState &operator=(const FollowLaneState &other);
@@ -37,4 +36,4 @@ class FollowLaneState : public State {
 
 };
 }
-#endif
+#endif //CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_MANEUVER_PLANNER_FOLLOW_LANE_STATE_HPP_

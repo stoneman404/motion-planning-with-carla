@@ -161,6 +161,7 @@ bool Planner::UpdateVehicleStatus() {
   VehicleState::Instance().set_section_id(carla_way_point.section_id);
   VehicleState::Instance().set_road_id(carla_way_point.road_id);
   VehicleState::Instance().set_is_junction(carla_way_point.is_junction);
+
 }
 
 bool Planner::GetWayPoint(const int &object_id,

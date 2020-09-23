@@ -25,13 +25,15 @@ void PlanningConfig::UpdateParams(const ros::NodeHandle &nh) {
   nh.param<int>("/local_planner/spline_order_", spline_order_, 3);
   nh.param<double>("/local_planner/max_lookahead_time", max_lookahead_time_, 8.0);
   nh.param<double>("/local_planner/safety_buffer", safety_buffer_, 6.0);
-  nh.param<double>("/local_planner/reference_max_forward_distance", reference_max_forward_distance_, 100.0);
-  nh.param<double>("/local_planner/reference_max_backward_distance", reference_max_backward_distance_, 30.0);
+  nh.param<double>("/local_planner/max_lookahead_distance", max_lookahead_distance_, 100);
+  nh.param<double>("/local_planner/max_lookback_distance", max_lookback_distance_, 30.0);
+  nh.param<double>("/local_planner/reference_max_forward_distance", reference_max_forward_distance_, 400.0);
+  nh.param<double>("/local_planner/reference_max_backward_distance", reference_max_backward_distance_, 60.0);
   nh.param<double>("/local_planner/max_acc", max_acc_, 2.0);
   nh.param<double>("/local_planner/max_velocity", max_velocity_, 10.0);
-  nh.param<double>("/target_speed", target_speed_, 8.333);
-
-
+  nh.param<double>("/local_planner/target_speed", target_speed_, 8.333);
+  nh.param<double>("/local_planner/maneuver_forward_clear_threshold", maneuver_forward_clear_threshold_, 30);
+  nh.param<double>("/local_planner/maneuver_backward_clear_threshold", maneuver_backward_clear_threshold_, 10);
 }
 
 void PlanningConfig::UpdateVehicleParams(const derived_object_msgs::Object &object,

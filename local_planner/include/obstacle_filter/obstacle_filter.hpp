@@ -30,7 +30,6 @@ class ObstacleFilter {
  private:
   ObstacleFilter() = default;
   ~ObstacleFilter() = default;
-
 };
 
 }

@@ -89,18 +89,20 @@ Obstacle::Obstacle(const derived_object_msgs::Object &object) {
 
 Obstacle::Obstacle(const Obstacle &other) {
   this->id_ = other.Id();
-  this->bounding_box_ = other.BoundingBox();
-  this->speed_ = other.Speed();
-  this->length_ = other.Length();
-  this->width_ = other.Width();
-  this->angular_speed_ = other.AngularSpeed();
-  this->object_ = other.Object();
-  this->trajectory_ = other.Trajectory();
-  this->is_valid_obstacle_ = other.IsValidObstacle();
-  this->is_static_ = other.IsStatic();
-  this->center_ = other.Center();
-  this->time_stamp_ = other.TimeStamp();
-  this->heading_ = other.Heading();
+  this->lane_id_ = other.lane_id_;
+  this->section_id_ = other.section_id_;
+  this->bounding_box_ = other.bounding_box_;
+  this->speed_ = other.speed_;
+  this->length_ = other.length_;
+  this->width_ = other.width_;
+  this->angular_speed_ = other.angular_speed_;
+  this->object_ = other.object_;
+  this->trajectory_ = other.trajectory_;
+  this->is_valid_obstacle_ = other.is_valid_obstacle_;
+  this->is_static_ = other.is_static_;
+  this->center_ = other.center_;
+  this->time_stamp_ = other.time_stamp_;
+  this->heading_ = other.heading_;
 }
 
 Box2d Obstacle::GetBoundingBoxAtPoint(const planning_msgs::TrajectoryPoint &point) const {
