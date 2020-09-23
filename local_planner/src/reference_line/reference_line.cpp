@@ -392,7 +392,11 @@ bool ReferenceLine::BuildReferenceLineWithSpline() {
 }
 
 bool ReferenceLine::Smooth() {
-  bool result = reference_smoother_->SmoothReferenceLine(way_points_, &reference_points_);
+  const auto way_points = way_points_;
+  bool result = reference_smoother_->SmoothReferenceLine(way_points, &reference_points_);
+  if (way_points.size() != reference_points_.size()) {
+    return false;
+  }
   if (!result) {
     smoothed_ = false;
     return false;
@@ -420,17 +424,18 @@ double ReferenceLine::GetDrivingWidth(const SLBoundary &sl_boundary) const {
   return driving_width;
 }
 
-planning_msgs::WayPoint ReferenceLine::GetNearestWayPoint(double x, double y) const {
+planning_msgs::WayPoint ReferenceLine::NearestWayPoint(double x, double y, size_t *index) const {
   size_t way_point_size = way_points_.size();
   double min_dist = std::numeric_limits<double>::infinity();
   size_t min_index = 0;
-  for (size_t i = 0; i < way_point_size; ++i){
+  for (size_t i = 0; i < way_point_size; ++i) {
     double dist = std::hypot(x - way_points_[i].pose.position.x, y - way_points_[i].pose.position.y);
-    if (dist < min_dist){
+    if (dist < min_dist) {
       min_dist = dist;
       min_index = i;
     }
   }
+  *index = min_index;
   return way_points_[min_index];
 }
 

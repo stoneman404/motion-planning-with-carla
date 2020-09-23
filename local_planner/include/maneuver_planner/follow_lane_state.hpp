@@ -75,14 +75,31 @@ class FollowLaneState : public State {
    * @param[in,out] maneuver_goal: the maneuver goal determined by traffic decision
    * @return : the decision type
    */
-  DecisionType TrafficLightsDecision(ManeuverGoal *maneuver_goal) const;
+  void TrafficLightsDecision(ManeuverGoal *maneuver_goal) const;
 
   /**
    * @brief: the obstacle decision
    * @param[in, out] maneuver_goal: the maneuver goal determined by obstacles
    * @return : the decision type
    */
-  DecisionType ObstaclesDecision(ManeuverGoal *maneuver_goal) const;
+  void ObstaclesDecision(ManeuverGoal *maneuver_goal) const;
+
+  /**
+   *
+   * @param current_lane_forward_clear_distance
+   * @param current_lane_backward_clear_distance
+   * @param current_lane_forward_obstacle_id
+   * @param current_lane_backward_obstacle_id
+   * @param incoming_way_point
+   * @param maneuver_goal
+   */
+  void ChangeLaneDecision(double ego_s,
+                          double current_lane_forward_clear_distance,
+                          double current_lane_backward_clear_distance,
+                          int current_lane_forward_obstacle_id,
+                          int current_lane_backward_obstacle_id,
+                          const planning_msgs::WayPoint &incoming_way_point,
+                          ManeuverGoal *maneuver_goal) const;
 
   /**
    * @brief: select the target lane

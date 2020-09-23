@@ -33,7 +33,7 @@ struct FrenetFramePoint {
 
 struct SLPoint {
   SLPoint() = default;
-  SLPoint(const SLPoint& other) {
+  SLPoint(const SLPoint &other) {
     s = other.s;
     l = other.l;
   }
@@ -46,7 +46,7 @@ struct SLPoint {
 struct SLBoundary {
 
   SLBoundary() = default;
-  SLBoundary(const SLBoundary& other){
+  SLBoundary(const SLBoundary &other) {
     start_s = other.start_s;
     end_s = other.end_s;
     start_l = other.start_l;
@@ -204,11 +204,13 @@ class ReferenceLine {
   * @return
   */
   static ReferencePoint Interpolate(const ReferencePoint &p0,
-                             const ReferencePoint &p1,
-                             double s0,
-                             double s1,
-                             double s) ;
+                                    const ReferencePoint &p1,
+                                    double s0,
+                                    double s1,
+                                    double s);
 
+  planning_msgs::WayPoint NearestWayPoint(double x, double y, size_t *min_index) const;
+  std::vector<planning_msgs::WayPoint> way_points() const { return way_points_; }
 
  private:
 
@@ -221,13 +223,8 @@ class ReferenceLine {
    * @return
    */
   static inline double DistanceToLineSegment(const Eigen::Vector2d &start,
-                                      const Eigen::Vector2d &end,
-                                      const Eigen::Vector2d &point) ;
-
-  planning_msgs::WayPoint GetNearestWayPoint(double x, double y) const;
-
-
-
+                                             const Eigen::Vector2d &end,
+                                             const Eigen::Vector2d &point);
 
  private:
   bool smoothed_ = false;

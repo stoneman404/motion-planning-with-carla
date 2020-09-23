@@ -18,7 +18,6 @@ class PlanningConfig {
   double obstacle_trajectory_time() const;
   double delta_t() const { return delta_t_; }
   double filter_obstacle_length() const;
-  double max_lookahead_distance() const;
   const VehicleParams &vehicle_params() const;
   ////////// reference smoother params /////////////////
   double reference_smoother_distance_weight() const;
@@ -31,13 +30,16 @@ class PlanningConfig {
 
   int spline_order() const;
   double max_lookahead_time() const;
-  double safety_buffer() const;
+  double lon_safety_buffer() const;
+  double lat_safety_buffer() const;
   double reference_max_forward_distance() const;
   double reference_max_backward_distance() const;
   double target_speed() const;
-  double max_lookback_distance() const {return max_lookback_distance_;}
-  double maneuver_forward_clear_threshold() const {return maneuver_forward_clear_threshold_;}
-  double maneuver_backward_clear_threshold() const {return maneuver_backward_clear_threshold_;}
+  double max_lookahead_distance() const;
+  double max_lookback_distance() const;
+  double min_lookahead_distance() const;
+  double maneuver_forward_clear_threshold() const;
+  double maneuver_backward_clear_threshold() const;
 
  private:
   VehicleParams vehicle_params_; // ego_vehicle's params
@@ -46,8 +48,10 @@ class PlanningConfig {
   double filter_obstacle_length_{}; // we ignore the obstacles far away this length
   double collision_buffer_{}; // the buffer to avoid collision
   double max_lookahead_distance_{}; // the max lookahead distance for ego vehicle
+  double min_lookahead_distance_{};
   double max_lookahead_time_ = 8.0; // max lookahead time
-  double safety_buffer_ = 6.0; // safety_buffer_
+  double lon_safety_buffer_ = 6.0; // lon_safety_buffer_
+  double lat_safety_buffer_ = 2.0; // lat_safety_buffer_;
   double reference_smoother_distance_weight_ = 20.0;
   double reference_smoother_curvature_weight_ = 1.0;
   double reference_smoother_deviation_weight_ = 8.0;

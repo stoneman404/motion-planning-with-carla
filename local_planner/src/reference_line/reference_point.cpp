@@ -15,12 +15,10 @@ ReferencePoint::ReferencePoint(const double &x,
                                const double &kappa,
                                const double &dkappa,
                                const double &ddkappa)
-    : heading_(heading),
+    : xy_({x, y}), heading_(heading),
       kappa_(kappa),
       dkappa_(dkappa),
-      ddkappa_(ddkappa) {
-  xy_ = Eigen::Vector2d(x, y);
-}
+      ddkappa_(ddkappa) {}
 
 ReferencePoint::ReferencePoint(const planning::ReferencePoint &other) {
   this->xy_ = other.xy();
