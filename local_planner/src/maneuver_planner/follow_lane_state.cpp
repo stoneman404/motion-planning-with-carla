@@ -269,40 +269,53 @@ void FollowLaneState::ChangeLaneDecision(double ego_s,
                                          int current_lane_backward_obstacle_id,
                                          const planning_msgs::WayPoint &incoming_way_point,
                                          ManeuverGoal *maneuver_goal) const {
-// check left lane
-  double left_forward_clear_distance;
-  double left_backward_clear_distance;
+  double left_forward_clear_distance = -10.0;
+  double left_backward_clear_distance = -10.0;
   int left_forward_obstacle_id;
   int left_backward_obstacle_id;
-  double right_forward_clear_distance;
-  double right_backward_clear_distance;
+  double right_forward_clear_distance = -10.0;
+  double right_backward_clear_distance = -10.0;
   int right_forward_obstacle_id;
   int right_backward_obstacle_id;
   bool can_change_left = false;
   bool can_change_right = false;
-  if ((incoming_way_point.lane_change.type == planning_msgs::LaneChangeType::LEFT ||
-      incoming_way_point.lane_change.type == planning_msgs::LaneChangeType::BOTH) &&
-      incoming_way_point.has_left_lane) {
-    this->GetLaneClearDistance(-1,
-                               &left_forward_clear_distance,
-                               &left_backward_clear_distance,
-                               &left_forward_obstacle_id,
-                               &left_backward_obstacle_id);
-  } else {
-    can_change_left = false;
-  }
-  // check right lane
-  if ((incoming_way_point.lane_change.type == planning_msgs::LaneChangeType::RIGHT ||
-      incoming_way_point.lane_change.type == planning_msgs::LaneChangeType::BOTH) &&
-      incoming_way_point.has_right_lane) {
-
-    this->GetLaneClearDistance(1,
-                               &right_forward_clear_distance,
-                               &right_backward_clear_distance,
-                               &right_forward_obstacle_id,
-                               &right_backward_obstacle_id);
-  } else {
+  const auto &rear_obstacle = ObstacleFilter::Instance().Obstacles().at(current_lane_backward_obstacle_id);
+  const auto &front_obstacle = ObstacleFilter::Instance().Obstacles().at(current_lane_forward_obstacle_id);
+  // check current lane is clear to change lane
+  if (current_lane_forward_clear_distance < PlanningConfig::Instance().maneuver_forward_clear_threshold()
+      || current_lane_backward_clear_distance < PlanningConfig::Instance().maneuver_backward_clear_threshold()) {
+    // current lane is unsafe to change lane, because leading or follow vehicle is so closed
     can_change_right = false;
+    can_change_left = false;
+  } else if () {
+    // current lane is unsafe because the following car is so fast and may crash if change lane
+
+  } else {
+    // current lane is safe to change lane, check left lane
+    if ((incoming_way_point.lane_change.type == planning_msgs::LaneChangeType::LEFT ||
+        incoming_way_point.lane_change.type == planning_msgs::LaneChangeType::BOTH) &&
+        incoming_way_point.has_left_lane) {
+      this->GetLaneClearDistance(-1,
+                                 &left_forward_clear_distance,
+                                 &left_backward_clear_distance,
+                                 &left_forward_obstacle_id,
+                                 &left_backward_obstacle_id);
+    } else {
+      can_change_left = false;
+    }
+    // check right lane
+    if ((incoming_way_point.lane_change.type == planning_msgs::LaneChangeType::RIGHT ||
+        incoming_way_point.lane_change.type == planning_msgs::LaneChangeType::BOTH) &&
+        incoming_way_point.has_right_lane) {
+
+      this->GetLaneClearDistance(1,
+                                 &right_forward_clear_distance,
+                                 &right_backward_clear_distance,
+                                 &right_forward_obstacle_id,
+                                 &right_backward_obstacle_id);
+    } else {
+      can_change_right = false;
+    }
   }
   if (!can_change_right && !can_change_left) {
     const double lookahead_distance = std::max(PlanningConfig::Instance().min_lookahead_distance(),
@@ -315,8 +328,14 @@ void FollowLaneState::ChangeLaneDecision(double ego_s,
                                            ObstacleFilter::Instance().Obstacles().at(current_lane_forward_obstacle_id)->Speed());
     maneuver_goal->has_stop_point = false;
     maneuver_goal->target_s = ego_s + lookahead_distance;
-  }
+  } else if (can_change_left && !can_change_right) {
 
+  } else if (!can_change_left && can_change_right) {
+
+  } else {
+    int target_lane_id = this->SelectLane();
+
+  }
 }
 
 int FollowLaneState::SelectLane() const {
@@ -336,9 +355,7 @@ void FollowLaneState::GetLaneClearDistance(int lane_offset,
   reference_line_->GetSLBoundary(VehicleState::Instance().GetEgoBox(), &ego_sl_boundary);
   double forward_clear_dist = maneuver_forward_distance;
   double backward_clear_dist = maneuver_backward_distance;
-  double left_lane_width, right_lane_width;
-  double s = (ego_sl_boundary.start_s + ego_sl_boundary.end_s) * 0.5;
-  reference_line_->GetLaneWidth(s, &left_lane_width, &right_lane_width);
+  const double ego_width = PlanningConfig::Instance().vehicle_params().width;
   for (const auto &obstacle : ObstacleFilter::Instance().Obstacles()) {
     SLBoundary obstacle_sl_boundary;
     reference_line_->GetSLBoundary(obstacle.second->BoundingBox(), &obstacle_sl_boundary);
@@ -348,12 +365,14 @@ void FollowLaneState::GetLaneClearDistance(int lane_offset,
     if (obstacle_sl_boundary.end_s + maneuver_backward_distance < ego_sl_boundary.start_s) {
       continue;
     }
+    double left_lane_width, right_lane_width;
+    double s = (obstacle_sl_boundary.start_s + obstacle_sl_boundary.end_s) * 0.5;
+    reference_line_->GetLaneWidth(s, &left_lane_width, &right_lane_width);
     switch (lane_offset) {
       case 0: {
         if (reference_line_->IsOnLane(obstacle_sl_boundary)) {
           double driving_width = reference_line_->GetDrivingWidth(obstacle_sl_boundary);
-          if (driving_width
-              < PlanningConfig::Instance().vehicle_params().width + PlanningConfig::Instance().lat_safety_buffer()) {
+          if (driving_width < ego_width + PlanningConfig::Instance().lat_safety_buffer()) {
             double forward_dist = obstacle_sl_boundary.start_s - ego_sl_boundary.end_s;
             if (forward_dist > 0.0 && forward_dist < forward_clear_dist) {
               forward_clear_dist = forward_dist;
@@ -370,7 +389,9 @@ void FollowLaneState::GetLaneClearDistance(int lane_offset,
       }
       case 1: {
         // right lane check
-        if (obstacle_sl_boundary.end_l < 0 && obstacle_sl_boundary.start_l < -right_lane_width) {
+        // the obstacle is on right lane, and the driving width on right lane is not safety
+        if (obstacle_sl_boundary.end_l < -right_lane_width && std::fabs(obstacle_sl_boundary.end_l) <
+            right_lane_width + ego_width + PlanningConfig::Instance().lat_safety_buffer()) {
           double forward_dist = obstacle_sl_boundary.start_s - ego_sl_boundary.end_s;
           double backward_dist = obstacle_sl_boundary.end_s - ego_sl_boundary.start_s;
           if (forward_dist > 0.0 && forward_dist < forward_clear_dist) {
@@ -386,7 +407,9 @@ void FollowLaneState::GetLaneClearDistance(int lane_offset,
       }
       case -1: {
         // left lane check
-        if (obstacle_sl_boundary.start_l > 0 && obstacle_sl_boundary.end_l > left_lane_width) {
+        // the obstacle is on left lane, and the driving width on left lane is not safety
+        if (obstacle_sl_boundary.start_l > left_lane_width && obstacle_sl_boundary.start_l <
+            left_lane_width + ego_width + PlanningConfig::Instance().lat_safety_buffer()) {
           double forward_dist = obstacle_sl_boundary.start_s - ego_sl_boundary.end_s;
           double backward_dist = obstacle_sl_boundary.end_s - ego_sl_boundary.start_s;
           if (forward_dist > 0.0 && forward_dist < forward_clear_dist) {
