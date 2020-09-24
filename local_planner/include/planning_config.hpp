@@ -156,6 +156,10 @@ class PlanningConfig {
    */
   double maneuver_backward_clear_threshold() const;
 
+  double maneuver_target_lane_forward_clear_threshold() const;
+
+  double maneuver_target_lane_backward_clear_threshold() const;
+
   /**
    * @brief : the speed discount factor for change lane
    * @return
@@ -185,6 +189,8 @@ class PlanningConfig {
   double max_lookback_distance_{};
   double maneuver_forward_clear_threshold_{};
   double maneuver_backward_clear_threshold_{};
+  double maneuver_target_lane_backward_clear_threshold_{};
+  double maneuver_target_lane_forward_clear_threshold_{};
   double maneuver_change_lane_speed_discount_factor_{};
  private:
   PlanningConfig() = default;

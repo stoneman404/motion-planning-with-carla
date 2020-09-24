@@ -409,7 +409,7 @@ bool ReferenceLine::Smooth() {
     xs.push_back(reference_point.x());
     ys.push_back(reference_point.y());
   }
-  ref_line_spline_.reset(new Spline2d(xs, ys, 3));
+  ref_line_spline_.reset(new Spline2d(xs, ys, PlanningConfig::Instance().spline_order()));
   return true;
 }
 
@@ -438,5 +438,4 @@ planning_msgs::WayPoint ReferenceLine::NearestWayPoint(double x, double y, size_
   *index = min_index;
   return way_points_[min_index];
 }
-
 }

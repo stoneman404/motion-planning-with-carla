@@ -19,8 +19,8 @@ class State;
 enum class DecisionType : uint32_t {
   kFollowLane = 1u,
   kEmergencyStop = 2u,
-  kOverTake = 3u,
-  kTailGate = 4u,
+  kChangeLeft = 3u,
+  kChangeRight = 4u,
   kStop = 5u
 };
 

@@ -41,11 +41,15 @@ void PlanningConfig::UpdateParams(const ros::NodeHandle &nh) {
   nh.param<double>("/local_planner/max_velocity", max_velocity_, 10.0);
   nh.param<double>("/local_planner/target_speed", target_speed_, 8.333);
   nh.param<double>("/local_planner/maneuver_forward_clear_threshold",
-                   maneuver_forward_clear_threshold_, 30);
+                   maneuver_forward_clear_threshold_, 20);
   nh.param<double>("/local_planner/maneuver_backward_clear_threshold",
                    maneuver_backward_clear_threshold_, 10);
+  nh.param<double>("/local_planner/maneuver_target_lane_forward_clear_distance",
+                   maneuver_forward_clear_threshold_, 20);
+  nh.param<double>("/local_planner/maneuver_target_lane_backward_clear_distance",
+                   maneuver_target_lane_backward_clear_threshold_, 15);
   nh.param<double>("/local_planner/min_lookahead_distance",
-                   min_lookahead_distance_, 4.0);
+                   min_lookahead_distance_, 1.0);
   nh.param<double>("/local_planner/maneuver_change_lane_speed_discount_factor",
                    maneuver_change_lane_speed_discount_factor_, 0.6);
 }
@@ -123,5 +127,13 @@ double PlanningConfig::maneuver_backward_clear_threshold() const { return maneuv
 
 double PlanningConfig::maneuver_change_lane_speed_discount_factor() const {
   return maneuver_change_lane_speed_discount_factor_;
+}
+
+double PlanningConfig::maneuver_target_lane_forward_clear_threshold() const {
+  return maneuver_target_lane_forward_clear_threshold_;
+}
+
+double PlanningConfig::maneuver_target_lane_backward_clear_threshold() const {
+  return maneuver_target_lane_backward_clear_threshold_;
 }
 }
