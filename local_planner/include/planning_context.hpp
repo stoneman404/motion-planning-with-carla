@@ -7,12 +7,37 @@
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <carla_msgs/CarlaTrafficLightStatusList.h>
 #include <carla_waypoint_types/CarlaWaypoint.h>
-
-#include "planning_context.hpp"
 #include "vehicle_state/vehicle_state.hpp"
 #include "reference_line/reference_line.hpp"
 
 namespace planning {
+
+enum class DecisionType : uint32_t {
+  kFollowLane = 1u,
+  kEmergencyStop = 2u,
+  kChangeLeft = 3u,
+  kChangeRight = 4u,
+  kStopAtDestination = 5u,
+  kStopAtTrafficSign = 6u
+};
+
+struct ManeuverGoal {
+  ManeuverGoal() = default;
+  ~ManeuverGoal() = default;
+  ManeuverGoal(const int _lane_id, const bool _has_stop_point,
+               const double _target_s, const double _target_speed,
+               const DecisionType _decision_type)
+      : lane_id(_lane_id),
+        has_stop_point(_has_stop_point),
+        target_s(_target_s),
+        target_speed(_target_speed),
+        decision_type(_decision_type) {}
+  int lane_id = 0;
+  bool has_stop_point = false;
+  double target_s = 0.0;
+  double target_speed = 0.0;
+  DecisionType decision_type = DecisionType::kFollowLane;
+};
 
 class PlanningContext {
  public:

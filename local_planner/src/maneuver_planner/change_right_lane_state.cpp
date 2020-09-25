@@ -28,6 +28,11 @@ std::string ChangeRightLaneState::Name() const { return "ChangeRightLaneState"; 
 State *ChangeRightLaneState::NextState(ManeuverPlanner *maneuver_planner) const {
   return nullptr;
 }
+void ChangeRightLaneState::TrafficLightDecision(ManeuverGoal *maneuver_goal) const {
 
+}
+void ChangeRightLaneState::ObstacleDecision(ManeuverGoal *maneuver_goal) const {
+
+}
 
 }

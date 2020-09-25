@@ -14,36 +14,8 @@
 #include "planning_context.hpp"
 
 namespace planning {
+
 class State;
-
-enum class DecisionType : uint32_t {
-  kFollowLane = 1u,
-  kEmergencyStop = 2u,
-  kChangeLeft = 3u,
-  kChangeRight = 4u,
-  kStop = 5u
-};
-
-struct ManeuverGoal {
-  ManeuverGoal() = default;
-  ~ManeuverGoal() = default;
-  ManeuverGoal(const int _lane_id, const bool _has_stop_point,
-               const double _target_s, const double _target_speed,
-               const DecisionType _decision_type) :
-      lane_id(_lane_id),
-      has_stop_point(_has_stop_point),
-      target_s(_target_s),
-      target_speed(_target_speed),
-      decision_type(_decision_type){}
-  int lane_id = -1;
-  bool has_stop_point = false;
-  double target_s = 0.0;
-  double target_speed = 0.0;
-  DecisionType decision_type= DecisionType::kFollowLane;
-};
-
-
-
 class ManeuverPlanner {
  public:
   /**
@@ -57,6 +29,9 @@ class ManeuverPlanner {
    */
   ~ManeuverPlanner();
 
+  /**
+   *
+   */
   void InitPlanner();
 
   /**
@@ -96,7 +71,19 @@ class ManeuverPlanner {
    */
   const planning_msgs::TrajectoryPoint &init_trajectory_point() const;
 
-  void SetManeuverGoal(const ManeuverGoal& maneuver_goal);
+  /**
+   *
+   * @param maneuver_goal
+   */
+  void SetManeuverGoal(const ManeuverGoal &maneuver_goal);
+
+  const ManeuverGoal &maneuver_goal() const;
+
+  /**
+   *
+   * @return
+   */
+  bool NeedReRoute() const;
 
  private:
 
@@ -106,8 +93,8 @@ class ManeuverPlanner {
    * @param way_points
    * @return
    */
-  int GetNearestIndex(const geometry_msgs::Pose &ego_pose,
-                      const std::vector<planning_msgs::WayPoint> &way_points) const;
+  static int GetNearestIndex(const geometry_msgs::Pose &ego_pose,
+                             const std::vector<planning_msgs::WayPoint> &way_points);
 
   /**
    *
@@ -116,9 +103,9 @@ class ManeuverPlanner {
    * @param way_points
    * @return
    */
-  int GetStartIndex(const int matched_index,
-                    double backward_distance,
-                    const std::vector<planning_msgs::WayPoint> &way_points) const;
+  static int GetStartIndex(const int matched_index,
+                           double backward_distance,
+                           const std::vector<planning_msgs::WayPoint> &way_points);
 
   /**
    *
@@ -128,8 +115,8 @@ class ManeuverPlanner {
    * @return
    */
   static int GetEndIndex(const int matched_index,
-                  double forward_distance,
-                  const std::vector<planning_msgs::WayPoint> &way_points) ;
+                         double forward_distance,
+                         const std::vector<planning_msgs::WayPoint> &way_points);
 
   /**
    *
@@ -141,7 +128,7 @@ class ManeuverPlanner {
   static std::vector<planning_msgs::WayPoint>
   GetWayPointsFromStartToEndIndex(const int start_index,
                                   const int end_index,
-                                  const std::vector<planning_msgs::WayPoint> &way_points) ;
+                                  const std::vector<planning_msgs::WayPoint> &way_points);
 
  private:
   ManeuverGoal maneuver_goal_;
@@ -150,7 +137,6 @@ class ManeuverPlanner {
   ros::ServiceClient route_service_client_;
   std::unique_ptr<State> current_state_;
   int current_lane_id_{};
-  std::list<std::shared_ptr<ReferenceLine>> reference_line_;
 
 };
 }

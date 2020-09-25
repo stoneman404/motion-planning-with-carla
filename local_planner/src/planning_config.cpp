@@ -8,7 +8,8 @@ PlanningConfig &PlanningConfig::Instance() {
 }
 
 void PlanningConfig::UpdateParams(const ros::NodeHandle &nh) {
-  nh.param<double>("/local_planner/obstacle_trajectory_time", obstacle_trajectory_time_, 8.0);
+  nh.param<double>("/local_planner/obstacle_trajectory_time",
+                   obstacle_trajectory_time_, 8.0);
   nh.param<double>("/local_planner/delta_t", delta_t_, 0.1);
 //  nh.param<double>("/local_planner/filter_obstacle_length", filter_obstacle_length_, 100);
 //  nh.param<double>("/local_planner/collison_buffer", collision_buffer_, 1.0);
@@ -52,6 +53,14 @@ void PlanningConfig::UpdateParams(const ros::NodeHandle &nh) {
                    min_lookahead_distance_, 1.0);
   nh.param<double>("/local_planner/maneuver_change_lane_speed_discount_factor",
                    maneuver_change_lane_speed_discount_factor_, 0.6);
+  nh.param<double>("/local_planner/maneuver_execute_time_length",
+                   maneuver_execute_time_length_, 8.0);
+  nh.param<double>("/local_planner/maneuver_safety_cost_gain",
+                   maneuver_safety_cost_gain_, 10.0);
+  nh.param<double>("/local_planner/maneuver_efficiency_cost_gain",
+                   maneuver_efficiency_cost_gain_, 6.0);
+  nh.param<double>("/local_planner/maneuver_comfort_cost_gain",
+                   maneuver_comfort_cost_gain_, 5.0);
 }
 
 void PlanningConfig::UpdateVehicleParams(const derived_object_msgs::Object &object,
@@ -121,9 +130,13 @@ double PlanningConfig::min_lookahead_distance() const { return min_lookahead_dis
 
 double PlanningConfig::max_lookback_distance() const { return max_lookback_distance_; }
 
-double PlanningConfig::maneuver_forward_clear_threshold() const { return maneuver_forward_clear_threshold_; }
+double PlanningConfig::maneuver_forward_clear_threshold() const {
+  return maneuver_forward_clear_threshold_;
+}
 
-double PlanningConfig::maneuver_backward_clear_threshold() const { return maneuver_backward_clear_threshold_; }
+double PlanningConfig::maneuver_backward_clear_threshold() const {
+  return maneuver_backward_clear_threshold_;
+}
 
 double PlanningConfig::maneuver_change_lane_speed_discount_factor() const {
   return maneuver_change_lane_speed_discount_factor_;
@@ -136,4 +149,21 @@ double PlanningConfig::maneuver_target_lane_forward_clear_threshold() const {
 double PlanningConfig::maneuver_target_lane_backward_clear_threshold() const {
   return maneuver_target_lane_backward_clear_threshold_;
 }
+
+double PlanningConfig::maneuver_execute_time_length() const {
+  return maneuver_execute_time_length_;
+}
+
+double PlanningConfig::maneuver_safety_cost_gain() const {
+  return maneuver_safety_cost_gain_;
+}
+
+double PlanningConfig::maneuver_efficiency_cost_gain() const {
+  return maneuver_efficiency_cost_gain_;
+}
+
+double PlanningConfig::maneuver_comfort_cost_gain() const {
+  return maneuver_comfort_cost_gain_;
+}
+
 }

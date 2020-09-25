@@ -166,6 +166,14 @@ class PlanningConfig {
    */
   double maneuver_change_lane_speed_discount_factor() const;
 
+  double maneuver_execute_time_length() const;
+
+  double maneuver_safety_cost_gain() const;
+
+  double maneuver_efficiency_cost_gain() const;
+
+  double maneuver_comfort_cost_gain() const;
+
  private:
   VehicleParams vehicle_params_; // ego_vehicle's params
   double obstacle_trajectory_time_{}; // the trajectory total time of obstacles
@@ -192,6 +200,10 @@ class PlanningConfig {
   double maneuver_target_lane_backward_clear_threshold_{};
   double maneuver_target_lane_forward_clear_threshold_{};
   double maneuver_change_lane_speed_discount_factor_{};
+  double maneuver_execute_time_length_{};
+  double maneuver_safety_cost_gain_{};
+  double maneuver_efficiency_cost_gain_{};
+  double maneuver_comfort_cost_gain_{};
  private:
   PlanningConfig() = default;
   ~PlanningConfig() = default;

@@ -137,7 +137,7 @@ set(planning_SRC
         src/reference_line/reference_line_smooth_ipopt_interface.cpp
         common/src/spline2d.cpp
         src/traffic_lights/traffic_light.cpp
-        src/traffic_lights/traffic_light_list.cpp)
+        src/traffic_lights/traffic_light_list.cpp src/maneuver_planner/state.cpp)
 
 add_executable(${PROJECT_NAME}_node
         ${planning_SRC}

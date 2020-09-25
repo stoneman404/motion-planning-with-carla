@@ -12,6 +12,9 @@ class StopState : public State {
   std::string Name() const override;
   static State &Instance();
   State *NextState(ManeuverPlanner *maneuver_planner) const override;
+ protected:
+  void ObstacleDecision(ManeuverGoal *maneuver_goal) const override;
+  void TrafficLightDecision(ManeuverGoal *maneuver_goal) const override;
 
  private:
   StopState() = default;

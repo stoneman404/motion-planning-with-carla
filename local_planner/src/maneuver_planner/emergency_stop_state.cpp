@@ -22,6 +22,11 @@ std::string EmergencyStopState::Name() const { return "EmergencyStopState"; }
 State *EmergencyStopState::NextState(ManeuverPlanner *maneuver_planner) const {
   return nullptr;
 }
+void EmergencyStopState::TrafficLightDecision(ManeuverGoal *maneuver_goal) const {
 
+}
+void EmergencyStopState::ObstacleDecision(ManeuverGoal *maneuver_goal) const {
+
+}
 
 }

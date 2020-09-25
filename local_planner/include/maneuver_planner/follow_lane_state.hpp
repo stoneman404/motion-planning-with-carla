@@ -47,42 +47,28 @@ class FollowLaneState : public State {
   static State &Instance();
 
   /**
-   *
    * @param[in, out] maneuver_planner
    * @return : return the next state if current state transition
    */
   State *NextState(ManeuverPlanner *maneuver_planner) const override;
 
+ protected:
+  /**
+   * @brief: obstacle decision
+   * @param maneuver_goal
+   */
+  void ObstacleDecision(ManeuverGoal *maneuver_goal) const override;
+
+  /**
+  * @brief: the traffic light decision
+  * @param[in,out] maneuver_goal: the maneuver goal determined by traffic decision
+  * @return : the decision type
+  */
+  void TrafficLightDecision(ManeuverGoal *maneuver_goal) const override;
+
  private:
 
-  /**
-   * @brief: calc the target lane clear distance,
-   * both front and rear clear distance as well as leading and following obstacle id
-   * @param[in] lane_offset : lane offset, -1: offset to left, +1 offset to rigth, 0 no offset
-   * @param[out] forward_clear_distance: the front clear distance at thr target lane
-   * @param[out] backward_clear_distance: the rear clear distance at the target lane
-   * @param[out] forward_obstacle_id : the front obstacle id, -1: means has no front obstacle
-   * @param[out] backward_obstacle_id: the rear obstacle id,  -1: means has no rear obstacle
-   */
-  void GetLaneClearDistance(int lane_offset,
-                            double *forward_clear_distance,
-                            double *backward_clear_distance,
-                            int *forward_obstacle_id,
-                            int *backward_obstacle_id) const;
-
-  /**
-   * @brief: the traffic light decision
-   * @param[in,out] maneuver_goal: the maneuver goal determined by traffic decision
-   * @return : the decision type
-   */
-  void TrafficLightsDecision(ManeuverGoal *maneuver_goal) const;
-
-  /**
-   * @brief: the obstacle decision
-   * @param[in, out] maneuver_goal: the maneuver goal determined by obstacles
-   * @return : the decision type
-   */
-  void ObstaclesDecision(ManeuverGoal *maneuver_goal) const;
+  static ManeuverGoal CombineManeuver(const ManeuverGoal &traffic_maneuver, const ManeuverGoal &obstacle_maneuver);
 
   /**
    * @brief: change lane decision process, used by obstacle decision
@@ -102,10 +88,32 @@ class FollowLaneState : public State {
                           ManeuverGoal *maneuver_goal) const;
 
   /**
-   * @brief: select the target lane
-   * @return : the target lane id
+   *
+   * @param ego_s
+   * @param ego_vel
+   * @param leading_velocity: [left_lane, current_lane, right_lane]
+   * @param following_velocity [left_lane, current_lane, right_lane]
+   * @param leading_clear_distance [left_lane, current_lane, right_lane]
+   * @param following_clear_distance [left_lane, current_lane, right_lane]
+   * @return
    */
-  int SelectLane() const;
+  static int SelectLane(double ego_s, double ego_vel,
+                        const std::vector<double> &leading_velocity,
+                        const std::vector<double> &following_velocity,
+                        const std::vector<double> &leading_clear_distance,
+                        const std::vector<double> &following_clear_distance);
+
+  static double SafetyCost(double leading_vel,
+                           double following_vel,
+                           double leading_clear_distance,
+                           double following_clear_distance);
+
+  static double EfficiencyCost(double target_vel,
+                               double leading_vel,
+                               double max_vel);
+
+  static double ComfortCost(double ego_vel, double leading_vel, double forward_clear_distance);
+
   FollowLaneState() = default;
   FollowLaneState(const FollowLaneState &other);
   FollowLaneState &operator=(const FollowLaneState &other);

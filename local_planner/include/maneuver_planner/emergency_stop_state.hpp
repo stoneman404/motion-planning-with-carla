@@ -11,6 +11,9 @@ class EmergencyStopState : public State {
   static State &Instance();
   std::string Name() const override;
   State *NextState(ManeuverPlanner *maneuver_planner) const override;
+ protected:
+  void ObstacleDecision(ManeuverGoal *maneuver_goal) const override;
+  void TrafficLightDecision(ManeuverGoal *maneuver_goal) const override;
  private:
   EmergencyStopState() = default;
   EmergencyStopState(const EmergencyStopState &other);

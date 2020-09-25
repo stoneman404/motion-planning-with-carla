@@ -61,7 +61,6 @@ bool ManeuverPlanner::ReRoute(const geometry_msgs::Pose &start,
 
 bool ManeuverPlanner::UpdateReferenceLine(std::list<std::shared_ptr<ReferenceLine>> *const reference_lines_list) const {
   const auto vehicle_pose = VehicleState::Instance().pose();
-  const auto lane_id = VehicleState::Instance().lane_id();
   const double max_forward_distance = PlanningConfig::Instance().reference_max_forward_distance();
   const double max_backward_distance = PlanningConfig::Instance().reference_max_backward_distance();
   const auto route_infos = PlanningContext::Instance().route_infos();
@@ -69,7 +68,7 @@ bool ManeuverPlanner::UpdateReferenceLine(std::list<std::shared_ptr<ReferenceLin
   for (const auto &route : route_infos) {
     const int matched_index = GetNearestIndex(vehicle_pose, route.route);
     const int start_index = GetStartIndex(matched_index, max_backward_distance, route.route);
-    const int end_index = GetStartIndex(matched_index, max_forward_distance, route.route);
+    const int end_index = GetEndIndex(matched_index, max_forward_distance, route.route);
     if (end_index - start_index < 1) {
       return false;
     }
@@ -87,7 +86,7 @@ bool ManeuverPlanner::UpdateReferenceLine(std::list<std::shared_ptr<ReferenceLin
 }
 
 int ManeuverPlanner::GetNearestIndex(const geometry_msgs::Pose &ego_pose,
-                                     const std::vector<planning_msgs::WayPoint> &way_points) const {
+                                     const std::vector<planning_msgs::WayPoint> &way_points) {
   double min_distance = std::numeric_limits<double>::max();
   const double ego_x = ego_pose.position.x;
   const double ego_y = ego_pose.position.y;
@@ -106,7 +105,7 @@ int ManeuverPlanner::GetNearestIndex(const geometry_msgs::Pose &ego_pose,
 
 int ManeuverPlanner::GetStartIndex(const int matched_index,
                                    double backward_distance,
-                                   const std::vector<planning_msgs::WayPoint> &way_points) const {
+                                   const std::vector<planning_msgs::WayPoint> &way_points) {
   int current_index = matched_index;
   const auto matched_way_point = way_points[current_index];
   double s = 0;
@@ -171,5 +170,17 @@ ManeuverPlanner::~ManeuverPlanner() {
 void ManeuverPlanner::SetManeuverGoal(const ManeuverGoal &maneuver_goal) {
   this->maneuver_goal_ = maneuver_goal;
 }
+bool ManeuverPlanner::NeedReRoute() const {
+  if (current_state_->Name() == "FollowLaneState" &&
+      (maneuver_goal_.decision_type == DecisionType::kChangeLeft
+          || maneuver_goal_.decision_type == DecisionType::kChangeRight)) {
+    return true;
+  }
 
+  if (PlanningContext::Instance().reference_lines().empty()) {
+    return true;
+  }
+  return false;
+}
+const ManeuverGoal &ManeuverPlanner::maneuver_goal() const { return maneuver_goal_; }
 }

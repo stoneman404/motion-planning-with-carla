@@ -1,7 +1,6 @@
 #include "maneuver_planner/stop_state.hpp"
 namespace planning {
 
-
 bool StopState::Enter(ManeuverPlanner *maneuver_planner) {
 
 }
@@ -20,11 +19,18 @@ State &StopState::Instance() {
   return instance;
 }
 
-
 std::string StopState::Name() const { return "StopState"; }
 
-
 State *StopState::NextState(ManeuverPlanner *maneuver_planner) const {
+
   return nullptr;
 }
+
+void StopState::ObstacleDecision(ManeuverGoal *maneuver_goal) const {
+}
+
+void StopState::TrafficLightDecision(ManeuverGoal *maneuver_goal) const {
+
+}
+
 }
