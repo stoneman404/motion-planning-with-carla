@@ -218,36 +218,6 @@ install(DIRECTORY config/
 #############
 
 ## Add gtest based cpp test target and link libraries
-catkin_add_gtest(reference_line_smoother_test
-
-        common/src/math_utils.cpp
-        common/src/box2d.cpp
-        common/src/coordinate_transformer.cpp
-        common/src/qunitic_polynomial.cpp
-        common/src/quartic_polynomial.cpp
-        common/src/polynomial.cpp
-
-        src/vehicle_state/vehicle_state.cpp
-        src/obstacle_filter/obstacle_filter.cpp
-        src/obstacle_filter/obstacle.cpp
-        src/planning_config.cpp
-        src/reference_line/reference_line.cpp
-        src/reference_line/reference_point.cpp
-        src/reference_line/reference_line_smoother.cpp
-        src/planning_context.cpp
-        src/planning_config.cpp
-        src/reference_line/reference_line.cpp
-        src/reference_line/reference_line_smooth_ipopt_interface.cpp
-        src/reference_line/reference_point.cpp
-        src/reference_line/reference_line_smoother_test.cpp)
-
-if (TARGET reference_line_smoother_test)
-    target_link_libraries(reference_line_smoother_test
-            Eigen3::Eigen
-            ${catkin_LIBRARIES}
-            ipopt)
-endif ()
-
 catkin_add_gtest(spline2d_test
         common/src/math_utils.cpp
         common/src/spline2d.cpp

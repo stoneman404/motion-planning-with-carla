@@ -14,9 +14,12 @@ bool ChangeLeftLaneState::Enter(ManeuverPlanner *maneuver_planner) {
       return false;
     }
     auto &route_infos = PlanningContext::Instance().mutable_route_infos();
+    if (route_infos.size() > 2) {
+      route_infos.pop_front();
+    }
     route_infos.push_back(route_response);
     std::list<std::shared_ptr<ReferenceLine>> reference_lines;
-    bool reference_result = ManeuverPlanner::UpdateReferenceLine(&reference_lines);
+    bool reference_result = ManeuverPlanner::UpdateReferenceLine(route_infos, &reference_lines);
     if (!reference_result) {
       ROS_FATAL("Failed to enter **ChangeLeftLaneState**, because UpdateReferenceLine failed");
       return false;
@@ -27,7 +30,7 @@ bool ChangeLeftLaneState::Enter(ManeuverPlanner *maneuver_planner) {
 
   target_lane_id_ = maneuver_planner->maneuver_goal().lane_id;
   current_lane_id_ = VehicleState::Instance().lane_id();
-  ROS_ASSERT(PlanningContext::Instance().mutable_reference_lines().size() == 2);
+  ROS_ASSERT(PlanningContext::Instance().reference_lines().size() == 2);
   current_reference_line_ = PlanningContext::Instance().reference_lines().front();
   target_reference_line_ = PlanningContext::Instance().reference_lines().back();
 }

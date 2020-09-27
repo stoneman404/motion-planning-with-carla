@@ -29,7 +29,7 @@ bool FollowLaneState::Enter(ManeuverPlanner *maneuver_planner) {
     }
     route_infos.push_back(route_response);
     std::list<std::shared_ptr<ReferenceLine>> reference_lines;
-    bool reference_result = ManeuverPlanner::UpdateReferenceLine(&reference_lines);
+    bool reference_result = ManeuverPlanner::UpdateReferenceLine(route_infos, &reference_lines);
     if (!reference_result) {
       return false;
     }
@@ -43,7 +43,7 @@ bool FollowLaneState::Enter(ManeuverPlanner *maneuver_planner) {
 }
 
 bool FollowLaneState::Execute(ManeuverPlanner *maneuver_planner) {
-
+  ROS_INFO("We are executing the **LaneFollowState**");
   if (maneuver_planner == nullptr) {
     ROS_ERROR("the ManeuverPlanner is nullptr");
     return false;

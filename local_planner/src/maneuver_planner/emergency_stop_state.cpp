@@ -10,7 +10,6 @@ namespace planning {
 bool EmergencyStopState::Enter(ManeuverPlanner *maneuver_planner) {
   ROS_INFO("Oops, something going wrong, we enter the **EmergencyStopState**");
   reference_line_ = PlanningContext::Instance().reference_lines().back(); //  reference line
-
 }
 
 bool EmergencyStopState::Execute(ManeuverPlanner *maneuver_planner) {

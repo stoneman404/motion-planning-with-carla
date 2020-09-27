@@ -23,24 +23,28 @@ void ManeuverPlanner::InitPlanner() {
       service::kRouteServiceName);
   current_lane_id_ = VehicleState::Instance().lane_id();
   current_state_.reset(&FollowLaneState::Instance());
+  need_reroute_ = true; // should reroute
   ROS_ASSERT(current_state_->Enter(this));
 }
 
-bool ManeuverPlanner::Process(const planning_msgs::TrajectoryPoint &init_trajectory_point) {
+bool ManeuverPlanner::Process(const planning_msgs::TrajectoryPoint &init_trajectory_point,
+                              planning_msgs::TrajectoryPointConstPtr pub_trajectory) {
   if (current_state_ == nullptr) {
     ROS_FATAL("[ManeuverPlanner::Process], the current state is nullptr");
     return false;
   }
+
   ROS_DEBUG("[ManeuverPlanner::Process], current state is [%s]", current_state_->Name().c_str());
   if (!current_state_->Execute(this)) {
     ROS_FATAL("[ManeuverPlanner::Process]");
     return false;
   }
   std::unique_ptr<State> state(current_state_->NextState(this));
-  if (state != nullptr) {
+  if (state != nullptr && state->Name() != current_state_->Name()) {
     current_state_->Exit(this);
     current_state_ = std::move(state);
     current_state_->Enter(this);
+
   }
   return true;
 }
@@ -62,15 +66,14 @@ bool ManeuverPlanner::ReRoute(const geometry_msgs::Pose &start,
   }
 }
 
-bool ManeuverPlanner::UpdateReferenceLine(
-    std::list<std::shared_ptr<ReferenceLine>> *const reference_lines_list) {
+bool ManeuverPlanner::UpdateReferenceLine(const std::list<planning_srvs::RouteResponse> &route_list,
+                                          std::list<std::shared_ptr<ReferenceLine>> *const reference_lines_list) {
 
   const auto vehicle_pose = VehicleState::Instance().pose();
   const double max_forward_distance = PlanningConfig::Instance().reference_max_forward_distance();
   const double max_backward_distance = PlanningConfig::Instance().reference_max_backward_distance();
-  const auto route_infos = PlanningContext::Instance().route_infos();
   reference_lines_list->clear();
-  for (const auto &route : route_infos) {
+  for (const auto &route : route_list) {
     const int matched_index = GetNearestIndex(vehicle_pose, route.route);
     const int start_index = GetStartIndex(matched_index, max_backward_distance, route.route);
     const int end_index = GetEndIndex(matched_index, max_forward_distance, route.route);
@@ -154,9 +157,8 @@ std::vector<planning_msgs::WayPoint> ManeuverPlanner::GetWayPointsFromStartToEnd
     const int end_index,
     const std::vector<planning_msgs::WayPoint> &way_points) {
   if (start_index >= end_index) {
-    ROS_ERROR(
-        "[ManeuverPlanner::GetWayPointsFromStartToEndIndex], "
-        "Failed to get waypoints because start_index >= end_index");
+    ROS_ERROR("[ManeuverPlanner::GetWayPointsFromStartToEndIndex], "
+              "Failed to get waypoints because start_index >= end_index");
     return {};
   }
   std::vector<planning_msgs::WayPoint> sampled_way_points;

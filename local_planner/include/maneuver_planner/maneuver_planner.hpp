@@ -5,6 +5,7 @@
 #include <carla_msgs/CarlaEgoVehicleStatus.h>
 #include <planning_srvs/Route.h>
 #include <planning_msgs/TrajectoryPoint.h>
+#include <planning_msgs/Trajectory.h>
 #include <Eigen/Core>
 #include <vector>
 #include "state.hpp"
@@ -37,7 +38,8 @@ class ManeuverPlanner {
    *
    * @return
    */
-  bool Process(const planning_msgs::TrajectoryPoint &init_trajectory_point);
+  bool Process(const planning_msgs::TrajectoryPoint &init_trajectory_point,
+               planning_msgs::TrajectoryConstPtr pub_trajectory);
 
   /**
    *
@@ -61,8 +63,8 @@ class ManeuverPlanner {
    * @param reference_lines_list
    * @return
    */
-  static bool UpdateReferenceLine(
-      std::list<std::shared_ptr<ReferenceLine>> *const reference_lines_list);
+  static bool UpdateReferenceLine(const std::list<planning_srvs::RouteResponse> &route_list,
+                                  std::list<std::shared_ptr<ReferenceLine>> *const reference_lines_list);
 
   /**
    *
@@ -132,6 +134,7 @@ class ManeuverPlanner {
  private:
   ManeuverGoal maneuver_goal_;
   ros::NodeHandle nh_;
+
   planning_msgs::TrajectoryPoint init_trajectory_point_;
   ros::ServiceClient route_service_client_;
   std::unique_ptr<State> current_state_;
