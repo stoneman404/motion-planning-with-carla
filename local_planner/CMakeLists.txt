@@ -116,6 +116,7 @@ set(planning_SRC
         common/src/qunitic_polynomial.cpp
         common/src/quartic_polynomial.cpp
         common/src/polynomial.cpp
+        common/src/spline2d.cpp
 
         src/maneuver_planner/maneuver_planner.cpp
         src/maneuver_planner/stop_state.cpp
@@ -123,21 +124,26 @@ set(planning_SRC
         src/maneuver_planner/follow_lane_state.cpp
         src/maneuver_planner/change_right_lane_state.cpp
         src/maneuver_planner/change_left_lane_state.cpp
-        src/planner/frenet_lattice_planner/frenet_lattice_planner.cpp
+        src/maneuver_planner/state.cpp
 
+        src/planner/frenet_lattice_planner/frenet_lattice_planner.cpp
         src/vehicle_state/vehicle_state.cpp
         src/obstacle_filter/obstacle_filter.cpp
         src/obstacle_filter/obstacle.cpp
-        src/planning_config.cpp
+
+        src/traffic_lights/traffic_light.cpp
+        src/traffic_lights/traffic_light_list.cpp
+
         src/reference_line/reference_line.cpp
         src/reference_line/reference_point.cpp
         src/reference_line/reference_line_smoother.cpp
-        src/planning_context.cpp
-        src/planner.cpp
         src/reference_line/reference_line_smooth_ipopt_interface.cpp
-        common/src/spline2d.cpp
-        src/traffic_lights/traffic_light.cpp
-        src/traffic_lights/traffic_light_list.cpp src/maneuver_planner/state.cpp)
+        src/planning_context.cpp
+        src/planning_config.cpp
+        src/planner.cpp
+
+
+        )
 
 add_executable(${PROJECT_NAME}_node
         ${planning_SRC}
@@ -235,6 +241,7 @@ catkin_add_gtest(reference_line_smoother_test
         src/reference_line/reference_line_smooth_ipopt_interface.cpp
         src/reference_line/reference_point.cpp
         src/reference_line/reference_line_smoother_test.cpp)
+
 if (TARGET reference_line_smoother_test)
     target_link_libraries(reference_line_smoother_test
             Eigen3::Eigen

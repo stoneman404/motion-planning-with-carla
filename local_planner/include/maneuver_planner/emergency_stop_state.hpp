@@ -13,11 +13,12 @@ class EmergencyStopState : public State {
   State *NextState(ManeuverPlanner *maneuver_planner) const override;
  protected:
   void ObstacleDecision(ManeuverGoal *maneuver_goal) const override;
-  void TrafficLightDecision(ManeuverGoal *maneuver_goal) const override;
  private:
   EmergencyStopState() = default;
   EmergencyStopState(const EmergencyStopState &other);
   EmergencyStopState &operator=(const EmergencyStopState &other);
+ private:
+  std::shared_ptr<ReferenceLine> reference_line_;
 };
 }
 #endif

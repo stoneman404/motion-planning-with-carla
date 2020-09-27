@@ -78,6 +78,7 @@ bool ManeuverPlanner::UpdateReferenceLine(
     }
     const auto sample_way_points = GetWayPointsFromStartToEndIndex(start_index, end_index, route.route);
     if (sample_way_points.empty()) {
+      ROS_FATAL("[UpdateReferenceLine], failed to get sampled way points");
       return false;
     }
     auto reference_line = std::make_shared<ReferenceLine>(sample_way_points);
@@ -152,6 +153,9 @@ std::vector<planning_msgs::WayPoint> ManeuverPlanner::GetWayPointsFromStartToEnd
     const int end_index,
     const std::vector<planning_msgs::WayPoint> &way_points) {
   if (start_index >= end_index) {
+    ROS_ERROR(
+        "[ManeuverPlanner::GetWayPointsFromStartToEndIndex], "
+        "Failed to get waypoints because start_index >= end_index");
     return {};
   }
   std::vector<planning_msgs::WayPoint> sampled_way_points;
@@ -186,6 +190,8 @@ bool ManeuverPlanner::NeedReRoute() const {
   return false;
 }
 
-const ManeuverGoal &ManeuverPlanner::maneuver_goal() const { return maneuver_goal_; }
+const ManeuverGoal &ManeuverPlanner::maneuver_goal() const {
+  return maneuver_goal_;
+}
 
 }

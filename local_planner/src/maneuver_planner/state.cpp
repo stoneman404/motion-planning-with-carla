@@ -1,3 +1,4 @@
+#include "traffic_lights/traffic_light_list.hpp"
 #include "obstacle_filter/obstacle_filter.hpp"
 #include "maneuver_planner/state.hpp"
 
@@ -93,4 +94,106 @@ void State::GetLaneClearDistance(int lane_offset,
   *forward_obstacle_id = front_obstacle_id;
   *backward_obstacle_id = rear_obstacle_id;
 }
+
+void State::TrafficLightDecision(std::shared_ptr<ReferenceLine> reference_line,
+                                 ManeuverGoal *maneuver_goal) const {
+  size_t nearest_index;
+
+  bool prohibited = false;
+  const double max_decel = PlanningConfig::Instance().max_acc();
+  const double min_stop_distance = std::pow(VehicleState::Instance().linear_vel(), 2) / (2.0 * max_decel);
+  const double max_comfort_decel = PlanningConfig::Instance().max_acc() * 0.6;
+  double min_comfort_stop_distance = std::pow(VehicleState::Instance().linear_vel(), 2) / (2.0 * max_comfort_decel);
+
+  const int ego_lane_id = VehicleState::Instance().lane_id();
+  const int ego_road_id = VehicleState::Instance().road_id();
+  const auto traffic_lights = TrafficLightList::Instance().TrafficLights();
+  const auto ego_box = VehicleState::Instance().GetEgoBox();
+  SLBoundary ego_sl_boundary;
+  reference_line->GetSLBoundary(ego_box, &ego_sl_boundary);
+  int min_id = -1;
+  double min_dist = std::numeric_limits<double>::max();
+  SLBoundary nearest_traffic_light_sl_boundary;
+  for (const auto &traffic_light : traffic_lights) {
+    if (traffic_light.second->RoadId() != ego_road_id) {
+      continue;
+    }
+    if (traffic_light.second->LaneId() != ego_lane_id) {
+      continue;
+    }
+    SLBoundary sl_boundary;
+    const Box2d light_box = traffic_light.second->GetBox2d();
+    reference_line->GetSLBoundary(light_box, &sl_boundary);
+    if (sl_boundary.end_s < ego_sl_boundary.start_s) {
+      continue;
+    }
+
+    double dist = sl_boundary.start_s - ego_sl_boundary.end_s;
+    if (dist < min_dist) {
+      min_dist = dist;
+      min_id = traffic_light.first;
+      nearest_traffic_light_sl_boundary = sl_boundary;
+    }
+  }
+  const auto traffic_state = traffic_lights.at(min_id)->TrafficLightStatus().state;
+  double ego_s = 0.5 * (ego_sl_boundary.start_s + ego_sl_boundary.end_s);
+  auto nearest_waypoint = reference_line->NearestWayPoint(
+      TrafficLightList::Instance().TrafficLights().at(min_id)->GetBox2d().center_x(),
+      TrafficLightList::Instance().TrafficLights().at(min_id)->GetBox2d().center_y(),
+      &nearest_index);
+  if (traffic_state == carla_msgs::CarlaTrafficLightStatus::GREEN
+      || traffic_state == carla_msgs::CarlaTrafficLightStatus::OFF
+      || traffic_state == carla_msgs::CarlaTrafficLightStatus::UNKNOWN) {
+    prohibited = false;
+  } else if (min_dist < min_stop_distance) {
+    prohibited = true;
+    maneuver_goal->has_stop_point = true;
+    maneuver_goal->decision_type = DecisionType::kEmergencyStop;
+    maneuver_goal->lane_id = nearest_waypoint.lane_id;
+    maneuver_goal->target_s = std::max(nearest_traffic_light_sl_boundary.start_s, ego_s + min_stop_distance);
+    maneuver_goal->target_speed = 0.0;
+
+  } else if (min_dist > min_comfort_stop_distance) {
+    prohibited = false;
+  } else {
+    prohibited = true;
+    maneuver_goal->target_speed = 0.0;
+    maneuver_goal->has_stop_point = true;
+    maneuver_goal->target_s = std::max(nearest_traffic_light_sl_boundary.start_s, ego_s + min_stop_distance);
+    maneuver_goal->lane_id = nearest_waypoint.lane_id;
+    maneuver_goal->decision_type = DecisionType::kStopAtTrafficSign;
+  }
+  if (!prohibited) {
+    maneuver_goal->target_speed = PlanningConfig::Instance().target_speed();
+    maneuver_goal->has_stop_point = false;
+    maneuver_goal->target_s = std::min(reference_line->Length(),
+                                       ego_s + PlanningConfig::Instance().max_lookahead_distance());
+    maneuver_goal->lane_id = nearest_waypoint.lane_id;
+    maneuver_goal->decision_type = DecisionType::kFollowLane;
+  }
+}
+
+ManeuverGoal State::CombineManeuver(const ManeuverGoal &traffic_light_maneuver,
+                                    const ManeuverGoal &obstacle_maneuver) const {
+  if (traffic_light_maneuver.decision_type == DecisionType::kEmergencyStop) {
+    return traffic_light_maneuver;
+  }
+
+  if (obstacle_maneuver.decision_type == DecisionType::kEmergencyStop) {
+    return obstacle_maneuver;
+  }
+  ManeuverGoal combined_maneuver;
+  if (traffic_light_maneuver.decision_type == DecisionType::kStopAtTrafficSign &&
+      obstacle_maneuver.decision_type == DecisionType::kStopAtDestination) {
+    combined_maneuver.has_stop_point = true;
+    combined_maneuver.target_speed = 0.0;
+    combined_maneuver.lane_id = traffic_light_maneuver.lane_id;
+    combined_maneuver.decision_type = traffic_light_maneuver.target_s < obstacle_maneuver.target_s ?
+                                      DecisionType::kStopAtTrafficSign : DecisionType::kStopAtDestination;
+    combined_maneuver.target_s = std::min(traffic_light_maneuver.target_s, obstacle_maneuver.target_s);
+    return combined_maneuver;
+  }
+  return obstacle_maneuver;
+}
+
 }

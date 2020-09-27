@@ -16,7 +16,7 @@ bool ChangeLeftLaneState::Enter(ManeuverPlanner *maneuver_planner) {
     auto &route_infos = PlanningContext::Instance().mutable_route_infos();
     route_infos.push_back(route_response);
     std::list<std::shared_ptr<ReferenceLine>> reference_lines;
-    bool reference_result = maneuver_planner->UpdateReferenceLine(&reference_lines);
+    bool reference_result = ManeuverPlanner::UpdateReferenceLine(&reference_lines);
     if (!reference_result) {
       ROS_FATAL("Failed to enter **ChangeLeftLaneState**, because UpdateReferenceLine failed");
       return false;
@@ -54,8 +54,13 @@ State &ChangeLeftLaneState::Instance() {
 std::string ChangeLeftLaneState::Name() const { return "ChangeLeftLaneState"; }
 
 State *ChangeLeftLaneState::NextState(ManeuverPlanner *maneuver_planner) const {
+  if (maneuver_planner == nullptr) {
+    return nullptr;
+  }
   ManeuverGoal obstacle_maneuver;
   this->ObstacleDecision(&obstacle_maneuver);
+  ManeuverGoal traffic_light_maneuver;
+  this->TrafficLightDecision(target_reference_line_, &traffic_light_maneuver);
   maneuver_planner->SetManeuverGoal(obstacle_maneuver);
   switch (obstacle_maneuver.decision_type) {
     case DecisionType::kChangeLeft:return &(ChangeLeftLaneState::Instance());
@@ -69,9 +74,6 @@ State *ChangeLeftLaneState::NextState(ManeuverPlanner *maneuver_planner) const {
   }
 }
 
-void ChangeLeftLaneState::TrafficLightDecision(ManeuverGoal *maneuver_goal) const {
-  return;
-}
 
 void ChangeLeftLaneState::ObstacleDecision(ManeuverGoal *maneuver_goal) const {
   double leading_clear_distance;

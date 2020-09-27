@@ -1,4 +1,3 @@
-
 #ifndef CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_MANEUVER_PLANNER_STOP_STATE_HPP_
 #define CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_MANEUVER_PLANNER_STOP_STATE_HPP_
 #include "state.hpp"
@@ -14,12 +13,13 @@ class StopState : public State {
   State *NextState(ManeuverPlanner *maneuver_planner) const override;
  protected:
   void ObstacleDecision(ManeuverGoal *maneuver_goal) const override;
-  void TrafficLightDecision(ManeuverGoal *maneuver_goal) const override;
 
  private:
   StopState() = default;
   StopState(const StopState &other);
   StopState &operator=(const StopState &other);
+ private:
+  std::shared_ptr<ReferenceLine> reference_line_;
 
 };
 }

@@ -438,4 +438,10 @@ planning_msgs::WayPoint ReferenceLine::NearestWayPoint(double x, double y, size_
   *index = min_index;
   return way_points_[min_index];
 }
+planning_msgs::WayPoint ReferenceLine::NearestWayPoint(double s) const {
+  auto reference_point = GetReferencePoint(s);
+  size_t index;
+  return NearestWayPoint(reference_point.x(), reference_point.y(), &index);
+
+}
 }

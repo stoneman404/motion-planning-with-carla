@@ -27,7 +27,10 @@ class State {
 
   virtual void ObstacleDecision(ManeuverGoal *maneuver_goal) const = 0;
 
-  virtual void TrafficLightDecision(ManeuverGoal *maneuver_goal) const = 0;
+  virtual void TrafficLightDecision(std::shared_ptr<ReferenceLine> reference_line,
+                                    ManeuverGoal *maneuver_goal) const;
+  virtual ManeuverGoal CombineManeuver(const ManeuverGoal &traffic_light_maneuver,
+                                       const ManeuverGoal &obstacle_maneuver) const;
 };
 }
 

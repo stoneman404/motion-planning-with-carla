@@ -59,16 +59,7 @@ class FollowLaneState : public State {
    */
   void ObstacleDecision(ManeuverGoal *maneuver_goal) const override;
 
-  /**
-  * @brief: the traffic light decision
-  * @param[in,out] maneuver_goal: the maneuver goal determined by traffic decision
-  * @return : the decision type
-  */
-  void TrafficLightDecision(ManeuverGoal *maneuver_goal) const override;
-
  private:
-
-  static ManeuverGoal CombineManeuver(const ManeuverGoal &traffic_maneuver, const ManeuverGoal &obstacle_maneuver);
 
   /**
    * @brief: change lane decision process, used by obstacle decision

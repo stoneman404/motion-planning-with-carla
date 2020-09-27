@@ -210,6 +210,7 @@ class ReferenceLine {
                                     double s);
 
   planning_msgs::WayPoint NearestWayPoint(double x, double y, size_t *min_index) const;
+  planning_msgs::WayPoint NearestWayPoint(double s) const;
   std::vector<planning_msgs::WayPoint> way_points() const { return way_points_; }
 
  private:

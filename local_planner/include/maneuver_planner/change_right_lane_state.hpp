@@ -13,7 +13,6 @@ class ChangeRightLaneState : public State {
   State *NextState(ManeuverPlanner *maneuver_planner) const override;
  protected:
   void ObstacleDecision(ManeuverGoal *maneuver_goal) const override;
-  void TrafficLightDecision(ManeuverGoal *maneuver_goal) const override;
  private:
   ChangeRightLaneState() = default;
   ChangeRightLaneState(const ChangeRightLaneState &other);
