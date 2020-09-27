@@ -8,7 +8,7 @@
 namespace planning {
 
 bool EmergencyStopState::Enter(ManeuverPlanner *maneuver_planner) {
-  ROS_INFO("Oops, something going wrong, we Enter the EmergecyStopState");
+  ROS_INFO("Oops, something going wrong, we enter the **EmergencyStopState**");
   reference_line_ = PlanningContext::Instance().reference_lines().back(); //  reference line
 
 }
@@ -22,7 +22,7 @@ bool EmergencyStopState::Execute(ManeuverPlanner *maneuver_planner) {
 }
 
 void EmergencyStopState::Exit(ManeuverPlanner *maneuver_planner) {
-  ROS_INFO("We have recovered from EmergencyStopState");
+  ROS_INFO("We are exiting **EmergencyStopState**");
 }
 
 State &EmergencyStopState::Instance() {
@@ -41,12 +41,12 @@ State *EmergencyStopState::NextState(ManeuverPlanner *maneuver_planner) const {
   this->TrafficLightDecision(reference_line_, &traffic_light_maneuver);
   auto combined_maneuver = CombineManeuver(traffic_light_maneuver, obstacle_maneuver);
   switch (combined_maneuver.decision_type) {
-    case DecisionType::kFollowLane:return &(FollowLaneState::Instance());
-    case DecisionType::kEmergencyStop:return &(EmergencyStopState::Instance());
+    case DecisionType::kFollowLane: return &(FollowLaneState::Instance());
+    case DecisionType::kEmergencyStop: return &(EmergencyStopState::Instance());
     case DecisionType::kStopAtTrafficSign:
-    case DecisionType::kStopAtDestination:return &(StopState::Instance());
-    case DecisionType::kChangeRight:return &(ChangeRightLaneState::Instance());
-    case DecisionType::kChangeLeft:return &(ChangeLeftLaneState::Instance());
+    case DecisionType::kStopAtDestination: return &(StopState::Instance());
+    case DecisionType::kChangeRight: return &(ChangeRightLaneState::Instance());
+    case DecisionType::kChangeLeft: return &(ChangeLeftLaneState::Instance());
     default:return nullptr;
   }
 }
