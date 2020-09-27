@@ -29,6 +29,7 @@ bool ManeuverPlanner::Process(const planning_msgs::TrajectoryPoint &init_traject
     ROS_FATAL("[ManeuverPlanner::Process], the current state is nullptr");
     return false;
   }
+  ROS_DEBUG("[ManeuverPlanner::Process], current state is [%s]", current_state_->Name().c_str());
   if (!current_state_->Execute(this)) {
     ROS_FATAL("[ManeuverPlanner::Process]");
     return false;

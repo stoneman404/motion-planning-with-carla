@@ -4,7 +4,6 @@
 
 #include <carla_msgs/CarlaEgoVehicleStatus.h>
 #include <planning_srvs/Route.h>
-
 #include <planning_msgs/TrajectoryPoint.h>
 #include <Eigen/Core>
 #include <vector>

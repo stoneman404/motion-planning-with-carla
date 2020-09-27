@@ -48,9 +48,7 @@ State *EmergencyStopState::NextState(ManeuverPlanner *maneuver_planner) const {
     case DecisionType::kChangeRight:return &(ChangeRightLaneState::Instance());
     case DecisionType::kChangeLeft:return &(ChangeLeftLaneState::Instance());
     default:return nullptr;
-
   }
-
 }
 
 void EmergencyStopState::ObstacleDecision(ManeuverGoal *maneuver_goal) const {

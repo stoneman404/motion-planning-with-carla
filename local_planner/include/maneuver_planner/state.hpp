@@ -18,6 +18,15 @@ class State {
 
  protected:
 
+  /**
+   * @brief: get clear distance at certain lane
+   * @param[in] lane_offset
+   * @param[in] reference_line
+   * @param[out] forward_clear_distance
+   * @param[out] backward_clear_distance
+   * @param[out] forward_obstacle_id
+   * @param[out] backward_obstacle_id
+   */
   virtual void GetLaneClearDistance(int lane_offset,
                                     std::shared_ptr<ReferenceLine> reference_line,
                                     double *forward_clear_distance,
@@ -25,10 +34,26 @@ class State {
                                     int *forward_obstacle_id,
                                     int *backward_obstacle_id) const;
 
+  /**
+   * @brief: obstacle decision
+   * @param[out] maneuver_goal
+   */
   virtual void ObstacleDecision(ManeuverGoal *maneuver_goal) const = 0;
 
+  /**
+   * @brief: traffic light decision
+   * @param[in] reference_line
+   * @param[out] maneuver_goal
+   */
   virtual void TrafficLightDecision(std::shared_ptr<ReferenceLine> reference_line,
                                     ManeuverGoal *maneuver_goal) const;
+
+  /**
+   * @brief: combine the obstacle and traffic light decision
+   * @param[in] traffic_light_maneuver
+   * @param[in] obstacle_maneuver
+   * @return : the combined maneuver
+   */
   virtual ManeuverGoal CombineManeuver(const ManeuverGoal &traffic_light_maneuver,
                                        const ManeuverGoal &obstacle_maneuver) const;
 };

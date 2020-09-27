@@ -47,7 +47,6 @@ State *StopState::NextState(ManeuverPlanner *maneuver_planner) const {
     case DecisionType::kChangeRight:return &(ChangeRightLaneState::Instance());
     default:return nullptr;
   }
-  return nullptr;
 }
 
 void StopState::ObstacleDecision(ManeuverGoal *maneuver_goal) const {

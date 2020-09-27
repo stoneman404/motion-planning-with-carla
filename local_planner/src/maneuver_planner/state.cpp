@@ -105,8 +105,6 @@ void State::TrafficLightDecision(std::shared_ptr<ReferenceLine> reference_line,
   const double max_comfort_decel = PlanningConfig::Instance().max_acc() * 0.6;
   double min_comfort_stop_distance = std::pow(VehicleState::Instance().linear_vel(), 2) / (2.0 * max_comfort_decel);
 
-  const int ego_lane_id = VehicleState::Instance().lane_id();
-  const int ego_road_id = VehicleState::Instance().road_id();
   const auto traffic_lights = TrafficLightList::Instance().TrafficLights();
   const auto ego_box = VehicleState::Instance().GetEgoBox();
   SLBoundary ego_sl_boundary;
@@ -115,12 +113,6 @@ void State::TrafficLightDecision(std::shared_ptr<ReferenceLine> reference_line,
   double min_dist = std::numeric_limits<double>::max();
   SLBoundary nearest_traffic_light_sl_boundary;
   for (const auto &traffic_light : traffic_lights) {
-    if (traffic_light.second->RoadId() != ego_road_id) {
-      continue;
-    }
-    if (traffic_light.second->LaneId() != ego_lane_id) {
-      continue;
-    }
     SLBoundary sl_boundary;
     const Box2d light_box = traffic_light.second->GetBox2d();
     reference_line->GetSLBoundary(light_box, &sl_boundary);
