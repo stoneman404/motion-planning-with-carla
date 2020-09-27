@@ -1,3 +1,4 @@
+
 #include <planning_srvs/Route.h>
 #include <reference_line/reference_line.hpp>
 #include "maneuver_planner/maneuver_planner.hpp"
@@ -10,6 +11,7 @@
 #include "string_name.hpp"
 #include "planning_context.hpp"
 #include "planning_config.hpp"
+
 namespace planning {
 
 ManeuverPlanner::ManeuverPlanner(const ros::NodeHandle &nh) : nh_(nh) {
@@ -34,14 +36,12 @@ bool ManeuverPlanner::Process(const planning_msgs::TrajectoryPoint &init_traject
     ROS_FATAL("[ManeuverPlanner::Process]");
     return false;
   }
-
   std::unique_ptr<State> state(current_state_->NextState(this));
   if (state != nullptr) {
     current_state_->Exit(this);
     current_state_ = std::move(state);
     current_state_->Enter(this);
   }
-
   return true;
 }
 
@@ -185,10 +185,7 @@ bool ManeuverPlanner::NeedReRoute() const {
           || maneuver_goal_.decision_type == DecisionType::kChangeRight)) {
     return true;
   }
-  if (PlanningContext::Instance().reference_lines().empty()) {
-    return true;
-  }
-  return false;
+  return PlanningContext::Instance().reference_lines().empty();
 }
 
 const ManeuverGoal &ManeuverPlanner::maneuver_goal() const {

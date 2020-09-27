@@ -13,9 +13,10 @@ namespace planning {
 
 bool FollowLaneState::Enter(ManeuverPlanner *maneuver_planner) {
   ROS_INFO("We are current switching to **FollowLaneState**...");
-  const auto ego_pose = VehicleState::Instance().pose();
-  const auto goal_pose = PlanningContext::Instance().global_goal_pose().pose;
+
   if (maneuver_planner->NeedReRoute()) {
+    const auto ego_pose = VehicleState::Instance().pose();
+    const auto goal_pose = PlanningContext::Instance().global_goal_pose().pose;
     planning_srvs::RouteResponse route_response;
     bool result = maneuver_planner->ReRoute(ego_pose, goal_pose, route_response);
     if (!result) {

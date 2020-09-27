@@ -116,15 +116,15 @@ void Spline2dTest::SetUp() {
     ys[i] = xy(i, 1);
   }
   spline2d_ = std::make_unique<Spline2d>(xs, ys, order_);
-
 }
+
 TEST_F(Spline2dTest, arc_length) {
 
   EXPECT_EQ(spline2d_->Order(), order_);
-  std::cout << spline2d_->ArcLength() << std::endl;
+//  std::cout << spline2d_->ArcLength() << std::endl;
   EXPECT_NEAR(spline2d_->ArcLength(), spline2d_->ChordLength().back(), 0.2);
-  std::cout << spline2d_->ArcLength() << ", chord length "
-            << spline2d_->ChordLength().back() << std::endl;
+//  std::cout << spline2d_->ArcLength() << ", chord length "
+//            << spline2d_->ChordLength().back() << std::endl;
 }
 
 TEST_F(Spline2dTest, evaluate) {
@@ -167,30 +167,31 @@ TEST_F(Spline2dTest, closed_point) {
   result = spline2d_->GetNearestPointOnSpline(x, y, &nearest_x, &nearest_y, &nearest_s);
   EXPECT_TRUE(result);
 //  EXPECT_NEAR(nearest_x, x, 1.0);
-  std::cout << "nearest_x : " << nearest_x << " , neareset_y: " << nearest_y << std::endl;
-  std::cout << "nearest_s : " << nearest_s << std::endl;
+//  std::cout << "nearest_x : " << nearest_x << " , neareset_y: " << nearest_y << std::endl;
+//  std::cout << "nearest_s : " << nearest_s << std::endl;
 
 }
 
-TEST_F(Spline2dTest, derivatives){
+TEST_F(Spline2dTest, derivatives) {
   double dx, dy, ddx, ddy, dddx, dddy;
   double s = spline2d_->ArcLength() - 40;
   bool result = spline2d_->EvaluateFirstDerivative(s, &dx, &dy);
   EXPECT_TRUE(result);
-  std::cout << "dx: " << dx << ", dy: " << dy << std::endl;
-  std::cout << "yaw : " << std::atan2(dy, dx) << std::endl;
+//  std::cout << "dx: " << dx << ", dy: " << dy << std::endl;
+//  std::cout << "yaw : " << std::atan2(dy, dx) << std::endl;
   result = spline2d_->EvaluateSecondDerivative(s, &dx, &dy);
   EXPECT_TRUE(result);
 
-  std::cout << "ddx: " << ddx << ", ddy: " << ddy << std::endl;
+//  std::cout << "ddx: " << ddx << ", ddy: " << ddy << std::endl;
 //  std::cout << "yaw : " << std::atan2(dy, dx) << std::endl;
   result = spline2d_->EvaluateThirdDerivative(s, &ddx, &ddy);
   EXPECT_TRUE(result);
-  double kappa = CalcKappa(dx, dy, ddx, ddy);
-  std::cout << "kappa : " << kappa << std::endl;
+  double kappa = MathUtil::CalcKappa(dx, dy, ddx, ddy);
+//  std::cout << "kappa : " << kappa << std::endl;
   result = spline2d_->EvaluateThirdDerivative(s, &dddx, &dddy);
-  double dkappa = CalcDKappa(dx, dy, ddx, ddy, dddx, dddy);
-  std::cout << "dkappa: " << dkappa << std::endl;
+  EXPECT_TRUE(result);
+  double dkappa = MathUtil::CalcDKappa(dx, dy, ddx, ddy, dddx, dddy);
+//  std::cout << "dkappa: " << dkappa << std::endl;
 }
 
 }

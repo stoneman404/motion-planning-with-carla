@@ -6,18 +6,9 @@
 
 namespace planning {
 
-bool ChangeRightLaneState::Execute(ManeuverPlanner *maneuver_planner) {
-
-  if (maneuver_planner == nullptr) {
-    return false;
-  }
-  // todo trajectory planner
-
-  return false;
-}
 
 bool ChangeRightLaneState::Enter(ManeuverPlanner *maneuver_planner) {
-  ROS_INFO("We are current enter the ChangeRightLane State");
+  ROS_INFO("We are current enter the **ChangeRightLaneState**");
   // todo: set offset for ego_pose
   const auto ego_pose = VehicleState::Instance().pose();
   const auto goal_pose = PlanningContext::Instance().global_goal_pose().pose;
@@ -46,8 +37,17 @@ bool ChangeRightLaneState::Enter(ManeuverPlanner *maneuver_planner) {
   target_reference_line_ = PlanningContext::Instance().reference_lines().back();
 }
 
+bool ChangeRightLaneState::Execute(ManeuverPlanner *maneuver_planner) {
+  if (maneuver_planner == nullptr) {
+    ROS_FATAL("[ChangeRightLaneState::Execute], the maneuver_planner is nullptr");
+    return false;
+  }
+  // todo trajectory planner
+  return false;
+}
+
 void ChangeRightLaneState::Exit(ManeuverPlanner *maneuver_planner) {
-  ROS_INFO("We are current exit the ChangeRightLane State");
+  ROS_INFO("We are current exit the **ChangeRightLaneState**");
 }
 
 State &ChangeRightLaneState::Instance() {
@@ -72,9 +72,7 @@ State *ChangeRightLaneState::NextState(ManeuverPlanner *maneuver_planner) const 
     case DecisionType::kChangeLeft:
     case DecisionType::kStopAtTrafficSign:
     default:return &(StopState::Instance());
-
   }
-
 }
 
 void ChangeRightLaneState::ObstacleDecision(ManeuverGoal *maneuver_goal) const {
