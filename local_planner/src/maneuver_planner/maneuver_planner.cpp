@@ -28,17 +28,19 @@ bool ManeuverPlanner::Process(const planning_msgs::TrajectoryPoint &init_traject
   if (current_state_ == nullptr) {
     ROS_FATAL("[ManeuverPlanner::Process], the current state is nullptr");
     return false;
-  } else {
-    if (!current_state_->Execute(this)) {
-      ROS_FATAL("[ManeuverPlanner::Process]");
-    }
-    std::unique_ptr<State> state(current_state_->NextState(this));
-    if (state != nullptr) {
-      current_state_->Exit(this);
-      current_state_ = std::move(state);
-      current_state_->Enter(this);
-    }
   }
+  if (!current_state_->Execute(this)) {
+    ROS_FATAL("[ManeuverPlanner::Process]");
+    return false;
+  }
+
+  std::unique_ptr<State> state(current_state_->NextState(this));
+  if (state != nullptr) {
+    current_state_->Exit(this);
+    current_state_ = std::move(state);
+    current_state_->Enter(this);
+  }
+
   return true;
 }
 
@@ -59,7 +61,9 @@ bool ManeuverPlanner::ReRoute(const geometry_msgs::Pose &start,
   }
 }
 
-bool ManeuverPlanner::UpdateReferenceLine(std::list<std::shared_ptr<ReferenceLine>> *const reference_lines_list) const {
+bool ManeuverPlanner::UpdateReferenceLine(
+    std::list<std::shared_ptr<ReferenceLine>> *const reference_lines_list) {
+
   const auto vehicle_pose = VehicleState::Instance().pose();
   const double max_forward_distance = PlanningConfig::Instance().reference_max_forward_distance();
   const double max_backward_distance = PlanningConfig::Instance().reference_max_backward_distance();
@@ -87,6 +91,7 @@ bool ManeuverPlanner::UpdateReferenceLine(std::list<std::shared_ptr<ReferenceLin
 
 int ManeuverPlanner::GetNearestIndex(const geometry_msgs::Pose &ego_pose,
                                      const std::vector<planning_msgs::WayPoint> &way_points) {
+
   double min_distance = std::numeric_limits<double>::max();
   const double ego_x = ego_pose.position.x;
   const double ego_y = ego_pose.position.y;
@@ -119,7 +124,6 @@ int ManeuverPlanner::GetStartIndex(const int matched_index,
     s += ds;
     current_index--;
   }
-
   return last_index;
 
 }
@@ -141,8 +145,8 @@ int ManeuverPlanner::GetEndIndex(const int matched_index,
   }
 
   return next_index;
-
 }
+
 std::vector<planning_msgs::WayPoint> ManeuverPlanner::GetWayPointsFromStartToEndIndex(
     const int start_index,
     const int end_index,
@@ -155,7 +159,6 @@ std::vector<planning_msgs::WayPoint> ManeuverPlanner::GetWayPointsFromStartToEnd
     sampled_way_points.push_back(way_points[i]);
   }
   return sampled_way_points;
-
 }
 
 const planning_msgs::TrajectoryPoint &ManeuverPlanner::init_trajectory_point() const {
@@ -165,22 +168,24 @@ const planning_msgs::TrajectoryPoint &ManeuverPlanner::init_trajectory_point() c
 ManeuverPlanner::~ManeuverPlanner() {
   current_state_->Exit(this);
   current_state_.reset(nullptr);
-
 }
+
 void ManeuverPlanner::SetManeuverGoal(const ManeuverGoal &maneuver_goal) {
   this->maneuver_goal_ = maneuver_goal;
 }
+
 bool ManeuverPlanner::NeedReRoute() const {
   if (current_state_->Name() == "FollowLaneState" &&
       (maneuver_goal_.decision_type == DecisionType::kChangeLeft
           || maneuver_goal_.decision_type == DecisionType::kChangeRight)) {
     return true;
   }
-
   if (PlanningContext::Instance().reference_lines().empty()) {
     return true;
   }
   return false;
 }
+
 const ManeuverGoal &ManeuverPlanner::maneuver_goal() const { return maneuver_goal_; }
+
 }

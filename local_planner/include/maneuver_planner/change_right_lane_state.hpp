@@ -18,6 +18,11 @@ class ChangeRightLaneState : public State {
   ChangeRightLaneState() = default;
   ChangeRightLaneState(const ChangeRightLaneState &other);
   ChangeRightLaneState &operator=(const ChangeRightLaneState &other);
+ private:
+  int target_lane_id_{};
+  int current_lane_id_{};
+  std::shared_ptr<ReferenceLine> current_reference_line_{};
+  std::shared_ptr<ReferenceLine> target_reference_line_{};
 };
 
 }

@@ -62,8 +62,8 @@ class ManeuverPlanner {
    * @param reference_lines_list
    * @return
    */
-  bool UpdateReferenceLine(
-      std::list<std::shared_ptr<ReferenceLine>> *const reference_lines_list) const;
+  static bool UpdateReferenceLine(
+      std::list<std::shared_ptr<ReferenceLine>> *const reference_lines_list);
 
   /**
    *
