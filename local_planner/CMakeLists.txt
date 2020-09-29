@@ -116,7 +116,7 @@ set(planning_SRC
         common/src/quartic_polynomial.cpp
         common/src/polynomial.cpp
         common/src/spline2d.cpp
-
+        common/src/st_data.cpp
         src/maneuver_planner/maneuver_planner.cpp
         src/maneuver_planner/stop_state.cpp
         src/maneuver_planner/emergency_stop_state.cpp
@@ -126,6 +126,7 @@ set(planning_SRC
         src/maneuver_planner/state.cpp
 
         src/planner/frenet_lattice_planner/frenet_lattice_planner.cpp
+        src/planner/frenet_lattice_planner/st_graph.cpp
         src/vehicle_state/vehicle_state.cpp
         src/obstacle_filter/obstacle_filter.cpp
         src/obstacle_filter/obstacle.cpp

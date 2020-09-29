@@ -25,6 +25,9 @@ class MathUtil {
   static double lerp(const double &x0, const double &t0,
                      const double &x1, const double &t1,
                      const double &t);
+  static double CrossProd(const Eigen::Vector2d &start_point,
+                          const Eigen::Vector2d &end_point1,
+                          const Eigen::Vector2d &end_point2);
 
 };
 

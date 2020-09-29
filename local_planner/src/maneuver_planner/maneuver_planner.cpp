@@ -23,12 +23,11 @@ void ManeuverPlanner::InitPlanner() {
       service::kRouteServiceName);
   current_lane_id_ = VehicleState::Instance().lane_id();
   current_state_.reset(&FollowLaneState::Instance());
-  need_reroute_ = true; // should reroute
   ROS_ASSERT(current_state_->Enter(this));
 }
 
 bool ManeuverPlanner::Process(const planning_msgs::TrajectoryPoint &init_trajectory_point,
-                              planning_msgs::TrajectoryPointConstPtr pub_trajectory) {
+                              planning_msgs::Trajectory::Ptr pub_trajectory) {
   if (current_state_ == nullptr) {
     ROS_FATAL("[ManeuverPlanner::Process], the current state is nullptr");
     return false;
@@ -44,7 +43,6 @@ bool ManeuverPlanner::Process(const planning_msgs::TrajectoryPoint &init_traject
     current_state_->Exit(this);
     current_state_ = std::move(state);
     current_state_->Enter(this);
-
   }
   return true;
 }

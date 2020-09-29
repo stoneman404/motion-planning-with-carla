@@ -96,4 +96,12 @@ Eigen::Vector3d MathUtil::Transform(const geometry_msgs::Pose &base_transform, c
           out_transitional_point(1),
           out_transitional_point(2)};
 }
+
+double MathUtil::CrossProd(const Eigen::Vector2d &start_point,
+                           const Eigen::Vector2d &end_point1,
+                           const Eigen::Vector2d &end_point2) {
+  Eigen::Vector2d vec_1 = end_point1 - start_point;
+  Eigen::Vector2d vec_2 = end_point2 - start_point;
+  return vec_1.x() * vec_2.y() - vec_1.y() * vec_2.x();
+}
 }

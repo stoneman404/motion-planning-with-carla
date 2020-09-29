@@ -12,6 +12,7 @@
 #include "vehicle_state/vehicle_state.hpp"
 #include "reference_line/reference_line.hpp"
 #include "planning_context.hpp"
+#include "planner/trajectory_planner.hpp"
 
 namespace planning {
 
@@ -39,7 +40,7 @@ class ManeuverPlanner {
    * @return
    */
   bool Process(const planning_msgs::TrajectoryPoint &init_trajectory_point,
-               planning_msgs::TrajectoryConstPtr pub_trajectory);
+               planning_msgs::Trajectory::Ptr pub_trajectory);
 
   /**
    *
@@ -134,7 +135,6 @@ class ManeuverPlanner {
  private:
   ManeuverGoal maneuver_goal_;
   ros::NodeHandle nh_;
-
   planning_msgs::TrajectoryPoint init_trajectory_point_;
   ros::ServiceClient route_service_client_;
   std::unique_ptr<State> current_state_;
