@@ -97,6 +97,12 @@ class PlanningConfig {
   double max_lookahead_time() const;
 
   /**
+   * @brief: min lookahead time, used for frenet lattice planner to sample the end conditions
+   * @return
+   */
+  double min_lookahead_time() const;
+
+  /**
    *
    * @return
    */
@@ -133,7 +139,7 @@ class PlanningConfig {
   double max_lookahead_distance() const;
 
   /**
-   * @brief : max lookback distance for local planner
+   * @brief : max lookback distance for local planner, used for check the target lane is safe to change lane
    * @return
    */
   double max_lookback_distance() const;
@@ -181,6 +187,7 @@ class PlanningConfig {
   double max_lookahead_distance_{}; // the max lookahead distance for ego vehicle
   double min_lookahead_distance_{};
   double max_lookahead_time_ = 8.0; // max lookahead time
+  double min_lookahead_time_ = 1.0;
   double lon_safety_buffer_ = 6.0; // lon_safety_buffer_
   double lat_safety_buffer_ = 2.0; // lat_safety_buffer_;
   double reference_smoother_distance_weight_ = 20.0;

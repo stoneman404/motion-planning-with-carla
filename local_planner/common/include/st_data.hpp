@@ -69,7 +69,10 @@ class STBoundary {
   const STPoint &lower_left_point() const;
   const STPoint &lower_right_point() const;
 
-  void set_upper_left_point(const STPoint) const {}
+  void set_upper_left_point(const STPoint &st_point);
+  void set_upper_right_point(const STPoint &st_point);
+  void set_lower_left_point(const STPoint &st_point);
+  void set_lower_right_point(const STPoint &st_point);
 
  private:
   size_t Prev(size_t i) const;

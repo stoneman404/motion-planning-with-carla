@@ -26,6 +26,7 @@ void PlanningConfig::UpdateParams(const ros::NodeHandle &nh) {
   nh.param<int>("/local_planner/spline_order_", spline_order_, 3);
   nh.param<double>("/local_planner/max_lookahead_time",
                    max_lookahead_time_, 8.0);
+  nh.param<double>("/local_planner/min_lookahead_time", min_lookahead_time_, 1.0);
   nh.param<double>("/local_planner/lon_safety_buffer",
                    lon_safety_buffer_, 3.0);
   nh.param<double>("/local_planner/lat_safety_buffer",
@@ -165,5 +166,6 @@ double PlanningConfig::maneuver_efficiency_cost_gain() const {
 double PlanningConfig::maneuver_comfort_cost_gain() const {
   return maneuver_comfort_cost_gain_;
 }
+double PlanningConfig::min_lookahead_time() const { return min_lookahead_distance_; }
 
 }

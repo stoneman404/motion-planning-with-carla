@@ -17,30 +17,31 @@ class Obstacle {
   explicit Obstacle(const derived_object_msgs::Object &object);
   Obstacle(const Obstacle &other);
 //    void SetId(const int& id) { this->id_ = id;}
-  void set_lane_id(const int &lane_id) { this->lane_id_ = lane_id; }
-  void set_section_id(const int &section_id) { this->section_id_ = section_id; }
-  void set_road_id(const int &road_id) { this->road_id_ = road_id; }
+  void set_lane_id(const int &lane_id);
+  void set_section_id(const int &section_id);
+  void set_road_id(const int &road_id);
 
   planning_msgs::TrajectoryPoint GetPointAtTime(double relative_time) const;
-  Box2d GetBoundingBox() const { return bounding_box_; }
-  bool HasTrajectory() const { return !trajectory_.trajectory_points.empty(); }
+  Box2d GetBoundingBox() const;
+  bool HasTrajectory() const;
+
   // getter
-  const ros::Time &TimeStamp() const { return time_stamp_; }
-  const derived_object_msgs::Object &Object() const { return object_; }
-  const Eigen::Vector2d &Center() const { return center_; }
-  const bool &IsStatic() const { return is_static_; }
-  const double &Speed() const { return speed_; }
-  const int &Id() const { return id_; }
-  const int &road_id() const { return road_id_; }
-  const int &section_id() const { return section_id_; }
-  const int &lane_id() const { return lane_id_; }
-  const bool &IsValidObstacle() const { return this->is_valid_obstacle_; }
-  const planning_msgs::Trajectory &Trajectory() const { return this->trajectory_; }
-  const double &AngularSpeed() const { return angular_speed_; }
-  const double &Heading() const { return heading_; }
-  const double &Length() const { return length_; }
-  const double &Width() const { return width_; }
-  const Box2d &BoundingBox() const { return bounding_box_; }
+  const ros::Time &TimeStamp() const;
+  const derived_object_msgs::Object &Object() const;
+  const Eigen::Vector2d &Center() const;
+  const bool &IsStatic() const;
+  const double &Speed() const;
+  const int &Id() const;
+  const int &road_id() const;
+  const int &section_id() const;
+  const int &lane_id() const;
+  const bool &IsValidObstacle() const;
+  const planning_msgs::Trajectory &Trajectory() const;
+  const double &AngularSpeed() const;
+  const double &Heading() const;
+  const double &Length() const;
+  const double &Width() const;
+  const Box2d &BoundingBox() const;
   Box2d GetBoundingBoxAtPoint(const planning_msgs::TrajectoryPoint &point) const;
  private:
 

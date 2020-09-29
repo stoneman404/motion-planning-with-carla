@@ -88,7 +88,7 @@ Obstacle::Obstacle(const derived_object_msgs::Object &object) {
 }
 
 Obstacle::Obstacle(const Obstacle &other) {
-  this->id_ = other.Id();
+  this->id_ = other.id_;
   this->lane_id_ = other.lane_id_;
   this->section_id_ = other.section_id_;
   this->bounding_box_ = other.bounding_box_;
@@ -141,5 +141,47 @@ planning_msgs::TrajectoryPoint Obstacle::GetPointAtTime(double relative_time) co
     return MathUtil::InterpolateTrajectoryPoint(*(it_lower - 1), *it_lower, relative_time);
   }
 }
+
+bool Obstacle::HasTrajectory() const { return trajectory_.trajectory_points.size() > 1; }
+
+void Obstacle::set_lane_id(const int &lane_id) { this->lane_id_ = lane_id; }
+
+void Obstacle::set_section_id(const int &section_id) { this->section_id_ = section_id; }
+
+void Obstacle::set_road_id(const int &road_id) { this->road_id_ = road_id; }
+
+Box2d Obstacle::GetBoundingBox() const { return bounding_box_; }
+
+const ros::Time &Obstacle::TimeStamp() const { return time_stamp_; }
+
+const derived_object_msgs::Object &Obstacle::Object() const { return object_; }
+
+const Eigen::Vector2d &Obstacle::Center() const { return center_; }
+
+const bool &Obstacle::IsStatic() const { return is_static_; }
+
+const double &Obstacle::Speed() const { return speed_; }
+
+const int &Obstacle::Id() const { return id_; }
+
+const int &Obstacle::road_id() const { return road_id_; }
+
+const int &Obstacle::section_id() const { return section_id_; }
+
+const int &Obstacle::lane_id() const { return lane_id_; }
+
+const double &Obstacle::Length() const { return length_; }
+
+const double &Obstacle::Width() const { return width_; }
+
+const planning_msgs::Trajectory &Obstacle::Trajectory() const { return this->trajectory_; }
+
+const bool &Obstacle::IsValidObstacle() const { return this->is_valid_obstacle_; }
+
+const Box2d &Obstacle::BoundingBox() const { return bounding_box_; }
+
+const double &Obstacle::Heading() const { return heading_; }
+
+const double &Obstacle::AngularSpeed() const { return angular_speed_; }
 
 }

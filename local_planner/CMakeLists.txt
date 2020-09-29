@@ -127,6 +127,7 @@ set(planning_SRC
 
         src/planner/frenet_lattice_planner/frenet_lattice_planner.cpp
         src/planner/frenet_lattice_planner/st_graph.cpp
+        src/planner/frenet_lattice_planner/end_condition_sampler.cpp
         src/vehicle_state/vehicle_state.cpp
         src/obstacle_filter/obstacle_filter.cpp
         src/obstacle_filter/obstacle.cpp

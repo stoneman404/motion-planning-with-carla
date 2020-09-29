@@ -16,10 +16,10 @@ STBoundary::STBoundary(const std::vector<std::pair<STPoint, STPoint>> &point_pai
     lower_points_.emplace_back(item.first.s(), t);
     upper_points_.emplace_back(item.second.s(), t);
   }
-  lower_left_point_ = lower_points_.front();
-  lower_right_point_ = lower_points_.back();
-  upper_left_point_ = upper_points_.front();
-  upper_right_point_ = upper_points_.back();
+//  lower_left_point_ = lower_points_.front();
+//  lower_right_point_ = lower_points_.back();
+//  upper_left_point_ = upper_points_.front();
+//  upper_right_point_ = upper_points_.back();
   for (const auto &point : lower_points_) {
     points_.emplace_back(point);
   }
@@ -182,6 +182,10 @@ bool STBoundary::IsPointInBoundary(const STPoint &st_point) const {
                                                  {lower_points_[right].t(), lower_points_[right].s()});
   return check_lower * check_upper < 0.0;
 }
+void STBoundary::set_upper_left_point(const STPoint &st_point) { upper_left_point_ = st_point; }
+void STBoundary::set_upper_right_point(const STPoint &st_point) { upper_right_point_ = st_point; }
+void STBoundary::set_lower_left_point(const STPoint &st_point) { lower_left_point_ = st_point; }
+void STBoundary::set_lower_right_point(const STPoint &st_point) { lower_right_point_ = st_point; }
 
 }
 

@@ -197,8 +197,8 @@ TEST_F(Spline2dTest, derivatives) {
 }
 
 int main(int argc, char **argv) {
-  ros::init(argc, argv, "spline2d_test");
-  ros::NodeHandle nh;
+//  ros::init(argc, argv, "spline2d_test");
+//  ros::NodeHandle nh;
   ::testing::InitGoogleTest(&argc, argv);
   return RUN_ALL_TESTS();
 }
