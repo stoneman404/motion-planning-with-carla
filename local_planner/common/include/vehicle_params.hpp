@@ -5,6 +5,8 @@ namespace planning{
 struct VehicleParams {
   double length;
   double width;
+  double half_length;
+  double half_width;
   double back_axle_to_center_length;
   double front_axle_to_center_length;
   double axle_length_;

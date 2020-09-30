@@ -186,6 +186,7 @@ void STBoundary::set_upper_left_point(const STPoint &st_point) { upper_left_poin
 void STBoundary::set_upper_right_point(const STPoint &st_point) { upper_right_point_ = st_point; }
 void STBoundary::set_lower_left_point(const STPoint &st_point) { lower_left_point_ = st_point; }
 void STBoundary::set_lower_right_point(const STPoint &st_point) { lower_right_point_ = st_point; }
+void STBoundary::set_id(int id) { id_ = id; }
 
 }
 

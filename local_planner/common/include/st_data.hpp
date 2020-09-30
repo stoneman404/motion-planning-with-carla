@@ -56,7 +56,7 @@ class STBoundary {
 
   int id() const;
 
-  void set_id(int id) { id_ = id; }
+  void set_id(int id);
   double min_s() const;
   double min_t() const;
   double max_s() const;

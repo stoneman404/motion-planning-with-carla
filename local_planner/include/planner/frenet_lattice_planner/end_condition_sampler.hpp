@@ -15,6 +15,7 @@ class EndConditionSampler {
   ~EndConditionSampler() = default;
   EndConditionSampler(const std::array<double, 3> &init_s,
                       const std::array<double, 3> &init_d,
+                      std::shared_ptr<ReferenceLine> ptr_ref_line,
                       std::shared_ptr<STGraph> ptr_st_graph);
   /**
    *
@@ -60,7 +61,6 @@ class EndConditionSampler {
    */
   std::vector<std::pair<STPoint, double>> FollowingSamplePoints(int obstacle_id) const;
 
-  double
   /**
    *
    * @param t
@@ -89,9 +89,21 @@ class EndConditionSampler {
    */
   double SLower(double t) const;
 
+  /**
+   * @brief: project the obstacle's velocity at time t to reference line,
+   * @param obstacle_id
+   * @param s
+   * @param t
+   * @param ptr_ref_line
+   * @return
+   */
+  static double GetObstacleSpeedAlongReferenceLine(int obstacle_id, double s, double t,
+                                                   std::shared_ptr<ReferenceLine> ptr_ref_line);
+
  private:
   std::array<double, 3> init_s_{};
   std::array<double, 3> init_d_{};
+  std::shared_ptr<ReferenceLine> ptr_ref_line_;
   std::shared_ptr<STGraph> ptr_st_graph_;
 };
 }
