@@ -37,7 +37,7 @@ class EndConditionSampler {
    *
    * @return
    */
-  std::vector<std::pair<std::array<double, 3>, double>> SampleLonEndConditionWithObstacles() const;
+  std::vector<std::pair<std::array<double, 3>, double>> SampleLonEndConditionWithSTGraph() const;
 
   /**
    *

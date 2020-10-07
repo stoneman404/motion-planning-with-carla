@@ -128,6 +128,7 @@ set(planning_SRC
         src/planner/frenet_lattice_planner/frenet_lattice_planner.cpp
         src/planner/frenet_lattice_planner/st_graph.cpp
         src/planner/frenet_lattice_planner/end_condition_sampler.cpp
+        src/planner/frenet_lattice_planner/trajectory_selector.cpp
         src/vehicle_state/vehicle_state.cpp
         src/obstacle_filter/obstacle_filter.cpp
         src/obstacle_filter/obstacle.cpp
@@ -142,8 +143,6 @@ set(planning_SRC
         src/planning_context.cpp
         src/planning_config.cpp
         src/planner.cpp
-
-
         )
 
 add_executable(${PROJECT_NAME}_node

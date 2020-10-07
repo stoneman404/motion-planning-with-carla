@@ -165,10 +165,10 @@ std::vector<STPoint> STGraph::GetObstacleSurroundingPoints(int obstacle_id, doub
     return pt_pairs;
   }
   const auto &pt_obstacle = obstacle_st_map_.at(obstacle_id);
-  double s0 = 0.0;
-  double s1 = 0.0;
-  double t0 = 0.0;
-  double t1 = 0.0;
+  double s0;
+  double s1;
+  double t0;
+  double t1;
 
   if (s_dist > 0.0) {
     s0 = pt_obstacle.upper_left_point().s();

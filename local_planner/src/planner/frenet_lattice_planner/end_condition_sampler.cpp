@@ -100,7 +100,7 @@ double EndConditionSampler::SLower(double t) const {
   return t < t_at_zero_speed ? init_s_[0] + init_s_[1] * t - PlanningConfig::Instance().max_acc() * t * t
                              : s_at_zero_speed;
 }
-std::vector<EndCondition> EndConditionSampler::SampleLonEndConditionWithObstacles() const {
+std::vector<EndCondition> EndConditionSampler::SampleLonEndConditionWithSTGraph() const {
   std::vector<EndCondition> end_s_conditions;
   std::vector<std::pair<STPoint, double>> sample_points_follow;
   std::vector<std::pair<STPoint, double>> sample_points_overtake;
