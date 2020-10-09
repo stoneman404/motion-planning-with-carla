@@ -35,7 +35,23 @@ class Spline2d {
    * @return
    */
   bool EvaluateFirstDerivative(double s, double *const dx, double *const dy) const;
+
+  /**
+   * @brief: evaluate second derivative
+   * @param s
+   * @param ddx
+   * @param ddy
+   * @return
+   */
   bool EvaluateSecondDerivative(double s, double *const ddx, double *const ddy) const;
+
+  /**
+   * @brief: evaluate third derivative
+   * @param s
+   * @param dddx
+   * @param dddy
+   * @return
+   */
   bool EvaluateThirdDerivative(double s, double *const dddx, double *const dddy) const;
 
   /**
