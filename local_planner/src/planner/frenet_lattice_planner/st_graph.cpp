@@ -1,6 +1,5 @@
-#include "planner/frenet_lattice_planner/st_graph.hpp"
-
 #include <utility>
+#include "planner/frenet_lattice_planner/st_graph.hpp"
 namespace planning {
 
 STGraph::STGraph(const std::vector<std::shared_ptr<Obstacle>> &obstacles,
@@ -152,8 +151,10 @@ std::vector<std::vector<std::pair<double, double>>> STGraph::GetPathBlockingInte
                                                                                      const double t_end,
                                                                                      const double t_resolution) const {
   std::vector<std::vector<std::pair<double, double>>> intervals;
-  for (double t = t_start; t <= t_end; t += t_resolution) {
+  double t = t_start;
+  while (t <= t_end) {
     intervals.push_back(GetPathBlockingIntervals(t));
+    t += t_resolution;
   }
   return intervals;
 }
