@@ -2,7 +2,6 @@
 #define CATKIN_WS_SRC_LOCAL_PLANNER_COMMON_INCLUDE_SPLINE2D_HPP_
 
 #include <Eigen/Core>
-//#include <Eigen/Dense>
 #include <eigen3/unsupported/Eigen/Splines>
 #include <vector>
 namespace planning {

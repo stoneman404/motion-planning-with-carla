@@ -44,6 +44,7 @@ std::vector<EndCondition> EndConditionSampler::SampleLatEndCondition() {
   }
   return end_d_conditions;
 }
+
 std::vector<EndCondition> EndConditionSampler::SampleLonEndConditionForCruising(const double ref_target_vel) const {
   constexpr int vel_samples_num = 10;  // put  into PlanningConfig
   constexpr int time_samples_num = 9; // put into PlanningConfig
@@ -144,6 +145,7 @@ std::vector<std::pair<STPoint, double>> EndConditionSampler::OvertakeSamplePoint
   }
   return sample_points;
 }
+
 std::vector<std::pair<STPoint, double>> EndConditionSampler::FollowingSamplePoints(int obstacle_id) const {
   constexpr size_t num_sample_follow_per_timestamp = 4;
   std::vector<std::pair<STPoint, double>> sample_points{};
