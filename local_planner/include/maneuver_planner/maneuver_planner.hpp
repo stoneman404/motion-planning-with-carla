@@ -12,7 +12,7 @@
 #include "vehicle_state/vehicle_state.hpp"
 #include "reference_line/reference_line.hpp"
 #include "planning_context.hpp"
-#include "planner/trajectory_planner.hpp"
+#include "motion_planner/trajectory_planner.hpp"
 
 namespace planning {
 

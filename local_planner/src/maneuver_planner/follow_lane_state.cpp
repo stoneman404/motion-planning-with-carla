@@ -7,7 +7,7 @@
 #include "reference_line/reference_line.hpp"
 #include "planning_config.hpp"
 #include "planning_context.hpp"
-#include "planner/trajectory_planner.hpp"
+#include "motion_planner/trajectory_planner.hpp"
 #include "traffic_lights/traffic_light_list.hpp"
 namespace planning {
 
