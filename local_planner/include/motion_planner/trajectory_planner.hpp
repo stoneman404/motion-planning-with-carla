@@ -14,7 +14,7 @@ class TrajectoryPlanner {
   virtual bool Process(const planning_msgs::TrajectoryPoint &init_trajectory_point,
                        const std::list<std::shared_ptr<ReferenceLine>> &reference_lines,
                        const ManeuverGoal &maneuver_goal,
-                       planning_msgs::Trajectory::ConstPtr pub_trajectory) = 0;
+                       std::shared_ptr<planning_msgs::Trajectory> pub_trajectory) = 0;
 };
 }
 #endif //CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_PLANNER_TRAJECTORY_PLANNER_HPP_

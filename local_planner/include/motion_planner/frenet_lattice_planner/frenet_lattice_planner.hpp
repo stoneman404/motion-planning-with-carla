@@ -13,61 +13,66 @@ namespace planning {
 
 class FrenetLatticePlanner : public TrajectoryPlanner {
  public:
+
   FrenetLatticePlanner() = default;
+
   ~FrenetLatticePlanner() override = default;
+
   /**
-   *
-   * @param init_trajectory_point
-   * @param reference_lines
-   * @param maneuver_goal
-   * @param pub_trajectory
+   * @brief: main function
+   * @param[in] init_trajectory_point
+   * @param[in] reference_lines
+   * @param[in] maneuver_goal
+   * @param[out] pub_trajectory
    * @return
    */
   bool Process(const planning_msgs::TrajectoryPoint &init_trajectory_point,
                const std::list<std::shared_ptr<ReferenceLine>> &reference_lines,
                const ManeuverGoal &maneuver_goal,
-               planning_msgs::Trajectory::ConstPtr pub_trajectory) override;
+               std::shared_ptr<planning_msgs::Trajectory> pub_trajectory) override;
 
  protected:
 
   /**
-   *
-   * @param init_trajectory_point
-   * @param ptr_ref_line
-   * @param maneuver_goal
-   * @param pub_trajectory
+   * @brief: planning on one reference line
+   * @param[in] init_trajectory_point
+   * @param[in] ptr_ref_line
+   * @param[in] maneuver_goal
+   * @param[out] pub_trajectory
    * @return
    */
   bool Plan(const planning_msgs::TrajectoryPoint &init_trajectory_point,
-            const std::shared_ptr<ReferenceLine> ptr_ref_line,
+            size_t index,
+            std::shared_ptr<ReferenceLine> ptr_ref_line,
             const ManeuverGoal &maneuver_goal,
-            planning_msgs::Trajectory::ConstPtr pub_trajectory) const;
+            std::vector<std::shared_ptr<planning_msgs::Trajectory>> *traj_on_ref_line) const;
 
   /**
-   *
-   * @param maneuver_goal
-   * @param ptr_lon_traj_vec
-   * @param ptr_lat_traj_vec
+   * @brief: generate lon trajectories and lat trajectories
+   * @param maneuver_goal: maneuver goal, comes from maneuver planner
+   * @param[out] ptr_lon_traj_vec: lon trajectories
+   * @param[out] ptr_lat_traj_vec: lat trajectories
    */
   void GenerateTrajectories(const ManeuverGoal &maneuver_goal,
                             std::vector<std::shared_ptr<Polynomial>> *ptr_lon_traj_vec,
                             std::vector<std::shared_ptr<Polynomial>> *ptr_lat_traj_vec) const;
+
   /**
-   *
-   * @param ptr_ref_line
-   * @param lon_traj_vec
-   * @param lat_traj_vec
-   * @param ptr_combined_pub_traj
+   * @brief: combine the lon and lat trajectories
+   * @param ptr_ref_line: reference line
+   * @param lon_traj_vec: lon trajectories
+   * @param lat_traj_vec: lat trajectories
+   * @param ptr_combined_pub_traj: combined trajectory
    * @return
    */
-  bool CombineTrajectories(const std::shared_ptr<ReferenceLine> ptr_ref_line,
-                           const Polynomial &lon_traj_vec, const Polynomial &lat_traj_vec,
-                           std::shared_ptr<planning_msgs::Trajectory> ptr_combined_pub_traj);
+  static bool CombineTrajectories(std::shared_ptr<ReferenceLine> ptr_ref_line,
+                                  const Polynomial &lon_traj_vec, const Polynomial &lat_traj_vec,
+                                  std::shared_ptr<planning_msgs::Trajectory> ptr_combined_pub_traj);
 
  private:
 
   /**
-   *
+   * @brief: generate lat polynomial trajectories
    * @param ptr_lat_traj_vec
    */
   void GenerateLatTrajectories(std::vector<std::shared_ptr<Polynomial>> *ptr_lat_traj_vec) const;
@@ -81,28 +86,40 @@ class FrenetLatticePlanner : public TrajectoryPlanner {
                                std::vector<std::shared_ptr<Polynomial>> *ptr_lon_traj_vec) const;
 
   /**
-   *
-   * @param cruise_speed
+   * @brief: generate cruising lon trajectories
+   * @param cruise_speed:
    * @param ptr_lon_traj_vec
    */
-  void GenerateCruisingLonTrajectories(const double cruise_speed,
+  void GenerateCruisingLonTrajectories(double cruise_speed,
                                        std::vector<std::shared_ptr<Polynomial>> *ptr_lon_traj_vec) const;
 
   /**
-   *
-   * @param stop_s
+   * @brief: generate stopping lon trajectories
+   * @param stop_s: stop position
    * @param ptr_lon_traj_vec
    */
-  void GenerateStoppingLonTrajectories(const double stop_s,
+  void GenerateStoppingLonTrajectories(double stop_s,
                                        std::vector<std::shared_ptr<Polynomial>> *ptr_lon_traj_vec) const;
 
   /**
-   *
+   * @brief: generate overtake and following lon trajectories
    * @param ptr_lon_traj_vec
    */
   void GenerateOvertakeAndFollowingLonTrajectories(std::vector<std::shared_ptr<Polynomial>> *ptr_lon_traj_vec) const;
 
+  /**
+   * @brief: generate polynomial trajectories, quartic_polynomial or quintic_polynomial
+   * @param init_condition: initial conditions
+   * @param end_conditions: end conditions
+   * @param order: order: 4-->quartic polynomial, 5-->quintic polynomial
+   * @param ptr_traj_vec: polynomial trajectories
+   */
+  static void GeneratePolynomialTrajectories(const std::array<double, 3> &init_condition,
+                                             const std::vector<std::pair<std::array<double, 3>,
+                                                                         double>> &end_conditions,
+                                             size_t order,
+                                             std::vector<std::shared_ptr<Polynomial>> *ptr_traj_vec);
 };
 
 }
-#endif //CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_PLANNER_FRENET_LATTICE_PLANNER_HPP_
+#endif

@@ -77,12 +77,12 @@ State *FollowLaneState::NextState(ManeuverPlanner *maneuver_planner) const {
   maneuver_planner->SetManeuverGoal(combined_maneuver);
   switch (combined_maneuver.decision_type) {
     case DecisionType::kStopAtDestination:
-    case DecisionType::kStopAtTrafficSign:return &(StopState::Instance());
+    case DecisionType::kStopAtTrafficSign: return &(StopState::Instance());
     case DecisionType::kEmergencyStop: return &(EmergencyStopState::Instance());
     case DecisionType::kChangeRight: return &(ChangeRightLaneState::Instance());
     case DecisionType::kChangeLeft: return &(ChangeLeftLaneState::Instance());
     case DecisionType::kFollowLane: return &(FollowLaneState::Instance());
-    default:return nullptr;
+    default: return nullptr;
   }
 }
 
@@ -175,7 +175,6 @@ void FollowLaneState::ObstacleDecision(ManeuverGoal *maneuver_goal) const {
         } else {
           // follow the leading vehicle
           maneuver_goal->decision_type = DecisionType::kFollowLane;
-
           maneuver_goal->target_s = std::min(ego_sl.s + lookahead_distance, reference_line_->Length());
           maneuver_goal->lane_id = reference_line_->NearestWayPoint(maneuver_goal->target_s).lane_id;
           maneuver_goal->has_stop_point = false;
