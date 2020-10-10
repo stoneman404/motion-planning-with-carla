@@ -16,7 +16,7 @@ bool EmergencyStopState::Execute(ManeuverPlanner *maneuver_planner) {
   if (maneuver_planner == nullptr) {
     return false;
   }
-  // todo emergency stop trajectory planner
+  // todo emergency stop trajectory motion_planner
   return false;
 }
 

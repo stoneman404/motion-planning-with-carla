@@ -1,5 +1,5 @@
 #include <utility>
-#include "planner/frenet_lattice_planner/st_graph.hpp"
+#include "motion_planner/frenet_lattice_planner/st_graph.hpp"
 namespace planning {
 
 STGraph::STGraph(const std::vector<std::shared_ptr<Obstacle>> &obstacles,

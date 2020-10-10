@@ -1,4 +1,4 @@
-#include "planner/frenet_lattice_planner/end_condition_sampler.hpp"
+#include "motion_planner/frenet_lattice_planner/end_condition_sampler.hpp"
 #include "obstacle_filter/obstacle_filter.hpp"
 
 #include <utility>

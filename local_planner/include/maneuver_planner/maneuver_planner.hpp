@@ -1,6 +1,6 @@
 #ifndef CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_MANEUVER_PLANNER_MANEUVER_PLANNER_HPP_
 #define CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_MANEUVER_PLANNER_MANEUVER_PLANNER_HPP_
-// this is a simpler version of behavior planner,
+// this is a simpler version of behavior motion_planner,
 
 #include <carla_msgs/CarlaEgoVehicleStatus.h>
 #include <planning_srvs/Route.h>

@@ -1,5 +1,5 @@
-#ifndef CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_PLANNER_TRAJECTORY_SELECTOR_HPP_
-#define CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_PLANNER_TRAJECTORY_SELECTOR_HPP_
+#ifndef CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_MOTION_PLANNER_TRAJECTORY_SELECTOR_HPP_
+#define CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_MOTION_PLANNER_TRAJECTORY_SELECTOR_HPP_
 
 #include <array>
 #include <memory>
@@ -7,7 +7,7 @@
 #include <ros/ros.h>
 
 #include "polynomial.hpp"
-#include "planner/frenet_lattice_planner/st_graph.hpp"
+#include "st_graph.hpp"
 
 namespace planning {
 class TrajectorySelector {

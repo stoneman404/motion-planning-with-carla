@@ -1,6 +1,6 @@
-#ifndef CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_PLANNER_FRENET_LATTICE_PLANNER_HPP_
-#define CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_PLANNER_FRENET_LATTICE_PLANNER_HPP_
-#include "planner/trajectory_planner.hpp"
+#ifndef CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_MOTION_PLANNER_FRENET_LATTICE_PLANNER_HPP_
+#define CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_MOTION_PLANNER_FRENET_LATTICE_PLANNER_HPP_
+#include "motion_planner/trajectory_planner.hpp"
 #include <planning_msgs/TrajectoryPoint.h>
 #include "planning_context.hpp"
 #include "st_graph.hpp"

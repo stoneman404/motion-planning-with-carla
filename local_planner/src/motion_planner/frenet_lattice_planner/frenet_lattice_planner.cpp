@@ -1,8 +1,7 @@
-#include "planner/frenet_lattice_planner/frenet_lattice_planner.hpp"
-#include "planner/frenet_lattice_planner/trajectory_selector.hpp"
-#include "planner/frenet_lattice_planner/end_condition_sampler.hpp"
+#include "motion_planner/frenet_lattice_planner/frenet_lattice_planner.hpp"
+#include "motion_planner/frenet_lattice_planner/trajectory_selector.hpp"
+#include "motion_planner/frenet_lattice_planner/end_condition_sampler.hpp"
 namespace planning {
-
 
 bool FrenetLatticePlanner::Process(const planning_msgs::TrajectoryPoint &init_trajectory_point,
                                    const std::list<std::shared_ptr<ReferenceLine>> &reference_lines,

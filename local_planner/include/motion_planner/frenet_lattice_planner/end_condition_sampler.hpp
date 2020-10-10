@@ -1,9 +1,9 @@
-#ifndef CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_PLANNER_END_CONDITION_SAMPLER_HPP_
-#define CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_PLANNER_END_CONDITION_SAMPLER_HPP_
+#ifndef CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_MOTION_PLANNER_END_CONDITION_SAMPLER_HPP_
+#define CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_MOTION_PLANNER_END_CONDITION_SAMPLER_HPP_
 #include <array>
 #include <vector>
 #include "st_data.hpp"
-#include "planner/frenet_lattice_planner/st_graph.hpp"
+#include "motion_planner/frenet_lattice_planner/st_graph.hpp"
 #include "planning_context.hpp"
 
 namespace planning {
@@ -12,7 +12,9 @@ class EndConditionSampler {
  public:
 
   EndConditionSampler() = default;
+
   ~EndConditionSampler() = default;
+
   EndConditionSampler(const std::array<double, 3> &init_s,
                       const std::array<double, 3> &init_d,
                       std::shared_ptr<ReferenceLine> ptr_ref_line,

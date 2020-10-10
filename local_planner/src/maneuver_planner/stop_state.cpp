@@ -18,7 +18,7 @@ bool StopState::Execute(ManeuverPlanner *maneuver_planner) {
   if (nullptr == maneuver_planner) {
     return false;
   }
-  // todo stop trajectory planner
+  // todo stop trajectory motion_planner
   return false;
 }
 

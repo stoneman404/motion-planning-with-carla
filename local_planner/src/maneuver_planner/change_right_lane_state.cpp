@@ -45,7 +45,7 @@ bool ChangeRightLaneState::Execute(ManeuverPlanner *maneuver_planner) {
     ROS_FATAL("[ChangeRightLaneState::Execute], the maneuver_planner is nullptr");
     return false;
   }
-  // todo trajectory planner
+  // todo trajectory motion_planner
   return false;
 }
 

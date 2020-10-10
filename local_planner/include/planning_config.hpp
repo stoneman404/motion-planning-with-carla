@@ -97,7 +97,7 @@ class PlanningConfig {
   double max_lookahead_time() const;
 
   /**
-   * @brief: min lookahead time, used for frenet lattice planner to sample the end conditions
+   * @brief: min lookahead time, used for frenet lattice motion_planner to sample the end conditions
    * @return
    */
   double min_lookahead_time() const;
@@ -133,19 +133,19 @@ class PlanningConfig {
   double target_speed() const;
 
   /**
-   * @brief : max lookahead distance for local planner
+   * @brief : max lookahead distance for local motion_planner
    * @return
    */
   double max_lookahead_distance() const;
 
   /**
-   * @brief : max lookback distance for local planner, used for check the target lane is safe to change lane
+   * @brief : max lookback distance for local motion_planner, used for check the target lane is safe to change lane
    * @return
    */
   double max_lookback_distance() const;
 
   /**
-   * @brief : min lookahead distance for local planner
+   * @brief : min lookahead distance for local motion_planner
    * @return
    */
   double min_lookahead_distance() const;
