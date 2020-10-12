@@ -139,28 +139,32 @@ void State::TrafficLightDecision(std::shared_ptr<ReferenceLine> reference_line,
     prohibited = false;
   } else if (min_dist < min_stop_distance) {
     prohibited = true;
-    maneuver_goal->has_stop_point = true;
+    maneuver_goal->maneuver_infos.resize(1);
+    maneuver_goal->maneuver_infos.front().has_stop_point = true;
     maneuver_goal->decision_type = DecisionType::kEmergencyStop;
-    maneuver_goal->lane_id = nearest_waypoint.lane_id;
-    maneuver_goal->target_s = std::max(nearest_traffic_light_sl_boundary.start_s, ego_s + min_stop_distance);
-    maneuver_goal->target_speed = 0.0;
+    maneuver_goal->maneuver_infos.front().lane_id = nearest_waypoint.lane_id;
+    maneuver_goal->maneuver_infos.front().ptr_ref_line = reference_line;
+    maneuver_goal->maneuver_infos.front().maneuver_target.target_s =
+        std::max(nearest_traffic_light_sl_boundary.start_s, ego_s + min_stop_distance);
 
   } else if (min_dist > min_comfort_stop_distance) {
     prohibited = false;
   } else {
     prohibited = true;
-    maneuver_goal->target_speed = 0.0;
-    maneuver_goal->has_stop_point = true;
-    maneuver_goal->target_s = std::max(nearest_traffic_light_sl_boundary.start_s, ego_s + min_stop_distance);
-    maneuver_goal->lane_id = nearest_waypoint.lane_id;
+    maneuver_goal->maneuver_infos.resize(1);
+    maneuver_goal->maneuver_infos.front().has_stop_point = true;
+    maneuver_goal->maneuver_infos.front().maneuver_target.target_s =
+        std::max(nearest_traffic_light_sl_boundary.start_s, ego_s + min_stop_distance);
+    maneuver_goal->maneuver_infos.front().lane_id = nearest_waypoint.lane_id;
+    maneuver_goal->maneuver_infos.front().ptr_ref_line = reference_line;
     maneuver_goal->decision_type = DecisionType::kStopAtTrafficSign;
   }
   if (!prohibited) {
-    maneuver_goal->target_speed = PlanningConfig::Instance().target_speed();
-    maneuver_goal->has_stop_point = false;
-    maneuver_goal->target_s = std::min(reference_line->Length(),
-                                       ego_s + PlanningConfig::Instance().max_lookahead_distance());
-    maneuver_goal->lane_id = nearest_waypoint.lane_id;
+    maneuver_goal->maneuver_infos.resize(1);
+    maneuver_goal->maneuver_infos.front().maneuver_target.target_speed = PlanningConfig::Instance().target_speed();
+    maneuver_goal->maneuver_infos.front().has_stop_point = false;
+    maneuver_goal->maneuver_infos.front().lane_id = nearest_waypoint.lane_id;
+    maneuver_goal->maneuver_infos.front().ptr_ref_line = reference_line;
     maneuver_goal->decision_type = DecisionType::kFollowLane;
   }
 }
@@ -177,12 +181,21 @@ ManeuverGoal State::CombineManeuver(const ManeuverGoal &traffic_light_maneuver,
   ManeuverGoal combined_maneuver;
   if (traffic_light_maneuver.decision_type == DecisionType::kStopAtTrafficSign &&
       obstacle_maneuver.decision_type == DecisionType::kStopAtDestination) {
-    combined_maneuver.has_stop_point = true;
-    combined_maneuver.target_speed = 0.0;
-    combined_maneuver.lane_id = traffic_light_maneuver.lane_id;
-    combined_maneuver.decision_type = traffic_light_maneuver.target_s < obstacle_maneuver.target_s ?
+    combined_maneuver.maneuver_infos.resize(1);
+    combined_maneuver.maneuver_infos.front().has_stop_point = true;
+//    combined_maneuver.target_speed = 0.0;
+    combined_maneuver.maneuver_infos.front().lane_id = traffic_light_maneuver.maneuver_infos.front().lane_id;
+    combined_maneuver.decision_type = traffic_light_maneuver.maneuver_infos.front().maneuver_target.target_s <
+        obstacle_maneuver.maneuver_infos.front().maneuver_target.target_s ?
                                       DecisionType::kStopAtTrafficSign : DecisionType::kStopAtDestination;
-    combined_maneuver.target_s = std::min(traffic_light_maneuver.target_s, obstacle_maneuver.target_s);
+    combined_maneuver.maneuver_infos.front().maneuver_target.target_s =
+        std::min(traffic_light_maneuver.maneuver_infos.front().maneuver_target.target_s,
+                 obstacle_maneuver.maneuver_infos.front().maneuver_target.target_s);
+    combined_maneuver.maneuver_infos.front().ptr_ref_line =
+        traffic_light_maneuver.maneuver_infos.front().maneuver_target.target_s <
+            obstacle_maneuver.maneuver_infos.front().maneuver_target.target_s
+        ? traffic_light_maneuver.maneuver_infos.front().ptr_ref_line :
+        obstacle_maneuver.maneuver_infos.front().ptr_ref_line;
     return combined_maneuver;
   }
   return obstacle_maneuver;

@@ -2,6 +2,7 @@
 #define CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_PLANNING_CONTEXT_HPP_
 
 #include <list>
+#include <utility>
 #include <planning_srvs/Route.h>
 #include <geometry_msgs/PoseStamped.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
@@ -21,21 +22,27 @@ enum class DecisionType : uint32_t {
   kStopAtTrafficSign = 6u
 };
 
+struct ManeuverInfo {
+  ManeuverInfo() = default;
+  ~ManeuverInfo() = default;
+  int lane_id = 0;
+  bool has_stop_point = false;
+  union {
+    double target_s;
+    double target_speed;
+  } maneuver_target{};
+  std::shared_ptr<ReferenceLine> ptr_ref_line = nullptr;
+};
+
 struct ManeuverGoal {
   ManeuverGoal() = default;
   ~ManeuverGoal() = default;
-  ManeuverGoal(const int _lane_id, const bool _has_stop_point,
-               const double _target_s, const double _target_speed,
-               const DecisionType _decision_type)
-      : lane_id(_lane_id),
-        has_stop_point(_has_stop_point),
-        target_s(_target_s),
-        target_speed(_target_speed),
-        decision_type(_decision_type) {}
-  int lane_id = 0;
-  bool has_stop_point = false;
-  double target_s = 0.0;
-  double target_speed = 0.0;
+
+  ManeuverGoal(std::list<ManeuverInfo> _maneuver_infos,
+               DecisionType _decision_type) :
+      maneuver_infos(std::move(_maneuver_infos)),
+      decision_type(_decision_type) {}
+  std::list<ManeuverInfo> maneuver_infos;
   DecisionType decision_type = DecisionType::kFollowLane;
 };
 
@@ -89,8 +96,6 @@ class PlanningContext {
    * @return
    */
   const std::list<std::shared_ptr<ReferenceLine>> &reference_lines() const;
-
-
 
  private:
 

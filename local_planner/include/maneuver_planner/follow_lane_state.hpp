@@ -94,15 +94,37 @@ class FollowLaneState : public State {
                         const std::vector<double> &leading_clear_distance,
                         const std::vector<double> &following_clear_distance);
 
+  /**
+   * @brief: safety cost for choosing lane
+   * @param leading_vel
+   * @param following_vel
+   * @param leading_clear_distance
+   * @param following_clear_distance
+   * @return
+   */
   static double SafetyCost(double leading_vel,
                            double following_vel,
                            double leading_clear_distance,
                            double following_clear_distance);
 
+  /**
+   * @brief: efficiency cost for choosing lane
+   * @param target_vel
+   * @param leading_vel
+   * @param max_vel
+   * @return
+   */
   static double EfficiencyCost(double target_vel,
                                double leading_vel,
                                double max_vel);
 
+  /**
+   * @brief: comfort cost for choosing lane
+   * @param ego_vel
+   * @param leading_vel
+   * @param forward_clear_distance
+   * @return
+   */
   static double ComfortCost(double ego_vel, double leading_vel, double forward_clear_distance);
 
   FollowLaneState() = default;

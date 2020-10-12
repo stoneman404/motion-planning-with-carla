@@ -5,10 +5,9 @@
 namespace planning {
 
 bool FrenetLatticePlanner::Process(const planning_msgs::TrajectoryPoint &init_trajectory_point,
-                                   const std::list<std::shared_ptr<ReferenceLine>> &reference_lines,
                                    const ManeuverGoal &maneuver_goal,
                                    std::shared_ptr<planning_msgs::Trajectory> pub_trajectory) {
-  if (reference_lines.empty()) {
+  if (maneuver_goal.maneuver_infos.empty()) {
     ROS_FATAL("[FrenetLatticePlanner::Process]: No reference line provided");
     return false;
   }
@@ -19,15 +18,15 @@ bool FrenetLatticePlanner::Process(const planning_msgs::TrajectoryPoint &init_tr
   size_t index = 0;
   size_t failed_ref_plan_num = 0;
   std::vector<std::shared_ptr<planning_msgs::Trajectory>> traj_on_ref_line;
-  for (const auto &ref_line : reference_lines) {
-    bool result = Plan(init_trajectory_point, index, ref_line, maneuver_goal, &traj_on_ref_line);
+  for (const auto &manuever_info : maneuver_goal.maneuver_infos) {
+    bool result = Plan(init_trajectory_point, index, manuever_info, &traj_on_ref_line);
     if (!result) {
       ROS_DEBUG("[FrenetLatticePlanner::Process], failed plan on reference line: %zu", index);
       failed_ref_plan_num++;
     }
     index++;
   }
-  if (failed_ref_plan_num >= reference_lines.size()) {
+  if (failed_ref_plan_num >= maneuver_goal.maneuver_infos.size()) {
     ROS_FATAL("[FrenetLatticePlanner::Process], the process is failed on every reference line");
     return false;
   }
@@ -37,8 +36,7 @@ bool FrenetLatticePlanner::Process(const planning_msgs::TrajectoryPoint &init_tr
 
 bool FrenetLatticePlanner::Plan(const planning_msgs::TrajectoryPoint &init_trajectory_point,
                                 size_t index,
-                                std::shared_ptr<ReferenceLine> ptr_ref_line,
-                                const ManeuverGoal &maneuver_goal,
+                                const ManeuverInfo &maneuver_info,
                                 std::vector<std::shared_ptr<planning_msgs::Trajectory>> *traj_on_ref_line) const {
 
   return false;

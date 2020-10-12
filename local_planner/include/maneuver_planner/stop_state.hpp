@@ -20,6 +20,7 @@ class StopState : public State {
   StopState &operator=(const StopState &other);
  private:
   std::shared_ptr<ReferenceLine> reference_line_;
+  int current_lane_id_{};
 
 };
 }

@@ -19,6 +19,7 @@ class EmergencyStopState : public State {
   EmergencyStopState &operator=(const EmergencyStopState &other);
  private:
   std::shared_ptr<ReferenceLine> reference_line_;
+  int current_lane_id_{};
 };
 }
 #endif

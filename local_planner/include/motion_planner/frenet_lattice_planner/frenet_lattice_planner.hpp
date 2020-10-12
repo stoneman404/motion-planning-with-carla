@@ -27,7 +27,6 @@ class FrenetLatticePlanner : public TrajectoryPlanner {
    * @return
    */
   bool Process(const planning_msgs::TrajectoryPoint &init_trajectory_point,
-               const std::list<std::shared_ptr<ReferenceLine>> &reference_lines,
                const ManeuverGoal &maneuver_goal,
                std::shared_ptr<planning_msgs::Trajectory> pub_trajectory) override;
 
@@ -43,8 +42,7 @@ class FrenetLatticePlanner : public TrajectoryPlanner {
    */
   bool Plan(const planning_msgs::TrajectoryPoint &init_trajectory_point,
             size_t index,
-            std::shared_ptr<ReferenceLine> ptr_ref_line,
-            const ManeuverGoal &maneuver_goal,
+            const ManeuverInfo &maneuver_info,
             std::vector<std::shared_ptr<planning_msgs::Trajectory>> *traj_on_ref_line) const;
 
   /**
@@ -109,10 +107,10 @@ class FrenetLatticePlanner : public TrajectoryPlanner {
 
   /**
    * @brief: generate polynomial trajectories, quartic_polynomial or quintic_polynomial
-   * @param init_condition: initial conditions
-   * @param end_conditions: end conditions
-   * @param order: order: 4-->quartic polynomial, 5-->quintic polynomial
-   * @param ptr_traj_vec: polynomial trajectories
+   * @param[in] init_condition: initial conditions
+   * @param[in] end_conditions: end conditions
+   * @param[in] order: order: 4-->quartic polynomial, 5-->quintic polynomial
+   * @param[out] ptr_traj_vec: polynomial trajectories
    */
   static void GeneratePolynomialTrajectories(const std::array<double, 3> &init_condition,
                                              const std::vector<std::pair<std::array<double, 3>,

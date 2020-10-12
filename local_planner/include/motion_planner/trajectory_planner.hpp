@@ -12,7 +12,6 @@ class TrajectoryPlanner {
   TrajectoryPlanner() = default;
   virtual ~TrajectoryPlanner() = default;
   virtual bool Process(const planning_msgs::TrajectoryPoint &init_trajectory_point,
-                       const std::list<std::shared_ptr<ReferenceLine>> &reference_lines,
                        const ManeuverGoal &maneuver_goal,
                        std::shared_ptr<planning_msgs::Trajectory> pub_trajectory) = 0;
 };

@@ -92,6 +92,32 @@ bool ManeuverPlanner::UpdateReferenceLine(const std::list<planning_srvs::RouteRe
   return true;
 }
 
+bool ManeuverPlanner::GenerateReferenceLine(const planning_srvs::RouteResponse &route,
+                                            std::shared_ptr<ReferenceLine> reference_line) {
+  if (reference_line == nullptr) {
+    return false;
+  }
+  const auto vehicle_pose = VehicleState::Instance().pose();
+  const double max_forward_distance = PlanningConfig::Instance().reference_max_forward_distance();
+  const double max_backward_distance = PlanningConfig::Instance().reference_max_backward_distance();
+  const int matched_index = GetNearestIndex(vehicle_pose, route.route);
+  const int start_index = GetStartIndex(matched_index, max_backward_distance, route.route);
+  const int end_index = GetEndIndex(matched_index, max_forward_distance, route.route);
+  if (end_index - start_index < 1) {
+    return false;
+  }
+  const auto sample_way_points = GetWayPointsFromStartToEndIndex(start_index, end_index, route.route);
+  if (sample_way_points.empty()) {
+    ROS_FATAL("[GenerateReferenceLine], failed to get sampled way points");
+    return false;
+  }
+  reference_line.reset(new ReferenceLine(route.route));
+  if (!reference_line->Smooth()) {
+    ROS_DEBUG("[ManeuverPlanner::GenerateReferenceLine], failed to smooth reference line.");
+  }
+  return true;
+}
+
 int ManeuverPlanner::GetNearestIndex(const geometry_msgs::Pose &ego_pose,
                                      const std::vector<planning_msgs::WayPoint> &way_points) {
 
@@ -128,7 +154,6 @@ int ManeuverPlanner::GetStartIndex(const int matched_index,
     current_index--;
   }
   return last_index;
-
 }
 
 int ManeuverPlanner::GetEndIndex(const int matched_index,
@@ -191,5 +216,6 @@ bool ManeuverPlanner::NeedReRoute() const {
 const ManeuverGoal &ManeuverPlanner::maneuver_goal() const {
   return maneuver_goal_;
 }
+ManeuverGoal &ManeuverPlanner::multable_maneuver_goal() { return maneuver_goal_; }
 
 }

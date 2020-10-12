@@ -5,14 +5,52 @@
 namespace planning {
 class ChangeRightLaneState : public State {
  public:
+  /**
+   *
+   * @param maneuver_planner
+   * @return
+   */
   bool Enter(ManeuverPlanner *maneuver_planner) override;
+
+  /**
+   *
+   * @param maneuver_planner
+   * @return
+   */
   bool Execute(ManeuverPlanner *maneuver_planner) override;
+
+  /**
+   *
+   * @param maneuver_planner
+   */
   void Exit(ManeuverPlanner *maneuver_planner) override;
+
+  /**
+   *
+   * @return
+   */
   std::string Name() const override;
+
+  /**
+   *
+   * @return
+   */
   static State &Instance();
+
+  /**
+   *
+   * @param maneuver_planner
+   * @return
+   */
   State *NextState(ManeuverPlanner *maneuver_planner) const override;
+
  protected:
+  /**
+   *
+   * @param maneuver_goal
+   */
   void ObstacleDecision(ManeuverGoal *maneuver_goal) const override;
+
  private:
   ChangeRightLaneState() = default;
   ChangeRightLaneState(const ChangeRightLaneState &other);

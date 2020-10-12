@@ -36,9 +36,9 @@ void PlanningConfig::UpdateParams(const ros::NodeHandle &nh) {
   nh.param<double>("/local_planner/max_lookback_distance",
                    max_lookback_distance_, 30.0);
   nh.param<double>("/local_planner/reference_max_forward_distance",
-                   reference_max_forward_distance_, 400.0);
+                   reference_max_forward_distance_, 200.0);
   nh.param<double>("/local_planner/reference_max_backward_distance",
-                   reference_max_backward_distance_, 60.0);
+                   reference_max_backward_distance_, 30.0);
   nh.param<double>("/local_planner/max_acc", max_acc_, 2.0);
   nh.param<double>("/local_planner/max_velocity", max_velocity_, 10.0);
   nh.param<double>("/local_planner/target_speed", target_speed_, 8.333);

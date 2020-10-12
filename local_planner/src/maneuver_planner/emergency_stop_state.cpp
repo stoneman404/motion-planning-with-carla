@@ -9,7 +9,9 @@ namespace planning {
 
 bool EmergencyStopState::Enter(ManeuverPlanner *maneuver_planner) {
   ROS_INFO("Oops, something going wrong, we enter the **EmergencyStopState**");
-  reference_line_ = PlanningContext::Instance().reference_lines().back(); //  reference line
+  ROS_ASSERT(maneuver_planner->multable_maneuver_goal().maneuver_infos.size() == 1);
+  reference_line_ = maneuver_planner->multable_maneuver_goal().maneuver_infos.front().ptr_ref_line;
+  current_lane_id_ = maneuver_planner->multable_maneuver_goal().maneuver_infos.front().lane_id;
 }
 
 bool EmergencyStopState::Execute(ManeuverPlanner *maneuver_planner) {
@@ -63,30 +65,26 @@ void EmergencyStopState::ObstacleDecision(ManeuverGoal *maneuver_goal) const {
                              &backward_clear_distance,
                              &leading_vehicle_id,
                              &following_vehicle_id);
-
+  maneuver_goal->maneuver_infos.resize(1);
   if (forward_clear_distance > PlanningConfig::Instance().lon_safety_buffer()
       && backward_clear_distance > PlanningConfig::Instance().lon_safety_buffer()) {
     // following lane
     maneuver_goal->decision_type = DecisionType::kFollowLane;
-    maneuver_goal->has_stop_point = false;
-    maneuver_goal->target_speed =
+    maneuver_goal->maneuver_infos.front().has_stop_point = false;
+    maneuver_goal->maneuver_infos.front().maneuver_target.target_speed =
         leading_vehicle_id < 0 ?
         PlanningConfig::Instance().target_speed() : ObstacleFilter::Instance().Obstacles().at(
             leading_vehicle_id)->Speed();
-    maneuver_goal->target_s = ego_sl.s +
-        std::min(PlanningConfig::Instance().max_lookahead_distance(),
-                 std::max(PlanningConfig::Instance().min_lookahead_distance(),
-                          forward_clear_distance
-                              - PlanningConfig::Instance().lon_safety_buffer()));
-    maneuver_goal->lane_id = reference_line_->NearestWayPoint(maneuver_goal->target_s).lane_id;
-
+    maneuver_goal->maneuver_infos.front().lane_id = current_lane_id_;
+    maneuver_goal->maneuver_infos.front().ptr_ref_line = reference_line_;
   } else {
     // emergency stop
     maneuver_goal->decision_type = DecisionType::kEmergencyStop;
-    maneuver_goal->has_stop_point = true;
-    maneuver_goal->target_speed = 0.0;
-    maneuver_goal->target_s = ego_sl.s + PlanningConfig::Instance().lon_safety_buffer();
-    maneuver_goal->lane_id = reference_line_->NearestWayPoint(maneuver_goal->target_s).lane_id;
+    maneuver_goal->maneuver_infos.front().has_stop_point = true;
+    maneuver_goal->maneuver_infos.front().maneuver_target.target_s =
+        ego_sl.s + PlanningConfig::Instance().lon_safety_buffer();
+    maneuver_goal->maneuver_infos.front().lane_id = current_lane_id_;
+    maneuver_goal->maneuver_infos.front().ptr_ref_line = reference_line_;
   }
 }
 }

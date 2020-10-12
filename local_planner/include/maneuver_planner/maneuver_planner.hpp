@@ -1,13 +1,12 @@
 #ifndef CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_MANEUVER_PLANNER_MANEUVER_PLANNER_HPP_
 #define CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_MANEUVER_PLANNER_MANEUVER_PLANNER_HPP_
-// this is a simpler version of behavior motion_planner,
 
+#include <Eigen/Core>
+#include <vector>
 #include <carla_msgs/CarlaEgoVehicleStatus.h>
 #include <planning_srvs/Route.h>
 #include <planning_msgs/TrajectoryPoint.h>
 #include <planning_msgs/Trajectory.h>
-#include <Eigen/Core>
-#include <vector>
 #include "state.hpp"
 #include "vehicle_state/vehicle_state.hpp"
 #include "reference_line/reference_line.hpp"
@@ -19,40 +18,29 @@ namespace planning {
 class State;
 class ManeuverPlanner {
  public:
-  /**
-   *
-   * @param nh
-   */
   explicit ManeuverPlanner(const ros::NodeHandle &nh);
-
-  /**
-   *
-   */
   ~ManeuverPlanner();
-
-  /**
-   *
-   */
   void InitPlanner();
 
   /**
-   *
+   * @brief: main function
+   * @param[in] init_trajectory_point
+   * @param[out] pub_trajectory
    * @return
    */
   bool Process(const planning_msgs::TrajectoryPoint &init_trajectory_point,
                planning_msgs::Trajectory::Ptr pub_trajectory);
 
   /**
-   *
    * @return
    */
   int GetLaneId() const { return current_lane_id_; }
 
   /**
-   *
-   * @param start
-   * @param destination
-   * @param response
+   * @brief: reroute
+   * @param[in] start
+   * @param[in] destination
+   * @param[out] response
    * @return
    */
   bool ReRoute(const geometry_msgs::Pose &start,
@@ -60,26 +48,32 @@ class ManeuverPlanner {
                planning_srvs::RouteResponse &response);
 
   /**
-   *
-   * @param reference_lines_list
+   * @brief: update reference line
+   * @param[in] route_list
+   * @param[out]: reference_lines_list
    * @return
    */
   static bool UpdateReferenceLine(const std::list<planning_srvs::RouteResponse> &route_list,
                                   std::list<std::shared_ptr<ReferenceLine>> *const reference_lines_list);
 
+  static bool GenerateReferenceLine(const planning_srvs::RouteResponse &route,
+                                    std::shared_ptr<ReferenceLine> reference_line);
+
   /**
-   *
+   * @brief: init_trajectory_point
    * @return
    */
   const planning_msgs::TrajectoryPoint &init_trajectory_point() const;
 
   /**
-   *
+   * @brief: set maneuver goal
    * @param maneuver_goal
    */
   void SetManeuverGoal(const ManeuverGoal &maneuver_goal);
 
   const ManeuverGoal &maneuver_goal() const;
+
+  ManeuverGoal &multable_maneuver_goal();
 
   /**
    *
@@ -90,19 +84,19 @@ class ManeuverPlanner {
  private:
 
   /**
-   *
-   * @param ego_pose
-   * @param way_points
+   * @brief:
+   * @param[in] ego_pose
+   * @param[in] way_points
    * @return
    */
   static int GetNearestIndex(const geometry_msgs::Pose &ego_pose,
                              const std::vector<planning_msgs::WayPoint> &way_points);
 
   /**
-   *
-   * @param matched_index
-   * @param backward_distance
-   * @param way_points
+   * @brief:
+   * @param[in] matched_index
+   * @param[in] backward_distance
+   * @param[in] way_points
    * @return
    */
   static int GetStartIndex(const int matched_index,
@@ -110,10 +104,10 @@ class ManeuverPlanner {
                            const std::vector<planning_msgs::WayPoint> &way_points);
 
   /**
-   *
-   * @param matched_index
-   * @param forward_distance
-   * @param way_points
+   * @brief:
+   * @param[in] matched_index
+   * @param[in] forward_distance
+   * @param[in] way_points
    * @return
    */
   static int GetEndIndex(const int matched_index,
@@ -121,16 +115,15 @@ class ManeuverPlanner {
                          const std::vector<planning_msgs::WayPoint> &way_points);
 
   /**
-   *
-   * @param start_index
-   * @param end_index
-   * @param way_points
+   * @brief: get waypoints from start to end index on reference line
+   * @param[in] start_index
+   * @param[in] end_index
+   * @param[in] way_points
    * @return
    */
-  static std::vector<planning_msgs::WayPoint>
-  GetWayPointsFromStartToEndIndex(const int start_index,
-                                  const int end_index,
-                                  const std::vector<planning_msgs::WayPoint> &way_points);
+  static std::vector<planning_msgs::WayPoint> GetWayPointsFromStartToEndIndex(const int start_index,
+                                                                              const int end_index,
+                                                                              const std::vector<planning_msgs::WayPoint> &way_points);
 
  private:
   ManeuverGoal maneuver_goal_;
@@ -142,4 +135,5 @@ class ManeuverPlanner {
 
 };
 }
-#endif //CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_MANEUVER_PLANNER_MANEUVER_PLANNER_HPP_
+
+#endif
