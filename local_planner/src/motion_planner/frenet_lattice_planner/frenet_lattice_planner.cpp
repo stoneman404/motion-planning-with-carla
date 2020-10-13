@@ -1,5 +1,5 @@
 #include "motion_planner/frenet_lattice_planner/frenet_lattice_planner.hpp"
-#include "motion_planner/frenet_lattice_planner/trajectory_selector.hpp"
+#include "motion_planner/frenet_lattice_planner/polynomial_trajectory_evaluator.hpp"
 #include "motion_planner/frenet_lattice_planner/end_condition_sampler.hpp"
 #include "coordinate_transformer.hpp"
 #include "obstacle_filter/obstacle_filter.hpp"
@@ -20,9 +20,9 @@ bool FrenetLatticePlanner::Process(const planning_msgs::TrajectoryPoint &init_tr
   size_t index = 0;
   size_t failed_ref_plan_num = 0;
   std::vector<std::shared_ptr<planning_msgs::Trajectory>> traj_on_ref_line;
-  for (const auto &manuever_info : maneuver_goal.maneuver_infos) {
+  for (const auto &maneuver_info : maneuver_goal.maneuver_infos) {
 //    auto traj_on_ref_line = std::make_shared<planning_msgs::Trajectory>();
-    bool result = Plan(init_trajectory_point, index, manuever_info, &traj_on_ref_line);
+    bool result = FrenetLatticePlanner::Plan(init_trajectory_point, index, maneuver_info, &traj_on_ref_line);
     if (!result) {
       ROS_DEBUG("[FrenetLatticePlanner::Process], failed plan on reference line: %zu", index);
       failed_ref_plan_num++;
@@ -39,20 +39,20 @@ bool FrenetLatticePlanner::Process(const planning_msgs::TrajectoryPoint &init_tr
 
 bool FrenetLatticePlanner::Plan(const planning_msgs::TrajectoryPoint &init_trajectory_point,
                                 size_t index, const ManeuverInfo &maneuver_info,
-                                std::vector<std::shared_ptr<planning_msgs::Trajectory>> *trajs_on_ref_line) const {
+                                std::vector<std::shared_ptr<planning_msgs::Trajectory>> *trajs_on_ref_line) {
   if (trajs_on_ref_line == nullptr) {
     ROS_FATAL("[FrenetLatticePlanner::Plan] failed because the traj_on_ref_line is nullptr");
   }
   std::vector<std::shared_ptr<Polynomial>> lon_traj_vec;
   std::vector<std::shared_ptr<Polynomial>> lat_traj_vec;
-  this->GenerateTrajectories(init_trajectory_point, maneuver_info, &lon_traj_vec, &lat_traj_vec);
+  FrenetLatticePlanner::GenerateTrajectories(init_trajectory_point, maneuver_info, &lon_traj_vec, &lat_traj_vec);
   return false;
 }
 
 void FrenetLatticePlanner::GenerateTrajectories(const planning_msgs::TrajectoryPoint &init_trajectory_point,
                                                 const ManeuverInfo &maneuver_info,
                                                 std::vector<std::shared_ptr<Polynomial>> *ptr_lon_traj_vec,
-                                                std::vector<std::shared_ptr<Polynomial>> *ptr_lat_traj_vec) const {
+                                                std::vector<std::shared_ptr<Polynomial>> *ptr_lat_traj_vec) {
 
   const auto &ref_line = maneuver_info.ptr_ref_line;
   std::array<double, 3> init_s{};
@@ -75,9 +75,10 @@ void FrenetLatticePlanner::GenerateTrajectories(const planning_msgs::TrajectoryP
   }
 
   auto end_condition_sampler = std::make_shared<EndConditionSampler>(init_s, init_d, ref_line, st_graph);
-  GenerateLonTrajectories(maneuver_info, init_s, end_condition_sampler, ptr_lon_traj_vec);
-  GenerateLatTrajectories(init_d, end_condition_sampler, ptr_lat_traj_vec);
-  ROS_DEBUG("[[FrenetLatticePlanner::GenerateTrajectories], the lon traj number is : %zu, the lat traj number is %zu",
+  FrenetLatticePlanner::GenerateLonTrajectories(maneuver_info, init_s, end_condition_sampler, ptr_lon_traj_vec);
+  FrenetLatticePlanner::GenerateLatTrajectories(init_d, end_condition_sampler, ptr_lat_traj_vec);
+  ROS_DEBUG("[FrenetLatticePlanner::GenerateTrajectories], "
+            "the lon traj number is : %zu, the lat traj number is %zu",
             ptr_lon_traj_vec->size(), ptr_lat_traj_vec->size());
 }
 
@@ -90,52 +91,53 @@ bool FrenetLatticePlanner::CombineTrajectories(const std::shared_ptr<ReferenceLi
 
 void FrenetLatticePlanner::GenerateLatTrajectories(const std::array<double, 3> &init_d,
                                                    const std::shared_ptr<EndConditionSampler> &end_condition_sampler,
-                                                   std::vector<std::shared_ptr<Polynomial>> *ptr_lat_traj_vec) const {
+                                                   std::vector<std::shared_ptr<Polynomial>> *ptr_lat_traj_vec) {
   ptr_lat_traj_vec->clear();
   auto lat_end_condtions = end_condition_sampler->SampleLatEndCondition();
   FrenetLatticePlanner::GeneratePolynomialTrajectories(init_d, lat_end_condtions, 5, ptr_lat_traj_vec);
-
 }
 
 void FrenetLatticePlanner::GenerateLonTrajectories(const ManeuverInfo &maneuver_info,
                                                    const std::array<double, 3> &init_s,
                                                    const std::shared_ptr<EndConditionSampler> &end_condition_sampler,
-                                                   std::vector<std::shared_ptr<Polynomial>> *ptr_lon_traj_vec) const {
+                                                   std::vector<std::shared_ptr<Polynomial>> *ptr_lon_traj_vec) {
   if (ptr_lon_traj_vec == nullptr) {
     ROS_DEBUG("[FrenetLatticePlanner::GenerateLonTrajectories]. "
               "Failed to generate lon trajectories, because ptr_lon_traj_vec is nullptr");
     return;
   }
   ptr_lon_traj_vec->clear();
-  GenerateCruisingLonTrajectories(PlanningConfig::Instance().target_speed(), init_s,
-                                  end_condition_sampler, ptr_lon_traj_vec);
-  GenerateOvertakeAndFollowingLonTrajectories(init_s, end_condition_sampler, ptr_lon_traj_vec);
+  FrenetLatticePlanner::GenerateCruisingLonTrajectories(PlanningConfig::Instance().target_speed(), init_s,
+                                                        end_condition_sampler, ptr_lon_traj_vec);
+  FrenetLatticePlanner::GenerateOvertakeAndFollowingLonTrajectories(init_s, end_condition_sampler, ptr_lon_traj_vec);
   if (maneuver_info.has_stop_point) {
-    GenerateStoppingLonTrajectories(maneuver_info.maneuver_target.target_s,
-                                    init_s, end_condition_sampler,
-                                    ptr_lon_traj_vec);
+    FrenetLatticePlanner::GenerateStoppingLonTrajectories(maneuver_info.maneuver_target.target_s,
+                                                          init_s, end_condition_sampler,
+                                                          ptr_lon_traj_vec);
   }
 }
 
 void FrenetLatticePlanner::GenerateCruisingLonTrajectories(double cruise_speed,
                                                            const std::array<double, 3> &init_s,
                                                            const std::shared_ptr<EndConditionSampler> &end_condition_sampler,
-                                                           std::vector<std::shared_ptr<Polynomial>> *ptr_lon_traj_vec) const {
-
+                                                           std::vector<std::shared_ptr<Polynomial>> *ptr_lon_traj_vec) {
+  auto end_conditions = end_condition_sampler->SampleLonEndConditionForCruising(cruise_speed);
+  FrenetLatticePlanner::GeneratePolynomialTrajectories(init_s, end_conditions, 4, ptr_lon_traj_vec);
 }
 
 void FrenetLatticePlanner::GenerateStoppingLonTrajectories(double stop_s,
                                                            const std::array<double, 3> &init_s,
                                                            const std::shared_ptr<EndConditionSampler> &end_condition_sampler,
-                                                           std::vector<std::shared_ptr<Polynomial>> *ptr_lon_traj_vec) const {
-
-
+                                                           std::vector<std::shared_ptr<Polynomial>> *ptr_lon_traj_vec) {
+  auto end_conditions = end_condition_sampler->SampleLonEndConditionForStopping(stop_s);
+  FrenetLatticePlanner::GeneratePolynomialTrajectories(init_s, end_conditions, 5, ptr_lon_traj_vec);
 }
 
 void FrenetLatticePlanner::GenerateOvertakeAndFollowingLonTrajectories(const std::array<double, 3> &init_s,
                                                                        const std::shared_ptr<EndConditionSampler> &end_condition_sampler,
-                                                                       std::vector<std::shared_ptr<Polynomial>> *ptr_lon_traj_vec) const {
-
+                                                                       std::vector<std::shared_ptr<Polynomial>> *ptr_lon_traj_vec) {
+  auto end_conditions = end_condition_sampler->SampleLonEndConditionWithSTGraph();
+  FrenetLatticePlanner::GeneratePolynomialTrajectories(init_s, end_conditions, 5, ptr_lon_traj_vec);
 }
 
 void FrenetLatticePlanner::GeneratePolynomialTrajectories(const std::array<double, 3> &init_condition,
@@ -152,8 +154,8 @@ void FrenetLatticePlanner::GeneratePolynomialTrajectories(const std::array<doubl
     ROS_FATAL("[FrenetLatticePlanner::GeneratePolynomialTrajectories], the end conditions vector is empty");
     return;
   }
-  ROS_DEBUG("[FrenetLatticePlanner::GeneratePolynomialTrajectories], the end conditions vector's size: %zu",
-            end_conditions.size());
+  ROS_DEBUG("[FrenetLatticePlanner::GeneratePolynomialTrajectories], "
+            "the end conditions vector's size: %zu", end_conditions.size());
   ptr_traj_vec->reserve(ptr_traj_vec->size() + end_conditions.size());
   switch (order) {
     case 4: {
@@ -191,8 +193,7 @@ void FrenetLatticePlanner::GetInitCondition(const std::shared_ptr<ReferenceLine>
     ROS_FATAL("[FrenetLatticePlanner::Plan] failed because the GetMatchedPoint failed");
     return;
   }
-  CoordinateTransformer::CartesianToFrenet(matched_s,
-                                           matched_ref_point.heading(),
+  CoordinateTransformer::CartesianToFrenet(matched_s, matched_ref_point.heading(),
                                            matched_ref_point.x(),
                                            matched_ref_point.y(),
                                            matched_ref_point.kappa(),

@@ -1,5 +1,5 @@
-#ifndef CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_MOTION_PLANNER_FRENENT_LATTICE_PLANNER_TRAJECTORY_SELECTOR_HPP_
-#define CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_MOTION_PLANNER_FRENENT_LATTICE_PLANNER_TRAJECTORY_SELECTOR_HPP_
+#ifndef CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_MOTION_PLANNER_FRENENT_LATTICE_PLANNER_POLYNOMIAL_TRAJECTORY_EVALUATOR_HPP_
+#define CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_MOTION_PLANNER_FRENENT_LATTICE_PLANNER_POLYNOMIAL_TRAJECTORY_EVALUATOR_HPP_
 
 #include <array>
 #include <memory>
@@ -10,13 +10,14 @@
 #include "st_graph.hpp"
 
 namespace planning {
-class TrajectorySelector {
+class PolynomialTrajectoryEvaluator {
   typedef std::pair<std::shared_ptr<Polynomial>, std::shared_ptr<Polynomial>> TrajectoryPair;
   typedef std::pair<TrajectoryPair, double> TrajectoryCostPair;
 
  public:
-  TrajectorySelector() = default;
-  ~TrajectorySelector() = default;
+  PolynomialTrajectoryEvaluator() = default;
+  ~PolynomialTrajectoryEvaluator() = default;
+
   /**
    *
    * @param init_s
@@ -25,14 +26,14 @@ class TrajectorySelector {
    * @param ptr_ref_line
    * @param ptr_st_graph
    */
-  TrajectorySelector(const std::array<double, 3> &init_s,
-                     const std::vector<std::shared_ptr<Polynomial>> &lon_trajectory_vec,
-                     const std::vector<std::shared_ptr<Polynomial>> &lat_trajectory_vec,
-                     std::shared_ptr<ReferenceLine> ptr_ref_line,
-                     std::shared_ptr<STGraph> ptr_st_graph);
+  PolynomialTrajectoryEvaluator(const std::array<double, 3> &init_s,
+                                const std::vector<std::shared_ptr<Polynomial>> &lon_trajectory_vec,
+                                const std::vector<std::shared_ptr<Polynomial>> &lat_trajectory_vec,
+                                std::shared_ptr<ReferenceLine> ptr_ref_line,
+                                std::shared_ptr<STGraph> ptr_st_graph);
 
  private:
-
+  // comparator for priority queue
   struct Comparator : public std::binary_function<const TrajectoryCostPair &, const TrajectoryCostPair &, bool> {
     bool operator()(const TrajectoryCostPair &left, const TrajectoryCostPair &right) {
       return left.second > right.second;

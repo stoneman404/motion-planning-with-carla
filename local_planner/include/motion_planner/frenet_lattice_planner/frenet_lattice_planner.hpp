@@ -40,10 +40,10 @@ class FrenetLatticePlanner : public TrajectoryPlanner {
    * @param[out] pub_trajectory
    * @return
    */
-  bool Plan(const planning_msgs::TrajectoryPoint &init_trajectory_point,
-            size_t index,
-            const ManeuverInfo &maneuver_info,
-            std::vector<std::shared_ptr<planning_msgs::Trajectory>> *trajs_on_ref_line) const;
+  static bool Plan(const planning_msgs::TrajectoryPoint &init_trajectory_point,
+                   size_t index,
+                   const ManeuverInfo &maneuver_info,
+                   std::vector<std::shared_ptr<planning_msgs::Trajectory>> *trajs_on_ref_line);
 
   /**
    * @brief: generate lon trajectories and lat trajectories
@@ -51,10 +51,10 @@ class FrenetLatticePlanner : public TrajectoryPlanner {
    * @param[out] ptr_lon_traj_vec: lon trajectories
    * @param[out] ptr_lat_traj_vec: lat trajectories
    */
-  void GenerateTrajectories(const planning_msgs::TrajectoryPoint &init_trajectory_point,
-                            const ManeuverInfo &maneuver_info,
-                            std::vector<std::shared_ptr<Polynomial>> *ptr_lon_traj_vec,
-                            std::vector<std::shared_ptr<Polynomial>> *ptr_lat_traj_vec) const;
+  static void GenerateTrajectories(const planning_msgs::TrajectoryPoint &init_trajectory_point,
+                                   const ManeuverInfo &maneuver_info,
+                                   std::vector<std::shared_ptr<Polynomial>> *ptr_lon_traj_vec,
+                                   std::vector<std::shared_ptr<Polynomial>> *ptr_lat_traj_vec);
 
   /**
    * @brief: combine the lon and lat trajectories
@@ -79,47 +79,47 @@ class FrenetLatticePlanner : public TrajectoryPlanner {
    * @brief: generate lat polynomial trajectories
    * @param ptr_lat_traj_vec
    */
-  void GenerateLatTrajectories(const std::array<double, 3> &init_d,
-                               const std::shared_ptr<EndConditionSampler> &end_condition_sampler,
-                               std::vector<std::shared_ptr<Polynomial>> *ptr_lat_traj_vec) const;
+  static void GenerateLatTrajectories(const std::array<double, 3> &init_d,
+                                      const std::shared_ptr<EndConditionSampler> &end_condition_sampler,
+                                      std::vector<std::shared_ptr<Polynomial>> *ptr_lat_traj_vec);
 
   /**
    *
    * @param maneuver_info
    * @param ptr_lon_traj_vec
    */
-  void GenerateLonTrajectories(const ManeuverInfo &maneuver_info,
-                               const std::array<double, 3> &init_s,
-                               const std::shared_ptr<EndConditionSampler> &end_condition_sampler,
-                               std::vector<std::shared_ptr<Polynomial>> *ptr_lon_traj_vec) const;
+  static void GenerateLonTrajectories(const ManeuverInfo &maneuver_info,
+                                      const std::array<double, 3> &init_s,
+                                      const std::shared_ptr<EndConditionSampler> &end_condition_sampler,
+                                      std::vector<std::shared_ptr<Polynomial>> *ptr_lon_traj_vec);
 
   /**
    * @brief: generate cruising lon trajectories
    * @param cruise_speed:
    * @param ptr_lon_traj_vec
    */
-  void GenerateCruisingLonTrajectories(double cruise_speed,
-                                       const std::array<double, 3> &init_s,
-                                       const std::shared_ptr<EndConditionSampler> &end_condition_sampler,
-                                       std::vector<std::shared_ptr<Polynomial>> *ptr_lon_traj_vec) const;
+  static void GenerateCruisingLonTrajectories(double cruise_speed,
+                                              const std::array<double, 3> &init_s,
+                                              const std::shared_ptr<EndConditionSampler> &end_condition_sampler,
+                                              std::vector<std::shared_ptr<Polynomial>> *ptr_lon_traj_vec);
 
   /**
    * @brief: generate stopping lon trajectories
    * @param stop_s: stop position
    * @param ptr_lon_traj_vec
    */
-  void GenerateStoppingLonTrajectories(double stop_s,
-                                       const std::array<double, 3> &init_s,
-                                       const std::shared_ptr<EndConditionSampler> &end_condition_sampler,
-                                       std::vector<std::shared_ptr<Polynomial>> *ptr_lon_traj_vec) const;
+  static void GenerateStoppingLonTrajectories(double stop_s,
+                                              const std::array<double, 3> &init_s,
+                                              const std::shared_ptr<EndConditionSampler> &end_condition_sampler,
+                                              std::vector<std::shared_ptr<Polynomial>> *ptr_lon_traj_vec);
 
   /**
    * @brief: generate overtake and following lon trajectories
    * @param ptr_lon_traj_vec
    */
-  void GenerateOvertakeAndFollowingLonTrajectories(const std::array<double, 3> &init_s,
-                                                   const std::shared_ptr<EndConditionSampler> &end_condition_sampler,
-                                                   std::vector<std::shared_ptr<Polynomial>> *ptr_lon_traj_vec) const;
+  static void GenerateOvertakeAndFollowingLonTrajectories(const std::array<double, 3> &init_s,
+                                                          const std::shared_ptr<EndConditionSampler> &end_condition_sampler,
+                                                          std::vector<std::shared_ptr<Polynomial>> *ptr_lon_traj_vec);
 
   /**
    * @brief: generate polynomial trajectories, quartic_polynomial or quintic_polynomial

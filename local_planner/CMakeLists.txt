@@ -128,7 +128,7 @@ set(planning_SRC
         src/motion_planner/frenet_lattice_planner/frenet_lattice_planner.cpp
         src/motion_planner/frenet_lattice_planner/st_graph.cpp
         src/motion_planner/frenet_lattice_planner/end_condition_sampler.cpp
-        src/motion_planner/frenet_lattice_planner/trajectory_selector.cpp
+        src/motion_planner/frenet_lattice_planner/polynomial_trajectory_evaluator.cpp
         src/vehicle_state/vehicle_state.cpp
         src/obstacle_filter/obstacle_filter.cpp
         src/obstacle_filter/obstacle.cpp
