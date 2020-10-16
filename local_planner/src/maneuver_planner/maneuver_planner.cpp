@@ -1,6 +1,7 @@
 
 #include <planning_srvs/Route.h>
 #include <reference_line/reference_line.hpp>
+#include <tf/transform_datatypes.h>
 #include "maneuver_planner/maneuver_planner.hpp"
 #include "maneuver_planner/state.hpp"
 #include "maneuver_planner/follow_lane_state.hpp"
@@ -21,8 +22,21 @@ ManeuverPlanner::ManeuverPlanner(const ros::NodeHandle &nh) : nh_(nh) {
 void ManeuverPlanner::InitPlanner() {
   this->route_service_client_ = nh_.serviceClient<planning_srvs::Route>(
       service::kRouteServiceName);
+  auto ego_pose = VehicleState::Instance().pose();
+  auto destination = PlanningContext::Instance().global_goal_pose().pose;
+  PlanningContext::Instance().mutable_route_infos().clear();
+  PlanningContext::Instance().mutable_reference_lines().clear();
+  ROS_ASSERT(this->ReRoute(ego_pose, destination, PlanningContext::Instance().mutable_route_infos().front()));
+  ROS_ASSERT(this->GenerateReferenceLine(PlanningContext::Instance().route_infos().front(),
+                                         PlanningContext::Instance().mutable_reference_lines().front()));
   current_lane_id_ = VehicleState::Instance().lane_id();
   current_state_.reset(&FollowLaneState::Instance());
+  maneuver_goal_.decision_type = DecisionType::kFollowLane;
+  maneuver_goal_.maneuver_infos.resize(1);
+  maneuver_goal_.maneuver_infos.front().maneuver_target.target_speed = PlanningConfig::Instance().target_speed();
+  maneuver_goal_.maneuver_infos.front().ptr_ref_line = PlanningContext::Instance().reference_lines().front();
+  maneuver_goal_.maneuver_infos.front().has_stop_point = false;
+  maneuver_goal_.maneuver_infos.front().lane_id = current_lane_id_;
   ROS_ASSERT(current_state_->Enter(this));
 }
 
@@ -39,12 +53,55 @@ bool ManeuverPlanner::Process(const planning_msgs::TrajectoryPoint &init_traject
     return false;
   }
   std::unique_ptr<State> state(current_state_->NextState(this));
+
   if (state != nullptr && state->Name() != current_state_->Name()) {
     current_state_->Exit(this);
     current_state_ = std::move(state);
     current_state_->Enter(this);
   }
   return true;
+}
+
+bool ManeuverPlanner::UpdateRouteInfo() {
+  if (this->NeedReRoute()) {
+    auto ego_pose = VehicleState::Instance().ego_waypoint();
+    auto destination = PlanningContext::Instance().global_goal_pose();
+    const double theta = MathUtil::NormalizeAngle(tf::getYaw(ego_pose.pose.orientation));
+    const double sin_theta = std::sin(theta);
+    const double cos_theta = std::cos(theta);
+    const double offset_length = VehicleState::Instance().ego_waypoint().lane_width;
+    planning_srvs::RouteResponse route_response;
+    switch (maneuver_goal_.decision_type) {
+      case DecisionType::kChangeLeft: {
+        auto new_pose = ego_pose.pose;
+        new_pose.position.x = ego_pose.pose.position.x - sin_theta * offset_length;
+        new_pose.position.y = ego_pose.pose.position.y + cos_theta * offset_length;
+        this->ReRoute(ego_pose.pose, destination.pose, route_response);
+        break;
+      }
+      case DecisionType::kChangeRight: {
+        auto new_pose = ego_pose.pose;
+        new_pose.position.x = ego_pose.pose.position.x + sin_theta * offset_length;
+        new_pose.position.y = ego_pose.pose.position.y + cos_theta * offset_length;
+        this->ReRoute(ego_pose.pose, destination.pose, route_response);
+        break;
+      }
+      case DecisionType::kStopAtDestination:
+      case DecisionType::kStopAtTrafficSign:
+      case DecisionType::kEmergencyStop:
+      case DecisionType::kFollowLane: {
+        this->ReRoute(ego_pose.pose, destination.pose, route_response);
+        break;
+      }
+      default: break;
+    }
+    PlanningContext::Instance().mutable_route_infos().push_back(route_response);
+  }
+  auto &routes = PlanningContext::Instance().mutable_route_infos();
+  for (const auto &route : routes) {
+
+  }
+  return false;
 }
 
 bool ManeuverPlanner::ReRoute(const geometry_msgs::Pose &start,
@@ -58,38 +115,9 @@ bool ManeuverPlanner::ReRoute(const geometry_msgs::Pose &start,
     return false;
   } else {
     response = srv.response;
-    ROS_INFO("[Planner::Reroute], Reroute SUCCESSFUL,"
-             " the route size is %zu", response.route.size());
+    ROS_DEBUG("[Planner::Reroute], Reroute SUCCESSFUL, the route size is %zu", response.route.size());
     return true;
   }
-}
-
-bool ManeuverPlanner::UpdateReferenceLine(const std::list<planning_srvs::RouteResponse> &route_list,
-                                          std::list<std::shared_ptr<ReferenceLine>> *const reference_lines_list) {
-
-  const auto vehicle_pose = VehicleState::Instance().pose();
-  const double max_forward_distance = PlanningConfig::Instance().reference_max_forward_distance();
-  const double max_backward_distance = PlanningConfig::Instance().reference_max_backward_distance();
-  reference_lines_list->clear();
-  for (const auto &route : route_list) {
-    const int matched_index = GetNearestIndex(vehicle_pose, route.route);
-    const int start_index = GetStartIndex(matched_index, max_backward_distance, route.route);
-    const int end_index = GetEndIndex(matched_index, max_forward_distance, route.route);
-    if (end_index - start_index < 1) {
-      return false;
-    }
-    const auto sample_way_points = GetWayPointsFromStartToEndIndex(start_index, end_index, route.route);
-    if (sample_way_points.empty()) {
-      ROS_FATAL("[UpdateReferenceLine], failed to get sampled way points");
-      return false;
-    }
-    auto reference_line = std::make_shared<ReferenceLine>(sample_way_points);
-    if (!reference_line->Smooth()) {
-      ROS_WARN("[ManeuverPlanner::UpdateReferenceLine], Failed to smooth reference line");
-    }
-    reference_lines_list->push_back(reference_line);
-  }
-  return true;
 }
 
 bool ManeuverPlanner::GenerateReferenceLine(const planning_srvs::RouteResponse &route,
@@ -137,8 +165,7 @@ int ManeuverPlanner::GetNearestIndex(const geometry_msgs::Pose &ego_pose,
   return min_index;
 }
 
-int ManeuverPlanner::GetStartIndex(const int matched_index,
-                                   double backward_distance,
+int ManeuverPlanner::GetStartIndex(const int matched_index, double backward_distance,
                                    const std::vector<planning_msgs::WayPoint> &way_points) {
   int current_index = matched_index;
   const auto matched_way_point = way_points[current_index];
@@ -205,17 +232,21 @@ void ManeuverPlanner::SetManeuverGoal(const ManeuverGoal &maneuver_goal) {
 }
 
 bool ManeuverPlanner::NeedReRoute() const {
+  if (PlanningContext::Instance().route_infos().empty()
+      || PlanningContext::Instance().reference_lines().empty()) {
+    return true;
+  }
   if (current_state_->Name() == "FollowLaneState" &&
       (maneuver_goal_.decision_type == DecisionType::kChangeLeft
           || maneuver_goal_.decision_type == DecisionType::kChangeRight)) {
     return true;
   }
-  return PlanningContext::Instance().reference_lines().empty();
+  return false;
 }
 
 const ManeuverGoal &ManeuverPlanner::maneuver_goal() const {
   return maneuver_goal_;
 }
-ManeuverGoal &ManeuverPlanner::multable_maneuver_goal() { return maneuver_goal_; }
 
+ManeuverGoal &ManeuverPlanner::multable_maneuver_goal() { return maneuver_goal_; }
 }

@@ -126,7 +126,7 @@ set(planning_SRC
         src/maneuver_planner/state.cpp
 
         src/motion_planner/frenet_lattice_planner/frenet_lattice_planner.cpp
-        src/motion_planner/frenet_lattice_planner/st_graph.cpp
+        src/collision_checker/st_graph.cpp
         src/motion_planner/frenet_lattice_planner/end_condition_sampler.cpp
         src/motion_planner/frenet_lattice_planner/polynomial_trajectory_evaluator.cpp
         src/vehicle_state/vehicle_state.cpp
@@ -143,7 +143,7 @@ set(planning_SRC
         src/planning_context.cpp
         src/planning_config.cpp
         src/planner.cpp
-        )
+        src/collision_checker/collision_checker.cpp)
 
 add_executable(${PROJECT_NAME}_node
         ${planning_SRC}

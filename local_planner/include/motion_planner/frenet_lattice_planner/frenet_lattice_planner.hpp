@@ -4,7 +4,7 @@
 #include <planning_msgs/TrajectoryPoint.h>
 #include "motion_planner/trajectory_planner.hpp"
 #include "planning_context.hpp"
-#include "st_graph.hpp"
+#include "collision_checker/st_graph.hpp"
 #include "end_condition_sampler.hpp"
 #include "quartic_polynomial.hpp"
 #include "quintic_polynomial.hpp"

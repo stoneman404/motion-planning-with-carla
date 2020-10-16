@@ -76,13 +76,12 @@ class PlanningConfig {
    *
    * @return
    */
-  double max_acc() const;
-
-  /**
-   *
-   * @return
-   */
-  double max_velocity() const;
+  double max_lon_acc() const;
+  double min_lon_acc() const { return min_lon_jerk_; }
+  double max_lon_velocity() const;
+  double min_lon_velocity() const { return min_lon_velocity_; }
+  double min_lon_jerk() const { return min_lon_jerk_; }
+  double max_lon_jerk() const { return max_lon_jerk_; }
 
   /**
    *
@@ -179,7 +178,16 @@ class PlanningConfig {
   double maneuver_efficiency_cost_gain() const;
 
   double maneuver_comfort_cost_gain() const;
+  double lattice_weight_opposite_side_offset() const;
+  double lattice_weight_same_side_offset() const;
+  double lattice_weight_dist_travelled() const;
+  double lattice_weight_target_speed() const;
+  double lattice_weight_collision() const;
 
+  double lattice_weight_lon_jerk() const;
+  double lattice_weight_lon_target() const;
+  double lattice_weight_lat_jerk() const;
+  double lattice_weight_lat_offset() const;
  private:
   VehicleParams vehicle_params_; // ego_vehicle's params
   double obstacle_trajectory_time_{}; // the trajectory total time of obstacles
@@ -198,8 +206,10 @@ class PlanningConfig {
   int spline_order_ = 3;
   double reference_max_forward_distance_ = 400.0;
   double reference_max_backward_distance_ = 10.0;
-  double max_acc_ = 1.0;
-  double max_velocity_ = 10.0;
+  double max_lon_acc_ = 1.0;
+  double min_lon_acc_{};
+  double max_lon_velocity_ = 10.0;
+  double min_lon_velocity_{};
   double target_speed_{};
   double max_lookback_distance_{};
   double maneuver_forward_clear_threshold_{};
@@ -211,6 +221,18 @@ class PlanningConfig {
   double maneuver_safety_cost_gain_{};
   double maneuver_efficiency_cost_gain_{};
   double maneuver_comfort_cost_gain_{};
+  double min_lon_jerk_{};
+  double max_lon_jerk_{};
+  double lattice_weight_opposite_side_offset_{};
+  double lattice_weight_same_side_offset_{};
+  double lattice_weight_dist_travelled_{};
+  double lattice_weight_target_speed_{};
+  double lattice_weight_collision_{};
+  double lattice_weight_lon_jerk_{};
+  double lattice_weight_lon_target_{};
+  double lattice_weight_lat_jerk_{};
+  double lattice_weight_lat_offset_{};
+
  private:
   PlanningConfig() = default;
   ~PlanningConfig() = default;

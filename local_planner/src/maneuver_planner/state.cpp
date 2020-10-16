@@ -100,9 +100,9 @@ void State::TrafficLightDecision(std::shared_ptr<ReferenceLine> reference_line,
   size_t nearest_index;
 
   bool prohibited = false;
-  const double max_decel = PlanningConfig::Instance().max_acc();
+  const double max_decel = PlanningConfig::Instance().max_lon_acc();
   const double min_stop_distance = std::pow(VehicleState::Instance().linear_vel(), 2) / (2.0 * max_decel);
-  const double max_comfort_decel = PlanningConfig::Instance().max_acc() * 0.6;
+  const double max_comfort_decel = PlanningConfig::Instance().max_lon_acc() * 0.6;
   double min_comfort_stop_distance = std::pow(VehicleState::Instance().linear_vel(), 2) / (2.0 * max_comfort_decel);
 
   const auto traffic_lights = TrafficLightList::Instance().TrafficLights();

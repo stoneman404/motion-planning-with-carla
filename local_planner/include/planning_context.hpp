@@ -2,6 +2,7 @@
 #define CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_PLANNING_CONTEXT_HPP_
 
 #include <list>
+#include <boost/circular_buffer.hpp>
 #include <utility>
 #include <planning_srvs/Route.h>
 #include <geometry_msgs/PoseStamped.h>
@@ -48,13 +49,14 @@ struct ManeuverGoal {
 
 class PlanningContext {
  public:
-
   static PlanningContext &Instance();
+
   /**
    *
    * @return
    */
   std::list<std::shared_ptr<ReferenceLine>> &mutable_reference_lines();
+
   /**
    *
    * @return
@@ -66,6 +68,7 @@ class PlanningContext {
    * @param goal_pose
    */
   void UpdateGlobalGoalPose(const geometry_msgs::PoseStamped &goal_pose);
+
   /**
    *
    * @param init_pose
@@ -100,7 +103,6 @@ class PlanningContext {
  private:
 
   std::list<planning_srvs::RouteResponse> route_infos_{};
-  // the reference line info
   std::list<std::shared_ptr<ReferenceLine>> reference_lines_{};
   geometry_msgs::PoseStamped global_goal_pose_;
   geometry_msgs::PoseWithCovarianceStamped global_init_pose_;
@@ -114,4 +116,4 @@ class PlanningContext {
 };
 
 }
-#endif //CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_PLANNING_CONTEXT_HPP_
+#endif

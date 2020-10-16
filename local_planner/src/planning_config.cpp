@@ -11,8 +11,6 @@ void PlanningConfig::UpdateParams(const ros::NodeHandle &nh) {
   nh.param<double>("/local_planner/obstacle_trajectory_time",
                    obstacle_trajectory_time_, 8.0);
   nh.param<double>("/local_planner/delta_t", delta_t_, 0.1);
-//  nh.param<double>("/local_planner/filter_obstacle_length", filter_obstacle_length_, 100);
-//  nh.param<double>("/local_planner/collison_buffer", collision_buffer_, 1.0);
   nh.param<double>("/local_planner/reference_smoother_deviation_weight",
                    reference_smoother_deviation_weight_, 10.0);
   nh.param<double>("/local_planner/reference_smoother_curvature_weight",
@@ -39,8 +37,12 @@ void PlanningConfig::UpdateParams(const ros::NodeHandle &nh) {
                    reference_max_forward_distance_, 200.0);
   nh.param<double>("/local_planner/reference_max_backward_distance",
                    reference_max_backward_distance_, 30.0);
-  nh.param<double>("/local_planner/max_acc", max_acc_, 2.0);
-  nh.param<double>("/local_planner/max_velocity", max_velocity_, 10.0);
+  nh.param<double>("/local_planner/max_lon_acc", max_lon_acc_, 2.0);
+  nh.param<double>("/local_planner/min_lon_acc", min_lon_acc_, -2.0);
+  nh.param<double>("/local_planner/max_lon_velocity", max_lon_velocity_, 10.0);
+  nh.param<double>("/local_planner/min_lon_velocity", min_lon_velocity_, 0.0);
+  nh.param<double>("/local_planner/max_lon_jerk", max_lon_jerk_, 5.0);
+  nh.param<double>("/local_planner/min_lon_jerk", min_lon_jerk_, -5.0);
   nh.param<double>("/local_planner/target_speed", target_speed_, 8.333);
   nh.param<double>("/local_planner/maneuver_forward_clear_threshold",
                    maneuver_forward_clear_threshold_, 20);
@@ -62,6 +64,24 @@ void PlanningConfig::UpdateParams(const ros::NodeHandle &nh) {
                    maneuver_efficiency_cost_gain_, 6.0);
   nh.param<double>("/local_planner/maneuver_comfort_cost_gain",
                    maneuver_comfort_cost_gain_, 5.0);
+  nh.param<double>("/local_planner/lattice_weight_opposite_side_offset",
+                   lattice_weight_opposite_side_offset_, 10.0);
+  nh.param<double>("/local_planner/lattice_weight_same_side_offset",
+                   lattice_weight_same_side_offset_, 5.0);
+  nh.param<double>("/local_planner/lattice_weight_dist_travelled",
+                   lattice_weight_dist_travelled_, 15.0);
+  nh.param<double>("/local_planner/lattice_weight_target_speed",
+                   lattice_weight_target_speed_, 12.0);
+  nh.param<double>("/local_planner/lattice_weight_collision",
+                   lattice_weight_collision_, 20);
+  nh.param<double>("/local_planner/lattice_weight_lon_jerk",
+                   lattice_weight_lon_jerk_, 10.0);
+  nh.param<double>("/local_planner/lattice_weight_lon_target",
+                   lattice_weight_lon_target_, 20.0);
+  nh.param<double>("/local_planner/lattice_weight_lat_offset",
+                   lattice_weight_lat_offset_, 20.0);
+  nh.param<double>("/local_planner/lattice_weight_lat_jerk",
+                   lattice_weight_lat_jerk_, 30);
 }
 
 void PlanningConfig::UpdateVehicleParams(const derived_object_msgs::Object &object,
@@ -111,7 +131,7 @@ double PlanningConfig::reference_smoother_heading_weight() const {
   return reference_smoother_heading_weight_;
 }
 
-double PlanningConfig::max_acc() const { return max_acc_; }
+double PlanningConfig::max_lon_acc() const { return max_lon_acc_; }
 
 int PlanningConfig::spline_order() const { return spline_order_; }
 
@@ -125,7 +145,7 @@ double PlanningConfig::reference_max_backward_distance() const { return referenc
 
 double PlanningConfig::reference_max_forward_distance() const { return reference_max_forward_distance_; }
 
-double PlanningConfig::max_velocity() const { return max_velocity_; }
+double PlanningConfig::max_lon_velocity() const { return max_lon_velocity_; }
 
 double PlanningConfig::target_speed() const { return target_speed_; }
 
@@ -168,6 +188,40 @@ double PlanningConfig::maneuver_efficiency_cost_gain() const {
 double PlanningConfig::maneuver_comfort_cost_gain() const {
   return maneuver_comfort_cost_gain_;
 }
+
 double PlanningConfig::min_lookahead_time() const { return min_lookahead_distance_; }
+
+double PlanningConfig::lattice_weight_opposite_side_offset() const {
+  return lattice_weight_opposite_side_offset_;
+}
+double PlanningConfig::lattice_weight_same_side_offset() const {
+  return lattice_weight_same_side_offset_;
+}
+double PlanningConfig::lattice_weight_dist_travelled() const {
+  return lattice_weight_dist_travelled_;
+}
+double PlanningConfig::lattice_weight_target_speed() const {
+  return lattice_weight_target_speed_;
+}
+
+double PlanningConfig::lattice_weight_collision() const {
+  return lattice_weight_collision_;
+}
+
+double PlanningConfig::lattice_weight_lon_jerk() const {
+  return lattice_weight_lon_jerk_;
+}
+
+double PlanningConfig::lattice_weight_lon_target() const {
+  return lattice_weight_lon_target_;
+}
+
+double PlanningConfig::lattice_weight_lat_jerk() const {
+  return lattice_weight_lat_jerk_;
+}
+
+double PlanningConfig::lattice_weight_lat_offset() const {
+  return lattice_weight_lat_offset_;
+}
 
 }

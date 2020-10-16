@@ -58,10 +58,10 @@ class ChangeLeftLaneState : public State {
   ChangeLeftLaneState &operator=(const ChangeLeftLaneState &other);
 
  private:
-  int target_lane_id_{};
-  int current_lane_id_{};
-  std::shared_ptr<ReferenceLine> current_reference_line_{};
-  std::shared_ptr<ReferenceLine> target_reference_line_{};
+  int after_lane_id_{};
+  int before_lane_id_{};
+  std::shared_ptr<ReferenceLine> before_reference_line_{};
+  std::shared_ptr<ReferenceLine> after_reference_line_{};
 };
 }
 #endif //

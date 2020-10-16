@@ -1,16 +1,16 @@
 #ifndef CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_MANEUVER_PLANNER_MANEUVER_PLANNER_HPP_
 #define CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_MANEUVER_PLANNER_MANEUVER_PLANNER_HPP_
 
-#include <Eigen/Core>
 #include <vector>
-#include <carla_msgs/CarlaEgoVehicleStatus.h>
+#include <Eigen/Core>
 #include <planning_srvs/Route.h>
 #include <planning_msgs/TrajectoryPoint.h>
 #include <planning_msgs/Trajectory.h>
+#include <carla_msgs/CarlaEgoVehicleStatus.h>
 #include "state.hpp"
+#include "planning_context.hpp"
 #include "vehicle_state/vehicle_state.hpp"
 #include "reference_line/reference_line.hpp"
-#include "planning_context.hpp"
 #include "motion_planner/trajectory_planner.hpp"
 
 namespace planning {
@@ -46,16 +46,12 @@ class ManeuverPlanner {
   bool ReRoute(const geometry_msgs::Pose &start,
                const geometry_msgs::Pose &destination,
                planning_srvs::RouteResponse &response);
-
   /**
-   * @brief: update reference line
-   * @param[in] route_list
-   * @param[out]: reference_lines_list
-   * @return
+   * @brief: generate reference line
+   * @param[in] route
+   * @param[in] reference_line
+   * @return: true if the reference line generation success, otherwise return false
    */
-  static bool UpdateReferenceLine(const std::list<planning_srvs::RouteResponse> &route_list,
-                                  std::list<std::shared_ptr<ReferenceLine>> *const reference_lines_list);
-
   static bool GenerateReferenceLine(const planning_srvs::RouteResponse &route,
                                     std::shared_ptr<ReferenceLine> reference_line);
 
@@ -82,6 +78,8 @@ class ManeuverPlanner {
   bool NeedReRoute() const;
 
  private:
+
+  bool UpdateRouteInfo();
 
   /**
    * @brief:

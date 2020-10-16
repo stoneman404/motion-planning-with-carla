@@ -16,6 +16,7 @@ const std::list<planning_srvs::RouteResponse> &PlanningContext::route_infos() co
 const std::list<std::shared_ptr<ReferenceLine>> &PlanningContext::reference_lines() const {
   return reference_lines_;
 }
+
 void PlanningContext::UpdateGlobalGoalPose(const geometry_msgs::PoseStamped &goal_pose) {
   this->global_goal_pose_ = goal_pose;
 }
@@ -35,5 +36,4 @@ const geometry_msgs::PoseStamped &PlanningContext::global_goal_pose() const {
 std::list<std::shared_ptr<ReferenceLine>> &PlanningContext::mutable_reference_lines() { return reference_lines_; }
 
 std::list<planning_srvs::RouteResponse> &PlanningContext::mutable_route_infos() { return route_infos_; }
-
 }

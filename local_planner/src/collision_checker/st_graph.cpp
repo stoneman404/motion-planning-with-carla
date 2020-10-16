@@ -1,5 +1,5 @@
 #include <utility>
-#include "motion_planner/frenet_lattice_planner/st_graph.hpp"
+#include "collision_checker/st_graph.hpp"
 namespace planning {
 
 STGraph::STGraph(const std::vector<std::shared_ptr<Obstacle>> &obstacles,
@@ -205,6 +205,16 @@ std::vector<STPoint> STGraph::GetObstacleSurroundingPoints(int obstacle_id, doub
 }
 bool STGraph::IsObstacleInGraph(int obstacle_id) {
   return obstacle_st_map_.find(obstacle_id) != obstacle_st_map_.end();
+}
+std::vector<std::vector<std::pair<double, double>>>
+STGraph::GetPathBlockingIntervals(double start_time,
+                                  double end_time,
+                                  double resolution) const {
+  std::vector<std::vector<std::pair<double, double>>> intervals;
+  for (double t = start_time; t <= end_time; t += resolution) {
+    intervals.push_back(GetPathBlockingIntervals(t));
+  }
+  return intervals;
 }
 
 }

@@ -7,38 +7,29 @@
 #include "reference_line/reference_line.hpp"
 #include "planning_config.hpp"
 #include "planning_context.hpp"
-#include "motion_planner/trajectory_planner.hpp"
-#include "traffic_lights/traffic_light_list.hpp"
+
 namespace planning {
 
 bool FollowLaneState::Enter(ManeuverPlanner *maneuver_planner) {
   ROS_INFO("We are current switching to **FollowLaneState**...");
-
   if (maneuver_planner->NeedReRoute()) {
-    const auto ego_pose = VehicleState::Instance().pose();
-    const auto goal_pose = PlanningContext::Instance().global_goal_pose().pose;
-    planning_srvs::RouteResponse route_response;
-    bool result = maneuver_planner->ReRoute(ego_pose, goal_pose, route_response);
-    if (!result) {
-      ROS_FATAL("Failed to enter **FollowLaneState** state");
+    auto ego_pose = VehicleState::Instance().pose();
+    auto destination = PlanningContext::Instance().global_goal_pose();
+    if (!maneuver_planner->ReRoute(ego_pose, destination.pose, route_response_)) {
+      ROS_FATAL("[FollowLaneState::Enter], error to get follow lane route");
       return false;
     }
-    auto &route_infos = PlanningContext::Instance().mutable_route_infos();
-    if (!route_infos.empty()) {
-      route_infos.clear();
-    }
-    route_infos.push_back(route_response);
-    std::list<std::shared_ptr<ReferenceLine>> reference_lines;
-    bool reference_result = ManeuverPlanner::UpdateReferenceLine(route_infos, &reference_lines);
-    if (!reference_result) {
-      return false;
-    }
-    auto &reference_line_list = PlanningContext::Instance().mutable_reference_lines();
-    reference_line_list.clear();
-    reference_line_list = reference_lines;
-    ROS_ASSERT(reference_line_list.size() == 1);
-    reference_line_ = reference_line_list.back();
+    PlanningContext::Instance().mutable_route_infos().clear();
+    PlanningContext::Instance().mutable_route_infos().push_back(route_response_);
   }
+  if (!ManeuverPlanner::GenerateReferenceLine(PlanningContext::Instance().route_infos().front(),
+                                              reference_line_)) {
+    ROS_FATAL("[FollowLaneState::Enter], failed to get follow lane reference line");
+    return false;
+  }
+  PlanningContext::Instance().mutable_reference_lines().clear();
+  PlanningContext::Instance().mutable_reference_lines().push_back(reference_line_);
+  maneuver_planner->multable_maneuver_goal().maneuver_infos.front().ptr_ref_line = reference_line_;
   return true;
 }
 
@@ -498,7 +489,7 @@ int FollowLaneState::SelectLane(double ego_s,
                                                              following_clear_distance[i]);
     const double efficiency_cost = efficiency_cost_gain * EfficiencyCost(PlanningConfig::Instance().target_speed(),
                                                                          leading_velocity[i],
-                                                                         PlanningConfig::Instance().max_velocity());
+                                                                         PlanningConfig::Instance().max_lon_velocity());
     const double
         comfort_cost = comfort_cost_gain * ComfortCost(ego_vel, leading_velocity[i], leading_clear_distance[i]);
     const double lane_cost = comfort_cost + efficiency_cost + safety_cost;
@@ -548,7 +539,7 @@ double FollowLaneState::ComfortCost(double ego_vel,
                                     double forward_clear_distance) {
   const double acc = (leading_vel * leading_vel - ego_vel * ego_vel) /
       2 * std::max(1e-3, forward_clear_distance - PlanningConfig::Instance().lon_safety_buffer());
-  const double max_acc = PlanningConfig::Instance().max_acc();
+  const double max_acc = PlanningConfig::Instance().max_lon_acc();
   double cost;
   if (std::fabs(acc) > max_acc) {
     cost = std::numeric_limits<double>::infinity();

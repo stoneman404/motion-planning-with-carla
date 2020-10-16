@@ -14,14 +14,14 @@ bool ChangeRightLaneState::Enter(ManeuverPlanner *maneuver_planner) {
   }
   for (auto &maneuver_info : maneuver_goal.maneuver_infos) {
     if (maneuver_info.ptr_ref_line == nullptr) {
-      const auto ego_pose = VehicleState::Instance().pose();
-      const double theta = MathUtil::NormalizeAngle(tf::getYaw(ego_pose.orientation));
+      const auto ego_pose = VehicleState::Instance().ego_waypoint();
+      const double theta = MathUtil::NormalizeAngle(tf::getYaw(ego_pose.pose.orientation));
       const double sin_theta = std::sin(theta);
       const double cos_theta = std::cos(theta);
       const double offset_length = VehicleState::Instance().ego_waypoint().lane_width;
-      auto new_pose = ego_pose;
-      new_pose.position.x = ego_pose.position.x + sin_theta * offset_length;
-      new_pose.position.y = ego_pose.position.y + cos_theta * offset_length;
+      auto new_pose = ego_pose.pose;
+      new_pose.position.x = ego_pose.pose.position.x + sin_theta * offset_length;
+      new_pose.position.y = ego_pose.pose.position.y + cos_theta * offset_length;
       const auto goal_pose = PlanningContext::Instance().global_goal_pose().pose;
       planning_srvs::RouteResponse route_response;
       bool result = maneuver_planner->ReRoute(new_pose, goal_pose, route_response);
@@ -29,18 +29,22 @@ bool ChangeRightLaneState::Enter(ManeuverPlanner *maneuver_planner) {
         ROS_FATAL("Failed to enter **ChangeLeftLaneState** state");
         return false;
       }
-      auto reference_line = std::make_shared<ReferenceLine>();
-      if (!ManeuverPlanner::GenerateReferenceLine(route_response, reference_line)) {
-        ROS_FATAL("Failed to enter ChangeRightLaneState, because cannot generate target reference line");
-        return false;
-      }
-      maneuver_info.ptr_ref_line = std::move(reference_line);
+      PlanningContext::Instance().mutable_route_infos().push_back(route_response);
     }
   }
+
+  if (!ManeuverPlanner::GenerateReferenceLine(PlanningContext::Instance().route_infos()[0], current_reference_line_)) {
+    ROS_FATAL("Failed to enter ChangeRightLaneState, because cannot current_reference_line_");
+    return false;
+  }
+
+  if (!ManeuverPlanner::GenerateReferenceLine(PlanningContext::Instance().route_infos()[1], target_reference_line_)) {
+    ROS_FATAL("Failed to enter ChangeRightLaneState, because cannot target_reference_line_");
+    return false;
+  }
+
   target_lane_id_ = maneuver_goal.maneuver_infos.back().lane_id;
-  current_lane_id_ = maneuver_goal.maneuver_infos.front().lane_id;
-  current_reference_line_ = maneuver_goal.maneuver_infos.front().ptr_ref_line;
-  target_reference_line_ = maneuver_goal.maneuver_infos.back().ptr_ref_line;
+  current_lane_id_ = VehicleState::Instance().lane_id();
 }
 
 bool ChangeRightLaneState::Execute(ManeuverPlanner *maneuver_planner) {
@@ -86,7 +90,9 @@ void ChangeRightLaneState::ObstacleDecision(ManeuverGoal *maneuver_goal) const {
   double following_clear_distance;
   int leading_vehicle_id;
   int following_vehicle_id;
-  if (current_lane_id_ == target_lane_id_) {
+  SLBoundary sl_boundary;
+  target_reference_line_->GetSLBoundary(VehicleState::Instance().GetEgoBox(), &sl_boundary);
+  if (target_reference_line_->IsOnLane(sl_boundary)) {
     // enter the target_lane
     SLPoint ego_sl;
     target_reference_line_->XYToSL(VehicleState::Instance().pose().position.x,

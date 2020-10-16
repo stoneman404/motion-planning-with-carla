@@ -3,7 +3,7 @@
 #include <array>
 #include <vector>
 #include "st_data.hpp"
-#include "motion_planner/frenet_lattice_planner/st_graph.hpp"
+#include "collision_checker/st_graph.hpp"
 #include "planning_context.hpp"
 
 namespace planning {

@@ -130,8 +130,11 @@ class FollowLaneState : public State {
   FollowLaneState() = default;
   FollowLaneState(const FollowLaneState &other);
   FollowLaneState &operator=(const FollowLaneState &other);
+
  private:
-  std::shared_ptr<ReferenceLine> reference_line_;
+
+  std::shared_ptr<ReferenceLine> reference_line_ = nullptr;
+  planning_srvs::RouteResponse route_response_;
 
 };
 }

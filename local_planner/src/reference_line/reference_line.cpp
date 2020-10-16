@@ -5,7 +5,7 @@
 #include "math_utils.hpp"
 #include "coordinate_transformer.hpp"
 
-namespace planning {;
+namespace planning {
 
 ReferenceLine::ReferenceLine(const planning_srvs::RouteResponse &route_response)
     : way_points_(route_response.route) {

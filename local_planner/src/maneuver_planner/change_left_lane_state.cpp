@@ -4,7 +4,9 @@
 namespace planning {
 
 bool ChangeLeftLaneState::Enter(ManeuverPlanner *maneuver_planner) {
+  if (maneuver_planner->NeedReRoute()) {
 
+  }
   auto &maneuver_goal = maneuver_planner->multable_maneuver_goal();
   if (maneuver_goal.maneuver_infos.size() < 2) {
     ROS_DEBUG("Failed to enter **ChangeLeftLaneState** state, because the maneuver goal is less than 2");
@@ -26,18 +28,15 @@ bool ChangeLeftLaneState::Enter(ManeuverPlanner *maneuver_planner) {
         ROS_FATAL("Failed to enter **ChangeLeftLaneState** state");
         return false;
       }
-      auto reference_line = std::make_shared<ReferenceLine>();
-      if (!ManeuverPlanner::GenerateReferenceLine(route_response, reference_line)) {
-        ROS_FATAL("Failed to enter ChangeLeftLaneState, because cannot generate target reference line");
-        return false;
-      }
-      maneuver_info.ptr_ref_line = std::move(reference_line);
+      PlanningContext::Instance().mutable_route_infos().push_back(route_response);
     }
   }
-  target_lane_id_ = maneuver_goal.maneuver_infos.back().lane_id;
-  current_lane_id_ = maneuver_goal.maneuver_infos.front().lane_id;
-  current_reference_line_ = maneuver_goal.maneuver_infos.front().ptr_ref_line;
-  target_reference_line_ = maneuver_goal.maneuver_infos.back().ptr_ref_line;
+
+  after_lane_id_ = maneuver_goal.maneuver_infos.back().lane_id;
+  before_lane_id_ = maneuver_goal.maneuver_infos.front().lane_id;
+
+  before_reference_line_ = maneuver_goal.maneuver_infos.front().ptr_ref_line;
+  after_reference_line_ = maneuver_goal.maneuver_infos.back().ptr_ref_line;
 }
 
 bool ChangeLeftLaneState::Execute(ManeuverPlanner *maneuver_planner) {
@@ -68,7 +67,7 @@ State *ChangeLeftLaneState::NextState(ManeuverPlanner *maneuver_planner) const {
   ManeuverGoal obstacle_maneuver;
   this->ObstacleDecision(&obstacle_maneuver);
   ManeuverGoal traffic_light_maneuver;
-  this->TrafficLightDecision(target_reference_line_, &traffic_light_maneuver);
+  this->TrafficLightDecision(after_reference_line_, &traffic_light_maneuver);
   maneuver_planner->SetManeuverGoal(obstacle_maneuver);
   switch (obstacle_maneuver.decision_type) {
     case DecisionType::kChangeLeft: return &(ChangeLeftLaneState::Instance());
@@ -87,26 +86,28 @@ void ChangeLeftLaneState::ObstacleDecision(ManeuverGoal *maneuver_goal) const {
   double following_clear_distance;
   int leading_vehicle_id;
   int following_vehicle_id;
-  if (current_lane_id_ == target_lane_id_) {
+  SLBoundary sl_boundary;
+  after_reference_line_->GetSLBoundary(VehicleState::Instance().GetEgoBox(), &sl_boundary);
+  if (after_reference_line_->IsOnLane(sl_boundary)) {
     // enter the target_lane
     SLPoint ego_sl;
-    target_reference_line_->XYToSL(VehicleState::Instance().pose().position.x,
-                                   VehicleState::Instance().pose().position.y, &ego_sl);
+    after_reference_line_->XYToSL(VehicleState::Instance().pose().position.x,
+                                  VehicleState::Instance().pose().position.y, &ego_sl);
 
-    this->GetLaneClearDistance(0, target_reference_line_,
+    this->GetLaneClearDistance(0, after_reference_line_,
                                &leading_clear_distance,
                                &following_clear_distance,
                                &leading_vehicle_id,
                                &following_vehicle_id);
-    if (ego_sl.s + leading_clear_distance < target_reference_line_->Length()) {
+    if (ego_sl.s + leading_clear_distance < after_reference_line_->Length()) {
       if (leading_vehicle_id < 0 && following_vehicle_id < 0) {
         // has no leading and following vehicle
         maneuver_goal->maneuver_infos.resize(1);
         maneuver_goal->decision_type = DecisionType::kFollowLane;
         maneuver_goal->maneuver_infos.front().maneuver_target.target_speed = PlanningConfig::Instance().target_speed();
-        maneuver_goal->maneuver_infos.front().lane_id = target_lane_id_;
+        maneuver_goal->maneuver_infos.front().lane_id = after_lane_id_;
         maneuver_goal->maneuver_infos.front().has_stop_point = false;
-        maneuver_goal->maneuver_infos.front().ptr_ref_line = target_reference_line_;
+        maneuver_goal->maneuver_infos.front().ptr_ref_line = after_reference_line_;
       } else if (leading_vehicle_id > 0 && following_vehicle_id < 0) {
         // has leading vehicle but no following vehicle
         if (leading_clear_distance > PlanningConfig::Instance().lon_safety_buffer()) {
@@ -117,8 +118,8 @@ void ChangeLeftLaneState::ObstacleDecision(ManeuverGoal *maneuver_goal) const {
               PlanningConfig::Instance().target_speed(),
               ObstacleFilter::Instance().Obstacles().at(leading_vehicle_id)->Speed());
           maneuver_goal->maneuver_infos.front().has_stop_point = false;
-          maneuver_goal->maneuver_infos.front().lane_id = target_lane_id_;
-          maneuver_goal->maneuver_infos.front().ptr_ref_line = target_reference_line_;
+          maneuver_goal->maneuver_infos.front().lane_id = after_lane_id_;
+          maneuver_goal->maneuver_infos.front().ptr_ref_line = after_reference_line_;
 
         } else {
           // emergency stop
@@ -129,8 +130,8 @@ void ChangeLeftLaneState::ObstacleDecision(ManeuverGoal *maneuver_goal) const {
                                            PlanningConfig::Instance().min_lookahead_distance()),
                                   PlanningConfig::Instance().max_lookahead_distance());
           maneuver_goal->maneuver_infos.front().has_stop_point = true;
-          maneuver_goal->maneuver_infos.front().lane_id = target_lane_id_;
-          maneuver_goal->maneuver_infos.front().ptr_ref_line = target_reference_line_;
+          maneuver_goal->maneuver_infos.front().lane_id = after_lane_id_;
+          maneuver_goal->maneuver_infos.front().ptr_ref_line = after_reference_line_;
         }
       } else if (leading_vehicle_id > 0 && following_vehicle_id > 0) {
         // has leading and following vehicle
@@ -141,17 +142,17 @@ void ChangeLeftLaneState::ObstacleDecision(ManeuverGoal *maneuver_goal) const {
           maneuver_goal->maneuver_infos.front().maneuver_target.target_s =
               ego_sl.s + PlanningConfig::Instance().lon_safety_buffer();
           maneuver_goal->decision_type = DecisionType::kEmergencyStop;
-          maneuver_goal->maneuver_infos.front().lane_id = target_lane_id_;
-          maneuver_goal->maneuver_infos.front().ptr_ref_line = target_reference_line_;
+          maneuver_goal->maneuver_infos.front().lane_id = after_lane_id_;
+          maneuver_goal->maneuver_infos.front().ptr_ref_line = after_reference_line_;
         } else {
           maneuver_goal->decision_type = DecisionType::kFollowLane;
           maneuver_goal->maneuver_infos.resize(1);
           maneuver_goal->maneuver_infos.front().maneuver_target.target_speed = std::min(
               ObstacleFilter::Instance().Obstacles().at(leading_vehicle_id)->Speed(),
               PlanningConfig::Instance().target_speed());
-          maneuver_goal->maneuver_infos.front().lane_id = target_lane_id_;
+          maneuver_goal->maneuver_infos.front().lane_id = after_lane_id_;
           maneuver_goal->maneuver_infos.front().has_stop_point = false;
-          maneuver_goal->maneuver_infos.front().ptr_ref_line = target_reference_line_;
+          maneuver_goal->maneuver_infos.front().ptr_ref_line = after_reference_line_;
         }
       } else {
         // has following vehicle but no leading vehicle
@@ -160,28 +161,28 @@ void ChangeLeftLaneState::ObstacleDecision(ManeuverGoal *maneuver_goal) const {
         maneuver_goal->maneuver_infos.front().maneuver_target.target_speed =
             std::min(PlanningConfig::Instance().target_speed(),
                      ObstacleFilter::Instance().Obstacles().at(following_vehicle_id)->Speed());
-        maneuver_goal->maneuver_infos.front().lane_id = target_lane_id_;
+        maneuver_goal->maneuver_infos.front().lane_id = after_lane_id_;
         maneuver_goal->maneuver_infos.front().has_stop_point = false;
-        maneuver_goal->maneuver_infos.front().ptr_ref_line = target_reference_line_;
+        maneuver_goal->maneuver_infos.front().ptr_ref_line = after_reference_line_;
       }
     } else {
       // close to reference line's end
       maneuver_goal->decision_type = DecisionType::kStopAtDestination;
       maneuver_goal->maneuver_infos.resize(1);
-      maneuver_goal->maneuver_infos.front().lane_id = target_lane_id_;
-      maneuver_goal->maneuver_infos.front().maneuver_target.target_s = target_reference_line_->Length();
+      maneuver_goal->maneuver_infos.front().lane_id = after_lane_id_;
+      maneuver_goal->maneuver_infos.front().maneuver_target.target_s = after_reference_line_->Length();
       maneuver_goal->maneuver_infos.front().has_stop_point = true;
-      maneuver_goal->maneuver_infos.front().ptr_ref_line = target_reference_line_;
+      maneuver_goal->maneuver_infos.front().ptr_ref_line = after_reference_line_;
     }
   } else {
     // not in target lane
     // 1.current lane
     SLPoint current_ego_sl;
-    current_reference_line_->XYToSL(VehicleState::Instance().pose().position.x,
-                                    VehicleState::Instance().pose().position.y,
-                                    &current_ego_sl);
+    before_reference_line_->XYToSL(VehicleState::Instance().pose().position.x,
+                                   VehicleState::Instance().pose().position.y,
+                                   &current_ego_sl);
 
-    this->GetLaneClearDistance(0, current_reference_line_,
+    this->GetLaneClearDistance(0, before_reference_line_,
                                &leading_clear_distance,
                                &following_clear_distance,
                                &leading_vehicle_id,
@@ -191,17 +192,17 @@ void ChangeLeftLaneState::ObstacleDecision(ManeuverGoal *maneuver_goal) const {
       maneuver_goal->maneuver_infos.resize(1);
       maneuver_goal->maneuver_infos.front().maneuver_target.target_s = leading_clear_distance;
       maneuver_goal->maneuver_infos.front().has_stop_point = true;
-      maneuver_goal->maneuver_infos.front().lane_id = current_lane_id_;
-      maneuver_goal->maneuver_infos.front().ptr_ref_line = current_reference_line_;
+      maneuver_goal->maneuver_infos.front().lane_id = before_lane_id_;
+      maneuver_goal->maneuver_infos.front().ptr_ref_line = before_reference_line_;
 
-    } else if (current_ego_sl.s + leading_clear_distance > current_reference_line_->Length()) {
+    } else if (current_ego_sl.s + leading_clear_distance > before_reference_line_->Length()) {
       // near the current reference line's end
       maneuver_goal->decision_type = DecisionType::kStopAtDestination;
       maneuver_goal->maneuver_infos.resize(1);
       maneuver_goal->maneuver_infos.front().has_stop_point = true;
-      maneuver_goal->maneuver_infos.front().lane_id = current_lane_id_;
-      maneuver_goal->maneuver_infos.front().maneuver_target.target_s = current_reference_line_->Length();
-      maneuver_goal->maneuver_infos.front().ptr_ref_line = current_reference_line_;
+      maneuver_goal->maneuver_infos.front().lane_id = before_lane_id_;
+      maneuver_goal->maneuver_infos.front().maneuver_target.target_s = before_reference_line_->Length();
+      maneuver_goal->maneuver_infos.front().ptr_ref_line = before_reference_line_;
     } else {
       // not the current reference line's end, continue change lane or return to the current lane
       if (leading_clear_distance < PlanningConfig::Instance().maneuver_forward_clear_threshold()
@@ -209,18 +210,18 @@ void ChangeLeftLaneState::ObstacleDecision(ManeuverGoal *maneuver_goal) const {
         // not safe to continue change lane, return to current lane
         maneuver_goal->decision_type = DecisionType::kFollowLane;
         maneuver_goal->maneuver_infos.resize(1);
-        maneuver_goal->maneuver_infos.front().lane_id = current_lane_id_;
+        maneuver_goal->maneuver_infos.front().lane_id = before_lane_id_;
         maneuver_goal->maneuver_infos.front().maneuver_target.target_speed =
             leading_vehicle_id < 0 ? PlanningConfig::Instance().target_speed() :
             std::min(PlanningConfig::Instance().target_speed(),
                      ObstacleFilter::Instance().Obstacles().at(leading_vehicle_id)->Speed());
         maneuver_goal->maneuver_infos.front().has_stop_point = false;
-        maneuver_goal->maneuver_infos.front().ptr_ref_line = current_reference_line_;
+        maneuver_goal->maneuver_infos.front().ptr_ref_line = before_reference_line_;
       } else {
         // can continue change lane, but should check the target lane's condition
         double target_leading_clear_distance, target_following_clear_distance;
         int target_leading_vehicle_id, target_following_vehicle_id;
-        this->GetLaneClearDistance(0, target_reference_line_,
+        this->GetLaneClearDistance(0, after_reference_line_,
                                    &target_leading_clear_distance,
                                    &target_following_clear_distance,
                                    &target_leading_vehicle_id,
@@ -230,20 +231,20 @@ void ChangeLeftLaneState::ObstacleDecision(ManeuverGoal *maneuver_goal) const {
                 < PlanningConfig::Instance().maneuver_target_lane_backward_clear_threshold()) {
           // cannot change lane, because the clear distance is too short
           maneuver_goal->maneuver_infos.resize(1);
-          maneuver_goal->maneuver_infos.front().lane_id = current_lane_id_;
+          maneuver_goal->maneuver_infos.front().lane_id = before_lane_id_;
           maneuver_goal->maneuver_infos.front().maneuver_target.target_speed =
               leading_vehicle_id < 0 ? PlanningConfig::Instance().target_speed() :
               std::min(PlanningConfig::Instance().target_speed(),
                        ObstacleFilter::Instance().Obstacles().at(leading_vehicle_id)->Speed());
           maneuver_goal->maneuver_infos.front().has_stop_point = false;
-          maneuver_goal->maneuver_infos.front().ptr_ref_line = current_reference_line_;
+          maneuver_goal->maneuver_infos.front().ptr_ref_line = before_reference_line_;
           maneuver_goal->decision_type = DecisionType::kFollowLane;
         } else {
           //  can continue change lane
           SLPoint ego_sl_target_lane;
-          target_reference_line_->XYToSL(VehicleState::Instance().pose().position.x,
-                                         VehicleState::Instance().pose().position.y,
-                                         &ego_sl_target_lane);
+          after_reference_line_->XYToSL(VehicleState::Instance().pose().position.x,
+                                        VehicleState::Instance().pose().position.y,
+                                        &ego_sl_target_lane);
           // 1. current lane maneuver info
 
           maneuver_goal->decision_type = DecisionType::kChangeLeft;
@@ -252,18 +253,18 @@ void ChangeLeftLaneState::ObstacleDecision(ManeuverGoal *maneuver_goal) const {
               leading_vehicle_id < 0 ? PlanningConfig::Instance().target_speed() :
               std::min(PlanningConfig::Instance().target_speed(),
                        ObstacleFilter::Instance().Obstacles().at(leading_vehicle_id)->Speed());
-          maneuver_goal->maneuver_infos.front().ptr_ref_line = current_reference_line_;
-          maneuver_goal->maneuver_infos.front().lane_id = current_lane_id_;
+          maneuver_goal->maneuver_infos.front().ptr_ref_line = before_reference_line_;
+          maneuver_goal->maneuver_infos.front().lane_id = before_lane_id_;
           maneuver_goal->maneuver_infos.front().has_stop_point = false;
 
           // 2. target lane maneuver info
-          maneuver_goal->maneuver_infos.back().lane_id = target_lane_id_;
+          maneuver_goal->maneuver_infos.back().lane_id = after_lane_id_;
           maneuver_goal->maneuver_infos.back().maneuver_target.target_speed =
               target_leading_vehicle_id < 0 ? PlanningConfig::Instance().target_speed() :
               std::min(PlanningConfig::Instance().target_speed(),
                        ObstacleFilter::Instance().Obstacles().at(target_leading_vehicle_id)->Speed());
           maneuver_goal->maneuver_infos.back().has_stop_point = false;
-          maneuver_goal->maneuver_infos.back().ptr_ref_line = target_reference_line_;
+          maneuver_goal->maneuver_infos.back().ptr_ref_line = after_reference_line_;
         }
       }
     }

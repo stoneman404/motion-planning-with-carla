@@ -46,6 +46,7 @@ bool FrenetLatticePlanner::Plan(const planning_msgs::TrajectoryPoint &init_traje
   std::vector<std::shared_ptr<Polynomial>> lon_traj_vec;
   std::vector<std::shared_ptr<Polynomial>> lat_traj_vec;
   FrenetLatticePlanner::GenerateTrajectories(init_trajectory_point, maneuver_info, &lon_traj_vec, &lat_traj_vec);
+
   return false;
 }
 

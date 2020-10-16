@@ -16,8 +16,15 @@ void ObstacleFilter::AddObstacle(const std::shared_ptr<Obstacle> &obstacle_ptr) 
 
 void ObstacleFilter::UpdateObstacles(const std::list<std::shared_ptr<Obstacle>> &obstacles) {
   obstacles_.clear();
+  const double obstacle_filter_distance = 150.0;
   for (const auto &obstacle : obstacles) {
+
     if (obstacle->road_id() != VehicleState::Instance().road_id()) {
+      continue;
+    }
+    double dist = std::hypot(obstacle->Center().x() - VehicleState::Instance().pose().position.x,
+                             obstacle->Center().y() - VehicleState::Instance().pose().position.y);
+    if (dist > obstacle_filter_distance) {
       continue;
     }
     obstacles_.emplace(obstacle->Id(), obstacle);

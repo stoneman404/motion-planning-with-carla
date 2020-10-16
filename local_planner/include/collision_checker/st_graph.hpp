@@ -1,5 +1,5 @@
-#ifndef CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_MOTION_PLANNER_FRENET_LATTICE_PLANNER_ST_GRAPH_HPP_
-#define CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_MOTION_PLANNER_FRENET_LATTICE_PLANNER_ST_GRAPH_HPP_
+#ifndef CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_COLLISION_CHECKER_ST_GRAPH_HPP_
+#define CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_COLLISION_CHECKER_ST_GRAPH_HPP_
 
 #include <vector>
 #include <array>
@@ -39,6 +39,10 @@ class STGraph {
    */
   std::vector<std::pair<double, double>> GetPathBlockingIntervals(
       const double t) const;
+
+  std::vector<std::vector<std::pair<double, double>>> GetPathBlockingIntervals(double start_time,
+                                                                               double end_time,
+                                                                               double resolution) const;
 
   /**
    *
