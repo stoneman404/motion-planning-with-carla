@@ -62,7 +62,7 @@
         <arg name='role_name' value='$(arg role_name)'/>
     </include>
 
-    <include file = "$(find local_planner)/launch/local_planner.launch">
+    <include file="$(find motion_planning)/launch/motion_planning.launch">
 
     </include>
 

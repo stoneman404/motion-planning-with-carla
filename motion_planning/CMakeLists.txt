@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(local_planner)
+project(motion_planning)
 
 add_compile_options(-std=c++14)
 
@@ -66,7 +66,7 @@ set(IPOPT_INCLUDE_DIRS /usr/local/include/coin)
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
         #        INCLUDE_DIRS include
-        #        LIBRARIES local_planner
+        #        LIBRARIES motion_planning
         #        CATKIN_DEPENDS
         #        carla_msgs
         #        derived_object_msgs
@@ -97,7 +97,7 @@ include_directories(
 #link_directories(/usr/local/lib)
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/local_planner.cpp
+#   src/${PROJECT_NAME}/motion_planning.cpp
 # )
 
 ## Add cmake target dependencies of the library

@@ -8,79 +8,79 @@ PlanningConfig &PlanningConfig::Instance() {
 }
 
 void PlanningConfig::UpdateParams(const ros::NodeHandle &nh) {
-  nh.param<double>("/local_planner/obstacle_trajectory_time",
+  nh.param<double>("/motion_planning/obstacle_trajectory_time",
                    obstacle_trajectory_time_, 8.0);
-  nh.param<double>("/local_planner/delta_t", delta_t_, 0.1);
-  nh.param<double>("/local_planner/reference_smoother_deviation_weight",
+  nh.param<double>("/motion_planning/delta_t", delta_t_, 0.1);
+  nh.param<double>("/motion_planning/reference_smoother_deviation_weight",
                    reference_smoother_deviation_weight_, 10.0);
-  nh.param<double>("/local_planner/reference_smoother_curvature_weight",
+  nh.param<double>("/motion_planning/reference_smoother_curvature_weight",
                    reference_smoother_curvature_weight_, 4.0);
-  nh.param<double>("/local_planner/reference_smoother_heading_weight",
+  nh.param<double>("/motion_planning/reference_smoother_heading_weight",
                    reference_smoother_heading_weight_, 10.0);
-  nh.param<double>("/local_planner/reference_smoother_distance_weight",
+  nh.param<double>("/motion_planning/reference_smoother_distance_weight",
                    reference_smoother_distance_weight_, 5.0);
-  nh.param<double>("/local_planner/reference_smoother_max_curvature",
+  nh.param<double>("/motion_planning/reference_smoother_max_curvature",
                    reference_smoother_max_curvature_, 100);
-  nh.param<int>("/local_planner/spline_order_", spline_order_, 3);
-  nh.param<double>("/local_planner/max_lookahead_time",
+  nh.param<int>("/motion_planning/spline_order_", spline_order_, 3);
+  nh.param<double>("/motion_planning/max_lookahead_time",
                    max_lookahead_time_, 8.0);
-  nh.param<double>("/local_planner/min_lookahead_time", min_lookahead_time_, 1.0);
-  nh.param<double>("/local_planner/lon_safety_buffer",
+  nh.param<double>("/motion_planning/min_lookahead_time", min_lookahead_time_, 1.0);
+  nh.param<double>("/motion_planning/lon_safety_buffer",
                    lon_safety_buffer_, 3.0);
-  nh.param<double>("/local_planner/lat_safety_buffer",
+  nh.param<double>("/motion_planning/lat_safety_buffer",
                    lat_safety_buffer_, 1.0);
-  nh.param<double>("/local_planner/max_lookahead_distance",
+  nh.param<double>("/motion_planning/max_lookahead_distance",
                    max_lookahead_distance_, 100);
-  nh.param<double>("/local_planner/max_lookback_distance",
+  nh.param<double>("/motion_planning/max_lookback_distance",
                    max_lookback_distance_, 30.0);
-  nh.param<double>("/local_planner/reference_max_forward_distance",
+  nh.param<double>("/motion_planning/reference_max_forward_distance",
                    reference_max_forward_distance_, 200.0);
-  nh.param<double>("/local_planner/reference_max_backward_distance",
+  nh.param<double>("/motion_planning/reference_max_backward_distance",
                    reference_max_backward_distance_, 30.0);
-  nh.param<double>("/local_planner/max_lon_acc", max_lon_acc_, 2.0);
-  nh.param<double>("/local_planner/min_lon_acc", min_lon_acc_, -2.0);
-  nh.param<double>("/local_planner/max_lon_velocity", max_lon_velocity_, 10.0);
-  nh.param<double>("/local_planner/min_lon_velocity", min_lon_velocity_, 0.0);
-  nh.param<double>("/local_planner/max_lon_jerk", max_lon_jerk_, 5.0);
-  nh.param<double>("/local_planner/min_lon_jerk", min_lon_jerk_, -5.0);
-  nh.param<double>("/local_planner/target_speed", target_speed_, 8.333);
-  nh.param<double>("/local_planner/maneuver_forward_clear_threshold",
+  nh.param<double>("/motion_planning/max_lon_acc", max_lon_acc_, 2.0);
+  nh.param<double>("/motion_planning/min_lon_acc", min_lon_acc_, -2.0);
+  nh.param<double>("/motion_planning/max_lon_velocity", max_lon_velocity_, 10.0);
+  nh.param<double>("/motion_planning/min_lon_velocity", min_lon_velocity_, 0.0);
+  nh.param<double>("/motion_planning/max_lon_jerk", max_lon_jerk_, 5.0);
+  nh.param<double>("/motion_planning/min_lon_jerk", min_lon_jerk_, -5.0);
+  nh.param<double>("/motion_planning/target_speed", target_speed_, 8.333);
+  nh.param<double>("/motion_planning/maneuver_forward_clear_threshold",
                    maneuver_forward_clear_threshold_, 20);
-  nh.param<double>("/local_planner/maneuver_backward_clear_threshold",
+  nh.param<double>("/motion_planning/maneuver_backward_clear_threshold",
                    maneuver_backward_clear_threshold_, 10);
-  nh.param<double>("/local_planner/maneuver_target_lane_forward_clear_distance",
+  nh.param<double>("/motion_planning/maneuver_target_lane_forward_clear_distance",
                    maneuver_forward_clear_threshold_, 20);
-  nh.param<double>("/local_planner/maneuver_target_lane_backward_clear_distance",
+  nh.param<double>("/motion_planning/maneuver_target_lane_backward_clear_distance",
                    maneuver_target_lane_backward_clear_threshold_, 15);
-  nh.param<double>("/local_planner/min_lookahead_distance",
+  nh.param<double>("/motion_planning/min_lookahead_distance",
                    min_lookahead_distance_, 1.0);
-  nh.param<double>("/local_planner/maneuver_change_lane_speed_discount_factor",
+  nh.param<double>("/motion_planning/maneuver_change_lane_speed_discount_factor",
                    maneuver_change_lane_speed_discount_factor_, 0.6);
-  nh.param<double>("/local_planner/maneuver_execute_time_length",
+  nh.param<double>("/motion_planning/maneuver_execute_time_length",
                    maneuver_execute_time_length_, 8.0);
-  nh.param<double>("/local_planner/maneuver_safety_cost_gain",
+  nh.param<double>("/motion_planning/maneuver_safety_cost_gain",
                    maneuver_safety_cost_gain_, 10.0);
-  nh.param<double>("/local_planner/maneuver_efficiency_cost_gain",
+  nh.param<double>("/motion_planning/maneuver_efficiency_cost_gain",
                    maneuver_efficiency_cost_gain_, 6.0);
-  nh.param<double>("/local_planner/maneuver_comfort_cost_gain",
+  nh.param<double>("/motion_planning/maneuver_comfort_cost_gain",
                    maneuver_comfort_cost_gain_, 5.0);
-  nh.param<double>("/local_planner/lattice_weight_opposite_side_offset",
+  nh.param<double>("/motion_planning/lattice_weight_opposite_side_offset",
                    lattice_weight_opposite_side_offset_, 10.0);
-  nh.param<double>("/local_planner/lattice_weight_same_side_offset",
+  nh.param<double>("/motion_planning/lattice_weight_same_side_offset",
                    lattice_weight_same_side_offset_, 5.0);
-  nh.param<double>("/local_planner/lattice_weight_dist_travelled",
+  nh.param<double>("/motion_planning/lattice_weight_dist_travelled",
                    lattice_weight_dist_travelled_, 15.0);
-  nh.param<double>("/local_planner/lattice_weight_target_speed",
+  nh.param<double>("/motion_planning/lattice_weight_target_speed",
                    lattice_weight_target_speed_, 12.0);
-  nh.param<double>("/local_planner/lattice_weight_collision",
+  nh.param<double>("/motion_planning/lattice_weight_collision",
                    lattice_weight_collision_, 20);
-  nh.param<double>("/local_planner/lattice_weight_lon_jerk",
+  nh.param<double>("/motion_planning/lattice_weight_lon_jerk",
                    lattice_weight_lon_jerk_, 10.0);
-  nh.param<double>("/local_planner/lattice_weight_lon_target",
+  nh.param<double>("/motion_planning/lattice_weight_lon_target",
                    lattice_weight_lon_target_, 20.0);
-  nh.param<double>("/local_planner/lattice_weight_lat_offset",
+  nh.param<double>("/motion_planning/lattice_weight_lat_offset",
                    lattice_weight_lat_offset_, 20.0);
-  nh.param<double>("/local_planner/lattice_weight_lat_jerk",
+  nh.param<double>("/motion_planning/lattice_weight_lat_jerk",
                    lattice_weight_lat_jerk_, 30);
 }
 

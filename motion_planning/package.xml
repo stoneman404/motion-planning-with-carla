@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>local_planner</name>
+  <name>motion_planning</name>
   <version>0.0.0</version>
   <description>The local_planner package</description>
 

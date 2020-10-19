@@ -1,7 +1,0 @@
-<!-- -->
-<launch>
-
-    <node pkg="local_planner" type="local_planner_node" name="local_planner" output="screen">
-    </node>
-
-</launch>
