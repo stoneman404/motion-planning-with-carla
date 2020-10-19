@@ -6,6 +6,7 @@
 #include <planning_srvs/Route.h>
 #include <planning_msgs/TrajectoryPoint.h>
 #include <planning_msgs/Trajectory.h>
+#include <planning_srvs/RouteResponse.h>
 #include <carla_msgs/CarlaEgoVehicleStatus.h>
 #include "state.hpp"
 #include "planning_context.hpp"
@@ -66,10 +67,10 @@ class ManeuverPlanner {
    * @param maneuver_goal
    */
   void SetManeuverGoal(const ManeuverGoal &maneuver_goal);
-
   const ManeuverGoal &maneuver_goal() const;
-
   ManeuverGoal &multable_maneuver_goal();
+  std::list<planning_srvs::RouteResponse> &multable_routes() { return routes_; }
+  std::list<std::shared_ptr<ReferenceLine>> &multable_ref_line() { return ref_lines_; }
 
   /**
    *
@@ -130,6 +131,9 @@ class ManeuverPlanner {
   ros::ServiceClient route_service_client_;
   std::unique_ptr<State> current_state_;
   int current_lane_id_{};
+  std::list<planning_srvs::RouteResponse> routes_;
+  std::list<std::shared_ptr<ReferenceLine>> ref_lines_;
+  ManeuverStatus prev_status_;
 
 };
 }

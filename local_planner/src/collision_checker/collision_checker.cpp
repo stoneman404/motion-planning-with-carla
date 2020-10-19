@@ -39,10 +39,10 @@ void CollisionChecker::Init(const std::unordered_map<int, std::shared_ptr<Obstac
 
   bool ego_vehicle_in_lane = IsEgoVehicleInLane(ego_vehicle_s, ego_vehicle_d);
   std::vector<std::shared_ptr<Obstacle>> obstacle_considered;
-  for (const auto &obstacle : obstacles) {
+  for (auto &obstacle : obstacles) {
     if (ego_vehicle_in_lane &&
-        (IsObstacleBehindEgoVehicle(obstacle.second, reference_line))
-        || !ptr_st_graph_->IsObstacleInGraph(obstacle.first)) {
+        (IsObstacleBehindEgoVehicle(obstacle.second, ego_vehicle_s, reference_line)
+            || !ptr_st_graph_->IsObstacleInGraph(obstacle.first))) {
       continue;
     }
     obstacle_considered.push_back(obstacle.second);

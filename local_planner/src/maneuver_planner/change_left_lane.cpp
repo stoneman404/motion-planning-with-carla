@@ -1,66 +1,80 @@
 #include <tf/transform_datatypes.h>
 #include "obstacle_filter/obstacle_filter.hpp"
-#include "maneuver_planner/change_left_lane_state.hpp"
+#include "maneuver_planner/change_left_lane.hpp"
 namespace planning {
 
-bool ChangeLeftLaneState::Enter(ManeuverPlanner *maneuver_planner) {
-  if (maneuver_planner->NeedReRoute()) {
+bool ChangeLeftLane::Enter(ManeuverPlanner *maneuver_planner) {
 
-  }
-  auto &maneuver_goal = maneuver_planner->multable_maneuver_goal();
-  if (maneuver_goal.maneuver_infos.size() < 2) {
-    ROS_DEBUG("Failed to enter **ChangeLeftLaneState** state, because the maneuver goal is less than 2");
-  }
-  for (auto &maneuver_info : maneuver_goal.maneuver_infos) {
-    if (maneuver_info.ptr_ref_line == nullptr) {
-      const auto ego_pose = VehicleState::Instance().pose();
-      const double theta = MathUtil::NormalizeAngle(tf::getYaw(ego_pose.orientation));
-      const double sin_theta = std::sin(theta);
-      const double cos_theta = std::cos(theta);
-      const double offset_length = VehicleState::Instance().ego_waypoint().lane_width;
-      auto new_pose = ego_pose;
-      new_pose.position.x = ego_pose.position.x - sin_theta * offset_length;
-      new_pose.position.y = ego_pose.position.y + cos_theta * offset_length;
-      const auto goal_pose = PlanningContext::Instance().global_goal_pose().pose;
-      planning_srvs::RouteResponse route_response;
-      bool result = maneuver_planner->ReRoute(new_pose, goal_pose, route_response);
-      if (!result) {
-        ROS_FATAL("Failed to enter **ChangeLeftLaneState** state");
-        return false;
-      }
-      PlanningContext::Instance().mutable_route_infos().push_back(route_response);
-    }
-  }
-
-  after_lane_id_ = maneuver_goal.maneuver_infos.back().lane_id;
-  before_lane_id_ = maneuver_goal.maneuver_infos.front().lane_id;
-
-  before_reference_line_ = maneuver_goal.maneuver_infos.front().ptr_ref_line;
-  after_reference_line_ = maneuver_goal.maneuver_infos.back().ptr_ref_line;
-}
-
-bool ChangeLeftLaneState::Execute(ManeuverPlanner *maneuver_planner) {
-
-  if (maneuver_planner == nullptr) {
-    ROS_FATAL("[ChangeLeftLaneState::Execute] failed, maneuver_planner == nullptr");
+  ROS_DEBUG("Enter the **ChangeLeftLane** state");
+  const auto ego_pose = VehicleState::Instance().pose();
+  const double theta = MathUtils::NormalizeAngle(tf::getYaw(ego_pose.orientation));
+  const double sin_theta = std::sin(theta);
+  const double cos_theta = std::cos(theta);
+  const double offset_length = VehicleState::Instance().ego_waypoint().lane_width;
+  auto new_pose = ego_pose;
+  new_pose.position.x = ego_pose.position.x - sin_theta * offset_length;
+  new_pose.position.y = ego_pose.position.y + cos_theta * offset_length;
+  const auto goal_pose = PlanningContext::Instance().global_goal_pose().pose;
+  planning_srvs::RouteResponse route_response;
+  bool result = maneuver_planner->ReRoute(new_pose, goal_pose, route_response);
+  if (!result) {
+    ROS_FATAL("Failed to enter **ChangeLeftLane** state");
     return false;
   }
+  maneuver_planner->multable_routes().push_back(route_response);
+  ROS_ASSERT(maneuver_planner->multable_routes().size() == 2);
+}
+
+ManeuverStatus ChangeLeftLane::Execute(ManeuverPlanner *maneuver_planner) {
+
+  if (maneuver_planner == nullptr) {
+    ROS_FATAL("[ChangeLeftLane::Execute] failed, maneuver_planner == nullptr");
+    return ManeuverStatus::kError;
+  }
+  before_reference_line_ = maneuver_planner->multable_ref_line().front();
+  after_reference_line_ = maneuver_planner->multable_ref_line().back();
+  SLPoint ego_sl;
+  before_reference_line_->XYToSL(VehicleState::Instance().pose().position.x,
+                                 VehicleState::Instance().pose().position.y,
+                                 &ego_sl);
+  before_lane_id_ = before_reference_line_->NearestWayPoint(ego_sl.s + 5.0).lane_id;
+  after_reference_line_->XYToSL(VehicleState::Instance().pose().position.x,
+                                VehicleState::Instance().pose().position.y,
+                                &ego_sl);
+  after_lane_id_ = after_reference_line_->NearestWayPoint(ego_sl.s + 5.0).lane_id;
+
   // todo: trajectory motion_planner
 
-  return false;
+  return ManeuverStatus::kError;
 }
-void ChangeLeftLaneState::Exit(ManeuverPlanner *maneuver_planner) {
-  ROS_INFO("We are currently exit the **ChangeLeftLaneState**");
+void ChangeLeftLane::Exit(ManeuverPlanner *maneuver_planner) {
+  ROS_INFO("We are currently exit the **ChangeLeftLane**");
+  switch (maneuver_planner->multable_maneuver_goal().decision_type) {
+    case DecisionType::kFollowLane:
+    case DecisionType::kEmergencyStop:
+    case DecisionType::kStopAtTrafficSign:
+    case DecisionType::kStopAtDestination: {
+      if (maneuver_planner->multable_maneuver_goal().maneuver_infos.front().lane_id == after_lane_id_) {
+        maneuver_planner->multable_routes().pop_front();
+      } else {
+        maneuver_planner->multable_routes().pop_back();
+      }
+      break;
+    }
+    case DecisionType::kChangeLeft:
+    case DecisionType::kChangeRight:
+    default:break;
+  }
 }
 
-State &ChangeLeftLaneState::Instance() {
-  static ChangeLeftLaneState instance;
+State &ChangeLeftLane::Instance() {
+  static ChangeLeftLane instance;
   return instance;
 }
 
-std::string ChangeLeftLaneState::Name() const { return "ChangeLeftLaneState"; }
+std::string ChangeLeftLane::Name() const { return "ChangeLeftLane"; }
 
-State *ChangeLeftLaneState::NextState(ManeuverPlanner *maneuver_planner) const {
+State *ChangeLeftLane::NextState(ManeuverPlanner *maneuver_planner) const {
   if (maneuver_planner == nullptr) {
     return nullptr;
   }
@@ -70,29 +84,32 @@ State *ChangeLeftLaneState::NextState(ManeuverPlanner *maneuver_planner) const {
   this->TrafficLightDecision(after_reference_line_, &traffic_light_maneuver);
   maneuver_planner->SetManeuverGoal(obstacle_maneuver);
   switch (obstacle_maneuver.decision_type) {
-    case DecisionType::kChangeLeft: return &(ChangeLeftLaneState::Instance());
-    case DecisionType::kFollowLane: return &(FollowLaneState::Instance());
-    case DecisionType::kEmergencyStop: return &(EmergencyStopState::Instance());
+    case DecisionType::kChangeLeft: return &(ChangeLeftLane::Instance());
+    case DecisionType::kFollowLane: return &(FollowLane::Instance());
+    case DecisionType::kEmergencyStop: return &(EmergencyStop::Instance());
     case DecisionType::kStopAtDestination:
     case DecisionType::kChangeRight:
     case DecisionType::kStopAtTrafficSign:
-    default: return &(StopState::Instance());
+    default: return &(Stop::Instance());
 
   }
 }
 
-void ChangeLeftLaneState::ObstacleDecision(ManeuverGoal *maneuver_goal) const {
+void ChangeLeftLane::ObstacleDecision(ManeuverGoal *maneuver_goal) const {
   double leading_clear_distance;
   double following_clear_distance;
   int leading_vehicle_id;
   int following_vehicle_id;
-  SLBoundary sl_boundary;
-  after_reference_line_->GetSLBoundary(VehicleState::Instance().GetEgoBox(), &sl_boundary);
-  if (after_reference_line_->IsOnLane(sl_boundary)) {
+  SLPoint ego_sl;
+  after_reference_line_->XYToSL(VehicleState::Instance().pose().position.x, VehicleState::Instance().pose().position.y,
+                                &ego_sl);
+//  SLBoundary sl_boundary;
+//  after_reference_line_->GetSLBoundary(VehicleState::Instance().GetEgoBox(), &sl_boundary);
+  if (IsOnLane(ego_sl.s, ego_sl.l, after_reference_line_)) {
     // enter the target_lane
-    SLPoint ego_sl;
-    after_reference_line_->XYToSL(VehicleState::Instance().pose().position.x,
-                                  VehicleState::Instance().pose().position.y, &ego_sl);
+//    SLPoint ego_sl;
+//    after_reference_line_->XYToSL(VehicleState::Instance().pose().position.x,
+//                                  VehicleState::Instance().pose().position.y, &ego_sl);
 
     this->GetLaneClearDistance(0, after_reference_line_,
                                &leading_clear_distance,

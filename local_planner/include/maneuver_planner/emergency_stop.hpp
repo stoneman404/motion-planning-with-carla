@@ -3,20 +3,20 @@
 #include "state.hpp"
 
 namespace planning {
-class EmergencyStopState : public State {
+class EmergencyStop : public State {
  public:
   bool Enter(ManeuverPlanner *maneuver_planner) override;
   void Exit(ManeuverPlanner *maneuver_planner) override;
-  bool Execute(ManeuverPlanner *maneuver_planner) override;
+  ManeuverStatus Execute(ManeuverPlanner *maneuver_planner) override;
   static State &Instance();
   std::string Name() const override;
   State *NextState(ManeuverPlanner *maneuver_planner) const override;
  protected:
   void ObstacleDecision(ManeuverGoal *maneuver_goal) const override;
  private:
-  EmergencyStopState() = default;
-  EmergencyStopState(const EmergencyStopState &other);
-  EmergencyStopState &operator=(const EmergencyStopState &other);
+  EmergencyStop() = default;
+  EmergencyStop(const EmergencyStop &other);
+  EmergencyStop &operator=(const EmergencyStop &other);
  private:
   std::shared_ptr<ReferenceLine> reference_line_;
   int current_lane_id_{};

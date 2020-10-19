@@ -118,7 +118,7 @@ bool Box2d::HasOverlapWithBox2d(const planning::Box2d &box) const {
 }
 
 void Box2d::RotateFromCenter(const double rotate_angle) {
-  heading_ = MathUtil::NormalizeAngle(heading_ + rotate_angle);
+  heading_ = MathUtils::NormalizeAngle(heading_ + rotate_angle);
   cos_heading_ = std::cos(heading_);
   sin_heading_ = std::sin(heading_);
   InitCorners();

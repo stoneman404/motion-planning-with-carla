@@ -1,38 +1,43 @@
 #include "obstacle_filter/obstacle_filter.hpp"
 #include "traffic_lights/traffic_light_list.hpp"
-#include "maneuver_planner/follow_lane_state.hpp"
-#include "maneuver_planner/emergency_stop_state.hpp"
-#include "maneuver_planner/stop_state.hpp"
-#include "maneuver_planner/change_left_lane_state.hpp"
-#include "maneuver_planner/change_right_lane_state.hpp"
+#include "maneuver_planner/follow_lane.hpp"
+#include "maneuver_planner/emergency_stop.hpp"
+#include "maneuver_planner/stop.hpp"
+#include "maneuver_planner/change_left_lane.hpp"
+#include "maneuver_planner/change_right_lane.hpp"
 namespace planning {
 
-bool EmergencyStopState::Enter(ManeuverPlanner *maneuver_planner) {
-  ROS_INFO("Oops, something going wrong, we enter the **EmergencyStopState**");
-  ROS_ASSERT(maneuver_planner->multable_maneuver_goal().maneuver_infos.size() == 1);
-  reference_line_ = maneuver_planner->multable_maneuver_goal().maneuver_infos.front().ptr_ref_line;
-  current_lane_id_ = maneuver_planner->multable_maneuver_goal().maneuver_infos.front().lane_id;
+bool EmergencyStop::Enter(ManeuverPlanner *maneuver_planner) {
+  ROS_INFO("Oops, something going wrong, we enter the **EmergencyStop**");
+
 }
 
-bool EmergencyStopState::Execute(ManeuverPlanner *maneuver_planner) {
+ManeuverStatus EmergencyStop::Execute(ManeuverPlanner *maneuver_planner) {
   if (maneuver_planner == nullptr) {
-    return false;
+    return ManeuverStatus::kError;
   }
+  reference_line_ = maneuver_planner->multable_ref_line().front();
+  SLPoint ego_sl;
+  reference_line_->XYToSL(VehicleState::Instance().pose().position.x,
+                          VehicleState::Instance().pose().position.y,
+                          &ego_sl);
+  reference_line_->NearestWayPoint(ego_sl.s);
+  current_lane_id_ = reference_line_->NearestWayPoint(ego_sl.s + 5.0).lane_id;
   // todo emergency stop trajectory motion_planner
-  return false;
+  return ManeuverStatus::kError;
 }
 
-void EmergencyStopState::Exit(ManeuverPlanner *maneuver_planner) {
-  ROS_INFO("We are exiting **EmergencyStopState**");
+void EmergencyStop::Exit(ManeuverPlanner *maneuver_planner) {
+  ROS_INFO("We are exiting **EmergencyStop**");
 }
 
-State &EmergencyStopState::Instance() {
-  static EmergencyStopState instance;
+State &EmergencyStop::Instance() {
+  static EmergencyStop instance;
   return instance;
 }
-std::string EmergencyStopState::Name() const { return "EmergencyStopState"; }
+std::string EmergencyStop::Name() const { return "EmergencyStop"; }
 
-State *EmergencyStopState::NextState(ManeuverPlanner *maneuver_planner) const {
+State *EmergencyStop::NextState(ManeuverPlanner *maneuver_planner) const {
   if (maneuver_planner == nullptr) {
     return nullptr;
   }
@@ -42,17 +47,17 @@ State *EmergencyStopState::NextState(ManeuverPlanner *maneuver_planner) const {
   this->TrafficLightDecision(reference_line_, &traffic_light_maneuver);
   auto combined_maneuver = CombineManeuver(traffic_light_maneuver, obstacle_maneuver);
   switch (combined_maneuver.decision_type) {
-    case DecisionType::kFollowLane: return &(FollowLaneState::Instance());
-    case DecisionType::kEmergencyStop: return &(EmergencyStopState::Instance());
+    case DecisionType::kFollowLane: return &(FollowLane::Instance());
+    case DecisionType::kEmergencyStop: return &(EmergencyStop::Instance());
     case DecisionType::kStopAtTrafficSign:
-    case DecisionType::kStopAtDestination: return &(StopState::Instance());
-    case DecisionType::kChangeRight: return &(ChangeRightLaneState::Instance());
-    case DecisionType::kChangeLeft: return &(ChangeLeftLaneState::Instance());
+    case DecisionType::kStopAtDestination: return &(Stop::Instance());
+    case DecisionType::kChangeRight: return &(ChangeRightLane::Instance());
+    case DecisionType::kChangeLeft: return &(ChangeLeftLane::Instance());
     default:return nullptr;
   }
 }
 
-void EmergencyStopState::ObstacleDecision(ManeuverGoal *maneuver_goal) const {
+void EmergencyStop::ObstacleDecision(ManeuverGoal *maneuver_goal) const {
   double forward_clear_distance, backward_clear_distance;
   int leading_vehicle_id, following_vehicle_id;
   SLPoint ego_sl;

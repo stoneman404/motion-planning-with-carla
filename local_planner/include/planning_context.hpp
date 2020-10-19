@@ -35,6 +35,13 @@ struct ManeuverInfo {
   std::shared_ptr<ReferenceLine> ptr_ref_line = nullptr;
 };
 
+enum class ManeuverStatus : uint32_t {
+  kSuccess,
+  kInProcess,
+  kError,
+  kUnknown
+};
+
 struct ManeuverGoal {
   ManeuverGoal() = default;
   ~ManeuverGoal() = default;

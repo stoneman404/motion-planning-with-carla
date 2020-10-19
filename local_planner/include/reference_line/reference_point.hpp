@@ -31,7 +31,6 @@ class ReferencePoint {
   void set_ddkappa(const double &ddkappa);
  private:
   Eigen::Vector2d xy_;
-  double s_{};
   double heading_{};
   double kappa_{};
   double dkappa_{};

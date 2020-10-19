@@ -4,11 +4,11 @@
 #include <tf/transform_datatypes.h>
 #include "maneuver_planner/maneuver_planner.hpp"
 #include "maneuver_planner/state.hpp"
-#include "maneuver_planner/follow_lane_state.hpp"
-#include "maneuver_planner/change_right_lane_state.hpp"
-#include "maneuver_planner/change_left_lane_state.hpp"
-#include "maneuver_planner/stop_state.hpp"
-#include "maneuver_planner/emergency_stop_state.hpp"
+#include "maneuver_planner/follow_lane.hpp"
+#include "maneuver_planner/change_right_lane.hpp"
+#include "maneuver_planner/change_left_lane.hpp"
+#include "maneuver_planner/stop.hpp"
+#include "maneuver_planner/emergency_stop.hpp"
 #include "string_name.hpp"
 #include "planning_context.hpp"
 #include "planning_config.hpp"
@@ -24,19 +24,23 @@ void ManeuverPlanner::InitPlanner() {
       service::kRouteServiceName);
   auto ego_pose = VehicleState::Instance().pose();
   auto destination = PlanningContext::Instance().global_goal_pose().pose;
-  PlanningContext::Instance().mutable_route_infos().clear();
-  PlanningContext::Instance().mutable_reference_lines().clear();
-  ROS_ASSERT(this->ReRoute(ego_pose, destination, PlanningContext::Instance().mutable_route_infos().front()));
-  ROS_ASSERT(this->GenerateReferenceLine(PlanningContext::Instance().route_infos().front(),
-                                         PlanningContext::Instance().mutable_reference_lines().front()));
+  routes_.clear();
+  ref_lines_.clear();
+  planning_srvs::RouteResponse route_response;
+  ROS_ASSERT(this->ReRoute(ego_pose, destination, route_response));
+  routes_.push_back(route_response);
+  auto ptr_ref_line = std::make_shared<ReferenceLine>();
+  ROS_ASSERT(this->GenerateReferenceLine(route_response, ptr_ref_line));
+  ref_lines_.push_back(ptr_ref_line);
   current_lane_id_ = VehicleState::Instance().lane_id();
-  current_state_.reset(&FollowLaneState::Instance());
-  maneuver_goal_.decision_type = DecisionType::kFollowLane;
+  current_state_.reset(&FollowLane::Instance());
+  maneuver_goal_.decision_type = DecisionType::kStopAtDestination;
   maneuver_goal_.maneuver_infos.resize(1);
-  maneuver_goal_.maneuver_infos.front().maneuver_target.target_speed = PlanningConfig::Instance().target_speed();
-  maneuver_goal_.maneuver_infos.front().ptr_ref_line = PlanningContext::Instance().reference_lines().front();
+  maneuver_goal_.maneuver_infos.front().maneuver_target.target_speed = 0.0;
+  maneuver_goal_.maneuver_infos.front().ptr_ref_line = ref_lines_.front();
   maneuver_goal_.maneuver_infos.front().has_stop_point = false;
-  maneuver_goal_.maneuver_infos.front().lane_id = current_lane_id_;
+  maneuver_goal_.maneuver_infos.front().lane_id = VehicleState::Instance().lane_id();
+  prev_status_ = ManeuverStatus::kInProcess;
   ROS_ASSERT(current_state_->Enter(this));
 }
 
@@ -46,12 +50,14 @@ bool ManeuverPlanner::Process(const planning_msgs::TrajectoryPoint &init_traject
     ROS_FATAL("[ManeuverPlanner::Process], the current state is nullptr");
     return false;
   }
-
   ROS_DEBUG("[ManeuverPlanner::Process], current state is [%s]", current_state_->Name().c_str());
-  if (!current_state_->Execute(this)) {
-    ROS_FATAL("[ManeuverPlanner::Process]");
-    return false;
+  ref_lines_.clear();
+  for (const auto &route_response : routes_) {
+    auto ptr_ref_line = std::make_shared<ReferenceLine>();
+    ManeuverPlanner::GenerateReferenceLine(route_response, ptr_ref_line);
+    ref_lines_.push_back(ptr_ref_line);
   }
+  prev_status_ = current_state_->Execute(this);
   std::unique_ptr<State> state(current_state_->NextState(this));
 
   if (state != nullptr && state->Name() != current_state_->Name()) {
@@ -66,7 +72,7 @@ bool ManeuverPlanner::UpdateRouteInfo() {
   if (this->NeedReRoute()) {
     auto ego_pose = VehicleState::Instance().ego_waypoint();
     auto destination = PlanningContext::Instance().global_goal_pose();
-    const double theta = MathUtil::NormalizeAngle(tf::getYaw(ego_pose.pose.orientation));
+    const double theta = MathUtils::NormalizeAngle(tf::getYaw(ego_pose.pose.orientation));
     const double sin_theta = std::sin(theta);
     const double cos_theta = std::cos(theta);
     const double offset_length = VehicleState::Instance().ego_waypoint().lane_width;
@@ -236,7 +242,7 @@ bool ManeuverPlanner::NeedReRoute() const {
       || PlanningContext::Instance().reference_lines().empty()) {
     return true;
   }
-  if (current_state_->Name() == "FollowLaneState" &&
+  if (current_state_->Name() == "FollowLane" &&
       (maneuver_goal_.decision_type == DecisionType::kChangeLeft
           || maneuver_goal_.decision_type == DecisionType::kChangeRight)) {
     return true;

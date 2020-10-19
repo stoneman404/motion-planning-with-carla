@@ -135,14 +135,14 @@ std::vector<std::pair<double, double>> STGraph::GetPathBlockingIntervals(const d
     if (t > pt_obstacle.max_t() || t < pt_obstacle.min_t()) {
       continue;
     }
-    double s_upper = MathUtil::lerp(pt_obstacle.upper_left_point().s(),
-                                    pt_obstacle.upper_left_point().t(),
-                                    pt_obstacle.upper_right_point().s(),
-                                    pt_obstacle.upper_right_point().t(), t);
-    double s_lower = MathUtil::lerp(pt_obstacle.lower_left_point().s(),
-                                    pt_obstacle.lower_left_point().t(),
-                                    pt_obstacle.lower_right_point().s(),
-                                    pt_obstacle.lower_right_point().t(), t);
+    double s_upper = MathUtils::lerp(pt_obstacle.upper_left_point().s(),
+                                     pt_obstacle.upper_left_point().t(),
+                                     pt_obstacle.upper_right_point().s(),
+                                     pt_obstacle.upper_right_point().t(), t);
+    double s_lower = MathUtils::lerp(pt_obstacle.lower_left_point().s(),
+                                     pt_obstacle.lower_left_point().t(),
+                                     pt_obstacle.lower_right_point().s(),
+                                     pt_obstacle.lower_right_point().t(), t);
     intervals.emplace_back(s_lower, s_upper);
   }
   return intervals;
@@ -192,7 +192,7 @@ std::vector<STPoint> STGraph::GetObstacleSurroundingPoints(int obstacle_id, doub
 
   for (size_t i = 0; i <= num_sections; ++i) {
     double t = t_interval * static_cast<double>(i) + t0;
-    double s = MathUtil::lerp(s0, t0, s1, t1, t) + s_dist;
+    double s = MathUtils::lerp(s0, t0, s1, t1, t) + s_dist;
 
     STPoint ptt;
     ptt.set_t(t);

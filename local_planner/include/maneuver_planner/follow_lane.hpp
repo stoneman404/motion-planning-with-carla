@@ -1,16 +1,16 @@
-#ifndef CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_MANEUVER_PLANNER_FOLLOW_LANE_STATE_HPP_
-#define CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_MANEUVER_PLANNER_FOLLOW_LANE_STATE_HPP_
+#ifndef CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_MANEUVER_PLANNER_FOLLOW_LANE_HPP_
+#define CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_MANEUVER_PLANNER_FOLLOW_LANE_HPP_
 #include "state.hpp"
 #include <vector>
 #include "planning_context.hpp"
-#include "change_left_lane_state.hpp"
-#include "change_right_lane_state.hpp"
-#include "stop_state.hpp"
-#include "emergency_stop_state.hpp"
+#include "change_left_lane.hpp"
+#include "change_right_lane.hpp"
+#include "stop.hpp"
+#include "emergency_stop.hpp"
 
 namespace planning {
 
-class FollowLaneState : public State {
+class FollowLane : public State {
 
  public:
 
@@ -26,7 +26,7 @@ class FollowLaneState : public State {
    * @param maneuver_planner
    * @return
    */
-  bool Execute(ManeuverPlanner *maneuver_planner) override;
+  ManeuverStatus Execute(ManeuverPlanner *maneuver_planner) override;
 
   /**
    * @brief: exit action
@@ -127,9 +127,9 @@ class FollowLaneState : public State {
    */
   static double ComfortCost(double ego_vel, double leading_vel, double forward_clear_distance);
 
-  FollowLaneState() = default;
-  FollowLaneState(const FollowLaneState &other);
-  FollowLaneState &operator=(const FollowLaneState &other);
+  FollowLane() = default;
+  FollowLane(const FollowLane &other);
+  FollowLane &operator=(const FollowLane &other);
 
  private:
 

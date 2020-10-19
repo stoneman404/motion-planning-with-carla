@@ -186,11 +186,11 @@ TEST_F(Spline2dTest, derivatives) {
 //  std::cout << "yaw : " << std::atan2(dy, dx) << std::endl;
   result = spline2d_->EvaluateThirdDerivative(s, &ddx, &ddy);
   EXPECT_TRUE(result);
-  double kappa = MathUtil::CalcKappa(dx, dy, ddx, ddy);
+  double kappa = MathUtils::CalcKappa(dx, dy, ddx, ddy);
 //  std::cout << "kappa : " << kappa << std::endl;
   result = spline2d_->EvaluateThirdDerivative(s, &dddx, &dddy);
   EXPECT_TRUE(result);
-  double dkappa = MathUtil::CalcDKappa(dx, dy, ddx, ddy, dddx, dddy);
+  double dkappa = MathUtils::CalcDKappa(dx, dy, ddx, ddy, dddx, dddy);
 //  std::cout << "dkappa: " << dkappa << std::endl;
 }
 

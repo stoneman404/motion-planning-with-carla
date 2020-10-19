@@ -138,7 +138,7 @@ planning_msgs::TrajectoryPoint Obstacle::GetPointAtTime(double relative_time) co
     if (it_lower == trajectory_points.end()) {
       return *trajectory_points.rbegin();
     }
-    return MathUtil::InterpolateTrajectoryPoint(*(it_lower - 1), *it_lower, relative_time);
+    return MathUtils::InterpolateTrajectoryPoint(*(it_lower - 1), *it_lower, relative_time);
   }
 }
 

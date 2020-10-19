@@ -78,9 +78,15 @@ void FrenetLatticePlanner::GenerateTrajectories(const planning_msgs::TrajectoryP
   auto end_condition_sampler = std::make_shared<EndConditionSampler>(init_s, init_d, ref_line, st_graph);
   FrenetLatticePlanner::GenerateLonTrajectories(maneuver_info, init_s, end_condition_sampler, ptr_lon_traj_vec);
   FrenetLatticePlanner::GenerateLatTrajectories(init_d, end_condition_sampler, ptr_lat_traj_vec);
-  ROS_DEBUG("[FrenetLatticePlanner::GenerateTrajectories], "
-            "the lon traj number is : %zu, the lat traj number is %zu",
-            ptr_lon_traj_vec->size(), ptr_lat_traj_vec->size());
+//  ROS_DEBUG("[FrenetLatticePlanner::GenerateTrajectories], "
+//            "the lon traj number is : %zu, the lat traj number is %zu",
+//            ptr_lon_traj_vec->size(), ptr_lat_traj_vec->size());
+//
+  PolynomialTrajectoryEvaluator trajectory_evaluator = PolynomialTrajectoryEvaluator(init_s,
+                                                                                     maneuver_info,
+                                                                                     *ptr_lon_traj_vec,
+                                                                                     *ptr_lat_traj_vec,
+                                                                                     ref_line, st_graph);
 }
 
 bool FrenetLatticePlanner::CombineTrajectories(const std::shared_ptr<ReferenceLine> &ptr_ref_line,

@@ -93,7 +93,7 @@ void CoordinateTransformer::FrenetToCartesian(double rs, double rx,
   const double delta_theta = std::atan2(d_condition[1], one_minus_kappa_r_d);
   const double cos_delta_theta = std::cos(delta_theta);
 
-  *ptr_theta = MathUtil::NormalizeAngle(delta_theta + rtheta);
+  *ptr_theta = MathUtils::NormalizeAngle(delta_theta + rtheta);
 
   const double kappa_r_d_prime =
       rdkappa * d_condition[0] + rkappa * d_condition[1];
@@ -118,7 +118,7 @@ void CoordinateTransformer::FrenetToCartesian(double rs, double rx,
 
 double CoordinateTransformer::CalcTheta(double rtheta, double rkappa,
                                         double l, double dl) {
-  return MathUtil::NormalizeAngle(rtheta + std::atan2(dl, 1 - l * rkappa));
+  return MathUtils::NormalizeAngle(rtheta + std::atan2(dl, 1 - l * rkappa));
 }
 
 double CoordinateTransformer::CalcKappa(double rkappa, double rdkappa,

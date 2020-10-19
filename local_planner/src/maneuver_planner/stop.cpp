@@ -1,37 +1,42 @@
-#include "maneuver_planner/emergency_stop_state.hpp"
-#include "maneuver_planner/follow_lane_state.hpp"
-#include "maneuver_planner/stop_state.hpp"
+#include "maneuver_planner/emergency_stop.hpp"
+#include "maneuver_planner/follow_lane.hpp"
+#include "maneuver_planner/stop.hpp"
 #include "obstacle_filter/obstacle_filter.hpp"
 
 namespace planning {
 
-bool StopState::Enter(ManeuverPlanner *maneuver_planner) {
-  ROS_INFO("We are currently switching to **StopState**");
-  ROS_ASSERT(maneuver_planner->multable_maneuver_goal().maneuver_infos.size() == 1);
-  reference_line_ = maneuver_planner->multable_maneuver_goal().maneuver_infos.front().ptr_ref_line;
-  current_lane_id_ = maneuver_planner->multable_maneuver_goal().maneuver_infos.front().lane_id;
+bool Stop::Enter(ManeuverPlanner *maneuver_planner) {
+  ROS_INFO("We are currently switching to **Stop**");
+  ROS_ASSERT(maneuver_planner->multable_routes().size() == 1);
 }
 
-void StopState::Exit(ManeuverPlanner *maneuver_planner) {
-  ROS_INFO("We are currently exiting **StopState**");
+void Stop::Exit(ManeuverPlanner *maneuver_planner) {
+  ROS_INFO("We are currently exiting **Stop**");
+
 }
 
-bool StopState::Execute(ManeuverPlanner *maneuver_planner) {
+ManeuverStatus Stop::Execute(ManeuverPlanner *maneuver_planner) {
   if (nullptr == maneuver_planner) {
-    return false;
+    return ManeuverStatus::kError;
   }
+  reference_line_ = maneuver_planner->multable_ref_line().front();
+  SLPoint sl_point;
+  reference_line_->XYToSL(VehicleState::Instance().pose().position.x,
+                          VehicleState::Instance().pose().position.y,
+                          &sl_point);
+  current_lane_id_ = reference_line_->NearestWayPoint(sl_point.s + 5.0).lane_id;
   // todo stop trajectory motion_planner
-  return false;
+  return ManeuverStatus::kError;
 }
 
-State &StopState::Instance() {
-  static StopState instance;
+State &Stop::Instance() {
+  static Stop instance;
   return instance;
 }
 
-std::string StopState::Name() const { return "StopState"; }
+std::string Stop::Name() const { return "Stop"; }
 
-State *StopState::NextState(ManeuverPlanner *maneuver_planner) const {
+State *Stop::NextState(ManeuverPlanner *maneuver_planner) const {
   if (maneuver_planner == nullptr) {
     return nullptr;
   }
@@ -42,16 +47,16 @@ State *StopState::NextState(ManeuverPlanner *maneuver_planner) const {
   auto combined_maneuver = CombineManeuver(traffic_light_maneuver, obstacle_maneuver);
   switch (combined_maneuver.decision_type) {
     case DecisionType::kStopAtTrafficSign:
-    case DecisionType::kStopAtDestination:return &(StopState::Instance());
-    case DecisionType::kEmergencyStop:return &(EmergencyStopState::Instance());
-    case DecisionType::kFollowLane:return &(FollowLaneState::Instance());
-    case DecisionType::kChangeLeft:return &(ChangeLeftLaneState::Instance());
-    case DecisionType::kChangeRight:return &(ChangeRightLaneState::Instance());
+    case DecisionType::kStopAtDestination:return &(Stop::Instance());
+    case DecisionType::kEmergencyStop:return &(EmergencyStop::Instance());
+    case DecisionType::kFollowLane:return &(FollowLane::Instance());
+    case DecisionType::kChangeLeft:return &(ChangeLeftLane::Instance());
+    case DecisionType::kChangeRight:return &(ChangeRightLane::Instance());
     default:return nullptr;
   }
 }
 
-void StopState::ObstacleDecision(ManeuverGoal *maneuver_goal) const {
+void Stop::ObstacleDecision(ManeuverGoal *maneuver_goal) const {
   double following_clear_distance, leading_clear_distance;
   int leading_vehicle_id, following_vehicle_state;
   const auto obstacles = ObstacleFilter::Instance().Obstacles();

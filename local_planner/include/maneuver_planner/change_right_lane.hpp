@@ -1,9 +1,9 @@
 
-#ifndef CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_MANEUVER_PLANNER_CHANGE_RIGHT_LANE_STATE_HPP_
-#define CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_MANEUVER_PLANNER_CHANGE_RIGHT_LANE_STATE_HPP_
+#ifndef CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_MANEUVER_PLANNER_CHANGE_RIGHT_LANE_HPP_
+#define CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_MANEUVER_PLANNER_CHANGE_RIGHT_LANE_HPP_
 #include "state.hpp"
 namespace planning {
-class ChangeRightLaneState : public State {
+class ChangeRightLane : public State {
  public:
   /**
    *
@@ -17,7 +17,7 @@ class ChangeRightLaneState : public State {
    * @param maneuver_planner
    * @return
    */
-  bool Execute(ManeuverPlanner *maneuver_planner) override;
+  ManeuverStatus Execute(ManeuverPlanner *maneuver_planner) override;
 
   /**
    *
@@ -52,14 +52,14 @@ class ChangeRightLaneState : public State {
   void ObstacleDecision(ManeuverGoal *maneuver_goal) const override;
 
  private:
-  ChangeRightLaneState() = default;
-  ChangeRightLaneState(const ChangeRightLaneState &other);
-  ChangeRightLaneState &operator=(const ChangeRightLaneState &other);
+  ChangeRightLane() = default;
+  ChangeRightLane(const ChangeRightLane &other);
+  ChangeRightLane &operator=(const ChangeRightLane &other);
  private:
-  int target_lane_id_{};
-  int current_lane_id_{};
-  std::shared_ptr<ReferenceLine> current_reference_line_{};
-  std::shared_ptr<ReferenceLine> target_reference_line_{};
+  int after_lane_id_{};
+  int before_lane_id_{};
+  std::shared_ptr<ReferenceLine> before_reference_line_{};
+  std::shared_ptr<ReferenceLine> after_reference_line_{};
 };
 
 }

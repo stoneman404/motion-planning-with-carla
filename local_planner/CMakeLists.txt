@@ -118,24 +118,20 @@ set(planning_SRC
         common/src/spline2d.cpp
         common/src/st_data.cpp
         src/maneuver_planner/maneuver_planner.cpp
-        src/maneuver_planner/stop_state.cpp
-        src/maneuver_planner/emergency_stop_state.cpp
-        src/maneuver_planner/follow_lane_state.cpp
-        src/maneuver_planner/change_right_lane_state.cpp
-        src/maneuver_planner/change_left_lane_state.cpp
+        src/maneuver_planner/stop.cpp
+        src/maneuver_planner/emergency_stop.cpp
+        src/maneuver_planner/follow_lane.cpp
+        src/maneuver_planner/change_right_lane.cpp
+        src/maneuver_planner/change_left_lane.cpp
         src/maneuver_planner/state.cpp
-
         src/motion_planner/frenet_lattice_planner/frenet_lattice_planner.cpp
-        src/collision_checker/st_graph.cpp
         src/motion_planner/frenet_lattice_planner/end_condition_sampler.cpp
         src/motion_planner/frenet_lattice_planner/polynomial_trajectory_evaluator.cpp
         src/vehicle_state/vehicle_state.cpp
         src/obstacle_filter/obstacle_filter.cpp
         src/obstacle_filter/obstacle.cpp
-
         src/traffic_lights/traffic_light.cpp
         src/traffic_lights/traffic_light_list.cpp
-
         src/reference_line/reference_line.cpp
         src/reference_line/reference_point.cpp
         src/reference_line/reference_line_smoother.cpp
@@ -143,7 +139,8 @@ set(planning_SRC
         src/planning_context.cpp
         src/planning_config.cpp
         src/planner.cpp
-        src/collision_checker/collision_checker.cpp)
+        src/collision_checker/collision_checker.cpp
+        src/collision_checker/st_graph.cpp)
 
 add_executable(${PROJECT_NAME}_node
         ${planning_SRC}

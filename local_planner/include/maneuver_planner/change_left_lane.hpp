@@ -1,11 +1,11 @@
-#ifndef CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_MANEUVER_PLANNER_CHANGE_LEFT_LANE_STATE_HPP_
-#define CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_MANEUVER_PLANNER_CHANGE_LEFT_LANE_STATE_HPP_
+#ifndef CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_MANEUVER_PLANNER_CHANGE_LEFT_LANE_HPP_
+#define CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_MANEUVER_PLANNER_CHANGE_LEFT_LANE_HPP_
 #include "state.hpp"
-#include "follow_lane_state.hpp"
-#include "stop_state.hpp"
-#include "emergency_stop_state.hpp"
+#include "follow_lane.hpp"
+#include "stop.hpp"
+#include "emergency_stop.hpp"
 namespace planning {
-class ChangeLeftLaneState : public State {
+class ChangeLeftLane : public State {
  public:
   /**
    *
@@ -19,7 +19,7 @@ class ChangeLeftLaneState : public State {
    * @param maneuver_planner
    * @return
    */
-  bool Execute(ManeuverPlanner *maneuver_planner) override;
+  ManeuverStatus Execute(ManeuverPlanner *maneuver_planner) override;
 
   /**
    *
@@ -53,9 +53,9 @@ class ChangeLeftLaneState : public State {
    */
   void ObstacleDecision(ManeuverGoal *maneuver_goal) const override;
  private:
-  ChangeLeftLaneState() = default;
-  ChangeLeftLaneState(const ChangeLeftLaneState &other);
-  ChangeLeftLaneState &operator=(const ChangeLeftLaneState &other);
+  ChangeLeftLane() = default;
+  ChangeLeftLane(const ChangeLeftLane &other);
+  ChangeLeftLane &operator=(const ChangeLeftLane &other);
 
  private:
   int after_lane_id_{};

@@ -35,7 +35,7 @@ ReferenceLine::ReferenceLine(const planning_srvs::RouteResponse &route_response)
     auto ref_point = ReferencePoint(way_point.pose.position.x, way_point.pose.position.y);
     ref_point.set_xy(way_point.pose.position.x, way_point.pose.position.y);
     ref_point.set_heading(
-        MathUtil::NormalizeAngle(std::atan2(heading(1), heading(0))));
+        MathUtils::NormalizeAngle(std::atan2(heading(1), heading(0))));
     reference_points_.push_back(ref_point);
     left_boundary_.emplace_back(
         ref_point.x() - left_width * std::sin(ref_point.heading()),
@@ -78,7 +78,7 @@ ReferenceLine::ReferenceLine(const std::vector<planning_msgs::WayPoint> &waypoin
     }
     auto ref_point = ReferencePoint(way_point.pose.position.x, way_point.pose.position.y);
     ref_point.set_xy(way_point.pose.position.x, way_point.pose.position.y);
-    ref_point.set_heading(MathUtil::NormalizeAngle(std::atan2(heading(1), heading(0))));
+    ref_point.set_heading(MathUtils::NormalizeAngle(std::atan2(heading(1), heading(0))));
     reference_points_.push_back(ref_point);
     left_boundary_.emplace_back(
         ref_point.x() - left_width * std::sin(ref_point.heading()),
@@ -132,9 +132,9 @@ ReferencePoint ReferenceLine::GetReferencePoint(double s) const {
   ref_line_spline_->EvaluateFirstDerivative(s, &ref_dx, &ref_dy);
   ref_line_spline_->EvaluateSecondDerivative(s, &ref_ddx, &ref_ddy);
   ref_line_spline_->EvaluateThirdDerivative(s, &ref_dddx, &ref_dddy);
-  double ref_heading = MathUtil::NormalizeAngle(std::atan2(ref_dy, ref_dx));
-  double ref_kappa = MathUtil::CalcKappa(ref_dx, ref_dy, ref_ddx, ref_ddy);
-  double ref_dkappa = MathUtil::CalcDKappa(ref_dx, ref_dy, ref_ddx, ref_ddy, ref_dddx, ref_dddy);
+  double ref_heading = MathUtils::NormalizeAngle(std::atan2(ref_dy, ref_dx));
+  double ref_kappa = MathUtils::CalcKappa(ref_dx, ref_dy, ref_ddx, ref_ddy);
+  double ref_dkappa = MathUtils::CalcDKappa(ref_dx, ref_dy, ref_ddx, ref_ddy, ref_dddx, ref_dddy);
   return ReferencePoint(ref_x, ref_y, ref_heading, ref_kappa, ref_dkappa);
 }
 
@@ -148,9 +148,9 @@ ReferencePoint ReferenceLine::GetReferencePoint(double x, double y) const {
   ref_line_spline_->EvaluateFirstDerivative(nearest_s, &ref_dx, &ref_dy);
   ref_line_spline_->EvaluateSecondDerivative(nearest_s, &ref_ddx, &ref_ddy);
   ref_line_spline_->EvaluateThirdDerivative(nearest_s, &ref_dddx, &ref_dddy);
-  double heading = MathUtil::NormalizeAngle(std::atan2(ref_dy, ref_dx));
-  double kappa = MathUtil::CalcKappa(ref_dx, ref_dy, ref_ddx, ref_ddy);
-  double dkappa = MathUtil::CalcDKappa(ref_dx, ref_dy, ref_ddx, ref_ddy, ref_dddx, ref_dddy);
+  double heading = MathUtils::NormalizeAngle(std::atan2(ref_dy, ref_dx));
+  double kappa = MathUtils::CalcKappa(ref_dx, ref_dy, ref_ddx, ref_ddy);
+  double dkappa = MathUtils::CalcDKappa(ref_dx, ref_dy, ref_ddx, ref_ddy, ref_dddx, ref_dddy);
   return ReferencePoint(nearest_x, nearest_y, heading, kappa, dkappa);
 
 }
@@ -263,11 +263,11 @@ ReferencePoint ReferenceLine::Interpolate(const ReferencePoint &p0,
                                           double s0,
                                           double s1,
                                           double s) {
-  double x = MathUtil::lerp(p0.x(), s0, p1.x(), s1, s);
-  double y = MathUtil::lerp(p0.y(), s0, p1.y(), s1, s);
-  double heading = MathUtil::slerp(p0.heading(), s0, p1.heading(), s1, s);
-  double kappa = MathUtil::lerp(p0.kappa(), s0, p1.kappa(), s1, s);
-  double dkappa = MathUtil::lerp(p0.dkappa(), s0, p1.dkappa(), s1, s);
+  double x = MathUtils::lerp(p0.x(), s0, p1.x(), s1, s);
+  double y = MathUtils::lerp(p0.y(), s0, p1.y(), s1, s);
+  double heading = MathUtils::slerp(p0.heading(), s0, p1.heading(), s1, s);
+  double kappa = MathUtils::lerp(p0.kappa(), s0, p1.kappa(), s1, s);
+  double dkappa = MathUtils::lerp(p0.dkappa(), s0, p1.dkappa(), s1, s);
   auto ref_point = ReferencePoint(x, y, heading, kappa, dkappa);
 
   return ref_point;
@@ -443,5 +443,27 @@ planning_msgs::WayPoint ReferenceLine::NearestWayPoint(double s) const {
   size_t index;
   return NearestWayPoint(reference_point.x(), reference_point.y(), &index);
 
+}
+bool ReferenceLine::GetMatchedPoint(double x, double y, ReferencePoint *matched_ref_point, double *matched_s) const {
+  ROS_ASSERT(!reference_points_.empty());
+  double nearest_x, nearest_y, nearest_s;
+  if (!ref_line_spline_->GetNearestPointOnSpline(x, y, &nearest_x, &nearest_y, &nearest_s)) {
+    return false;
+  }
+  double ref_dx, ref_dy;
+  double ref_ddx, ref_ddy;
+  double ref_dddx, ref_dddy;
+  ref_line_spline_->EvaluateFirstDerivative(nearest_s, &ref_dx, &ref_dy);
+  ref_line_spline_->EvaluateSecondDerivative(nearest_s, &ref_ddx, &ref_ddy);
+  ref_line_spline_->EvaluateThirdDerivative(nearest_s, &ref_dddx, &ref_dddy);
+  double heading = MathUtils::NormalizeAngle(std::atan2(ref_dy, ref_dx));
+  double kappa = MathUtils::CalcKappa(ref_dx, ref_dy, ref_ddx, ref_ddy);
+  double dkappa = MathUtils::CalcDKappa(ref_dx, ref_dy, ref_ddx, ref_ddy, ref_dddx, ref_dddy);
+  matched_ref_point->set_xy(nearest_x, nearest_y);
+  matched_ref_point->set_heading(heading);
+  matched_ref_point->set_kappa(kappa);
+  matched_ref_point->set_dkappa(dkappa);
+  *matched_s = nearest_s;
+  return true;
 }
 }

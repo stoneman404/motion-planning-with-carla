@@ -149,28 +149,7 @@ class ReferenceLine {
    */
   ReferencePoint GetReferencePoint(double x, double y) const;
 
-  bool GetMatchedPoint(double x, double y, ReferencePoint *matched_ref_point, double *matched_s) const {
-    ROS_ASSERT(!reference_points_.empty());
-    double nearest_x, nearest_y, nearest_s;
-    if (!ref_line_spline_->GetNearestPointOnSpline(x, y, &nearest_x, &nearest_y, &nearest_s)) {
-      return false;
-    }
-    double ref_dx, ref_dy;
-    double ref_ddx, ref_ddy;
-    double ref_dddx, ref_dddy;
-    ref_line_spline_->EvaluateFirstDerivative(nearest_s, &ref_dx, &ref_dy);
-    ref_line_spline_->EvaluateSecondDerivative(nearest_s, &ref_ddx, &ref_ddy);
-    ref_line_spline_->EvaluateThirdDerivative(nearest_s, &ref_dddx, &ref_dddy);
-    double heading = MathUtil::NormalizeAngle(std::atan2(ref_dy, ref_dx));
-    double kappa = MathUtil::CalcKappa(ref_dx, ref_dy, ref_ddx, ref_ddy);
-    double dkappa = MathUtil::CalcDKappa(ref_dx, ref_dy, ref_ddx, ref_ddy, ref_dddx, ref_dddy);
-    matched_ref_point->set_xy(nearest_x, nearest_y);
-    matched_ref_point->set_heading(heading);
-    matched_ref_point->set_kappa(kappa);
-    matched_ref_point->set_dkappa(dkappa);
-    *matched_s = nearest_s;
-    return true;
-  }
+  bool GetMatchedPoint(double x, double y, ReferencePoint *matched_ref_point, double *matched_s) const;
 
   /**
    * @brief: get the reference point

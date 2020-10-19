@@ -10,7 +10,7 @@ class State {
  public:
   State() = default;
   virtual bool Enter(ManeuverPlanner *maneuver_planner) = 0;
-  virtual bool Execute(ManeuverPlanner *maneuver_planner) = 0;
+  virtual ManeuverStatus Execute(ManeuverPlanner *maneuver_planner) = 0;
   virtual void Exit(ManeuverPlanner *maneuver_planner) = 0;
   virtual std::string Name() const = 0;
   virtual State *NextState(ManeuverPlanner *maneuver_planner) const = 0;
@@ -33,6 +33,15 @@ class State {
                                     double *backward_clear_distance,
                                     int *forward_obstacle_id,
                                     int *backward_obstacle_id) const;
+
+  virtual bool IsOnLane(const double ego_s, const double ego_d, const std::shared_ptr<ReferenceLine> &ref_line) const {
+    double left_width = 0, right_width = 0;
+    ref_line->GetLaneWidth(ego_s, &left_width, &right_width);
+    if (ego_d < left_width && ego_d > -right_width) {
+      return true;
+    }
+    return false;
+  }
 
   /**
    * @brief: obstacle decision

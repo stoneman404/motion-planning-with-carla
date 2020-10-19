@@ -30,9 +30,9 @@ STBoundary::STBoundary(const std::vector<std::pair<STPoint, STPoint>> &point_pai
   ROS_ASSERT(num_points_ >= 3);
   area_ = 0.0;
   for (size_t i = 1; i < num_points_; ++i) {
-    area_ += MathUtil::CrossProd({points_[0].t(), points_[0].s()},
-                                 {points_[i - 1].t(), points_[i - 1].s()},
-                                 {points_[i].t(), points_[i].s()});
+    area_ += MathUtils::CrossProd({points_[0].t(), points_[0].s()},
+                                  {points_[i - 1].t(), points_[i - 1].s()},
+                                  {points_[i].t(), points_[i].s()});
   }
   if (area_ < 0) {
     area_ = -area_;
@@ -43,9 +43,9 @@ STBoundary::STBoundary(const std::vector<std::pair<STPoint, STPoint>> &point_pai
 
   is_convex_ = true;
   for (int i = 0; i < num_points_; ++i) {
-    if (MathUtil::CrossProd({points_[Prev(i)].t(), points_[Prev(i)].s()},
-                            {points_[i].t(), points_[i].s()},
-                            {points_[Next(i)].t(), points_[Next(i)].s()}) <=
+    if (MathUtils::CrossProd({points_[Prev(i)].t(), points_[Prev(i)].s()},
+                             {points_[i].t(), points_[i].s()},
+                             {points_[Next(i)].t(), points_[Next(i)].s()}) <=
         -1e-6) {
       is_convex_ = false;
       break;
@@ -174,12 +174,12 @@ bool STBoundary::IsPointInBoundary(const STPoint &st_point) const {
   if (!GetIndexRange(lower_points_, st_point.t(), &left, &right)) {
     return false;
   }
-  const double check_upper = MathUtil::CrossProd({st_point.t(), st_point.s()},
-                                                 {upper_points_[left].t(), upper_points_[left].s()},
-                                                 {upper_points_[right].t(), upper_points_[right].s()});
-  const double check_lower = MathUtil::CrossProd({st_point.t(), st_point.s()},
-                                                 {lower_points_[left].t(), lower_points_[left].s()},
-                                                 {lower_points_[right].t(), lower_points_[right].s()});
+  const double check_upper = MathUtils::CrossProd({st_point.t(), st_point.s()},
+                                                  {upper_points_[left].t(), upper_points_[left].s()},
+                                                  {upper_points_[right].t(), upper_points_[right].s()});
+  const double check_lower = MathUtils::CrossProd({st_point.t(), st_point.s()},
+                                                  {lower_points_[left].t(), lower_points_[left].s()},
+                                                  {lower_points_[right].t(), lower_points_[right].s()});
   return check_lower * check_upper < 0.0;
 }
 void STBoundary::set_upper_left_point(const STPoint &st_point) { upper_left_point_ = st_point; }

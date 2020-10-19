@@ -1,5 +1,5 @@
-#include "maneuver_planner/emergency_stop_state.hpp"
-#include "maneuver_planner/follow_lane_state.hpp"
+#include "maneuver_planner/emergency_stop.hpp"
+#include "maneuver_planner/follow_lane.hpp"
 
 #include <tf/transform_datatypes.h>
 
@@ -10,50 +10,41 @@
 
 namespace planning {
 
-bool FollowLaneState::Enter(ManeuverPlanner *maneuver_planner) {
-  ROS_INFO("We are current switching to **FollowLaneState**...");
-  if (maneuver_planner->NeedReRoute()) {
+bool FollowLane::Enter(ManeuverPlanner *maneuver_planner) {
+  ROS_INFO("We are current switching to **FollowLane**...");
+  if (maneuver_planner->multable_routes().empty()) {
     auto ego_pose = VehicleState::Instance().pose();
     auto destination = PlanningContext::Instance().global_goal_pose();
-    if (!maneuver_planner->ReRoute(ego_pose, destination.pose, route_response_)) {
-      ROS_FATAL("[FollowLaneState::Enter], error to get follow lane route");
-      return false;
-    }
-    PlanningContext::Instance().mutable_route_infos().clear();
-    PlanningContext::Instance().mutable_route_infos().push_back(route_response_);
+    planning_srvs::RouteResponse route_response;
+    maneuver_planner->ReRoute(ego_pose, destination.pose, route_response);
+    maneuver_planner->multable_routes().push_back(route_response);
   }
-  if (!ManeuverPlanner::GenerateReferenceLine(PlanningContext::Instance().route_infos().front(),
-                                              reference_line_)) {
-    ROS_FATAL("[FollowLaneState::Enter], failed to get follow lane reference line");
-    return false;
-  }
-  PlanningContext::Instance().mutable_reference_lines().clear();
-  PlanningContext::Instance().mutable_reference_lines().push_back(reference_line_);
-  maneuver_planner->multable_maneuver_goal().maneuver_infos.front().ptr_ref_line = reference_line_;
   return true;
 }
 
-bool FollowLaneState::Execute(ManeuverPlanner *maneuver_planner) {
+ManeuverStatus FollowLane::Execute(ManeuverPlanner *maneuver_planner) {
   ROS_INFO("We are executing the **LaneFollowState**");
   if (maneuver_planner == nullptr) {
     ROS_ERROR("the ManeuverPlanner is nullptr");
-    return false;
+    return ManeuverStatus::kError;
   }
-  return true;
+  reference_line_ = maneuver_planner->multable_ref_line().front();
+
+  return ManeuverStatus::kError;
 }
 
-void FollowLaneState::Exit(ManeuverPlanner *maneuver_planner) {
-  ROS_INFO("We are currently Exiting the FollowLaneState...");
+void FollowLane::Exit(ManeuverPlanner *maneuver_planner) {
+  ROS_INFO("We are currently Exiting the FollowLane...");
 }
 
-State &FollowLaneState::Instance() {
-  static FollowLaneState instance;
+State &FollowLane::Instance() {
+  static FollowLane instance;
   return instance;
 }
 
-std::string FollowLaneState::Name() const { return "FollowLaneState"; }
+std::string FollowLane::Name() const { return "FollowLane"; }
 
-State *FollowLaneState::NextState(ManeuverPlanner *maneuver_planner) const {
+State *FollowLane::NextState(ManeuverPlanner *maneuver_planner) const {
 
   if (maneuver_planner == nullptr) {
     ROS_ERROR("the ManeuverPlanner is nullptr");
@@ -68,16 +59,16 @@ State *FollowLaneState::NextState(ManeuverPlanner *maneuver_planner) const {
   maneuver_planner->SetManeuverGoal(combined_maneuver);
   switch (combined_maneuver.decision_type) {
     case DecisionType::kStopAtDestination:
-    case DecisionType::kStopAtTrafficSign: return &(StopState::Instance());
-    case DecisionType::kEmergencyStop: return &(EmergencyStopState::Instance());
-    case DecisionType::kChangeRight: return &(ChangeRightLaneState::Instance());
-    case DecisionType::kChangeLeft: return &(ChangeLeftLaneState::Instance());
-    case DecisionType::kFollowLane: return &(FollowLaneState::Instance());
+    case DecisionType::kStopAtTrafficSign: return &(Stop::Instance());
+    case DecisionType::kEmergencyStop: return &(EmergencyStop::Instance());
+    case DecisionType::kChangeRight: return &(ChangeRightLane::Instance());
+    case DecisionType::kChangeLeft: return &(ChangeLeftLane::Instance());
+    case DecisionType::kFollowLane: return &(FollowLane::Instance());
     default: return nullptr;
   }
 }
 
-void FollowLaneState::ObstacleDecision(ManeuverGoal *maneuver_goal) const {
+void FollowLane::ObstacleDecision(ManeuverGoal *maneuver_goal) const {
   const auto obstacles = ObstacleFilter::Instance().Obstacles();
   SLPoint ego_sl;
   const double ego_vel = VehicleState::Instance().linear_vel();
@@ -95,7 +86,7 @@ void FollowLaneState::ObstacleDecision(ManeuverGoal *maneuver_goal) const {
                              &backward_obstacle_id);
 
   // determine the road option for vehicle
-  auto incoming_way_point = reference_line_->NearestWayPoint(std::min(ego_sl.s + 10.0, reference_line_->Length()));
+  auto incoming_way_point = reference_line_->NearestWayPoint(std::min(ego_sl.s + 5.0, reference_line_->Length()));
   double lookahead_distance =
       std::min(std::max(forward_clear_distance - PlanningConfig::Instance().lon_safety_buffer(),
                         PlanningConfig::Instance().min_lookahead_distance()),
@@ -212,13 +203,13 @@ void FollowLaneState::ObstacleDecision(ManeuverGoal *maneuver_goal) const {
   }
 }
 
-void FollowLaneState::ChangeLaneDecision(double ego_s,
-                                         double current_lane_forward_clear_distance,
-                                         double current_lane_backward_clear_distance,
-                                         int current_lane_forward_obstacle_id,
-                                         int current_lane_backward_obstacle_id,
-                                         const planning_msgs::WayPoint &incoming_way_point,
-                                         ManeuverGoal *maneuver_goal) const {
+void FollowLane::ChangeLaneDecision(double ego_s,
+                                    double current_lane_forward_clear_distance,
+                                    double current_lane_backward_clear_distance,
+                                    int current_lane_forward_obstacle_id,
+                                    int current_lane_backward_obstacle_id,
+                                    const planning_msgs::WayPoint &incoming_way_point,
+                                    ManeuverGoal *maneuver_goal) const {
   double left_forward_clear_distance = -10.0;
   double left_backward_clear_distance = -10.0;
   int left_forward_obstacle_id;
@@ -465,12 +456,12 @@ void FollowLaneState::ChangeLaneDecision(double ego_s,
   }
 }
 
-int FollowLaneState::SelectLane(double ego_s,
-                                double ego_vel,
-                                const std::vector<double> &leading_velocity,
-                                const std::vector<double> &following_velocity,
-                                const std::vector<double> &leading_clear_distance,
-                                const std::vector<double> &following_clear_distance) {
+int FollowLane::SelectLane(double ego_s,
+                           double ego_vel,
+                           const std::vector<double> &leading_velocity,
+                           const std::vector<double> &following_velocity,
+                           const std::vector<double> &leading_clear_distance,
+                           const std::vector<double> &following_clear_distance) {
 
   ROS_ASSERT(!leading_velocity.empty());
   const size_t lane_num = leading_velocity.size();
@@ -502,10 +493,10 @@ int FollowLaneState::SelectLane(double ego_s,
   return result->first;
 }
 
-double FollowLaneState::SafetyCost(double leading_vel,
-                                   double following_vel,
-                                   double leading_clear_distance,
-                                   double following_clear_distance) {
+double FollowLane::SafetyCost(double leading_vel,
+                              double following_vel,
+                              double leading_clear_distance,
+                              double following_clear_distance) {
 
   const double target_lane_vel_diff = leading_vel - following_vel;
   const double change_lane_execute_time = PlanningConfig::Instance().maneuver_execute_time_length();
@@ -518,9 +509,9 @@ double FollowLaneState::SafetyCost(double leading_vel,
   return safety_cost;
 }
 
-double FollowLaneState::EfficiencyCost(double target_vel,
-                                       double leading_vel,
-                                       double max_vel) {
+double FollowLane::EfficiencyCost(double target_vel,
+                                  double leading_vel,
+                                  double max_vel) {
   double vel_buffer = std::max(max_vel - target_vel, 0.2);
   double cost = 0.0;
   double desired_vel = max_vel - vel_buffer;
@@ -534,9 +525,9 @@ double FollowLaneState::EfficiencyCost(double target_vel,
   return cost;
 }
 
-double FollowLaneState::ComfortCost(double ego_vel,
-                                    double leading_vel,
-                                    double forward_clear_distance) {
+double FollowLane::ComfortCost(double ego_vel,
+                               double leading_vel,
+                               double forward_clear_distance) {
   const double acc = (leading_vel * leading_vel - ego_vel * ego_vel) /
       2 * std::max(1e-3, forward_clear_distance - PlanningConfig::Instance().lon_safety_buffer());
   const double max_acc = PlanningConfig::Instance().max_lon_acc();

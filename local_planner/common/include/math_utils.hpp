@@ -7,7 +7,7 @@
 #include <geometry_msgs/Pose.h>
 
 namespace planning {
-class MathUtil {
+class MathUtils {
  public:
   static double NormalizeAngle(const double &angle);
   static double CalcAngleDist(double from, double to);
