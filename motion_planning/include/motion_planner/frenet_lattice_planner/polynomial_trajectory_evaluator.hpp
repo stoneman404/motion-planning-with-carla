@@ -33,21 +33,28 @@ class PolynomialTrajectoryEvaluator {
                                 const std::vector<std::shared_ptr<Polynomial>> &lat_trajectory_vec,
                                 std::shared_ptr<ReferenceLine> ptr_ref_line,
                                 std::shared_ptr<STGraph> ptr_st_graph);
-  bool TrajectoryPairsIsEmpty() const;
-  size_t TrajectoryPairSize() const;
+  bool has_more_trajectory_pairs() const;
+  size_t num_of_trajectory_pairs() const;
+  double top_trajectory_pair_cost() const { return cost_queue_.top().second; }
+  TrajectoryPair next_top_trajectory_pair() {
+    ROS_ASSERT(has_more_trajectory_pairs());
+    auto top = cost_queue_.top();
+    cost_queue_.pop();
+    return top.first;
+  }
  private:
 
   double LatJerkCost(const std::shared_ptr<Polynomial> &lat_trajectory,
                      const std::shared_ptr<Polynomial> &lon_trajectory) const;
   static double LatOffsetCost(const std::shared_ptr<Polynomial> &lat_trajectory,
                               const std::shared_ptr<Polynomial> &lon_trajectory);
-  double LonJerkCost(const std::shared_ptr<Polynomial> &lon_trajectory) const;
-  double LonTargetCost(const std::shared_ptr<Polynomial> &lon_trajectory,
-                       const ManeuverInfo &maneuver_info) const;
+  static double LonJerkCost(const std::shared_ptr<Polynomial> &lon_trajectory);
+  static double LonTargetCost(const std::shared_ptr<Polynomial> &lon_trajectory,
+                              const ManeuverInfo &maneuver_info);
   double LonCollisionCost(const std::shared_ptr<Polynomial> &lon_trajectory) const;
 
   static bool IsValidLongitudinalTrajectory(const Polynomial &lon_traj);
-  static bool WithInRange(double value, double lower, double upper, double eps = 1e-4);
+
   double Evaluate(const ManeuverInfo &maneuver_info, const std::shared_ptr<Polynomial> &lon_traj,
                   const std::shared_ptr<Polynomial> &lat_traj);
 

@@ -2,6 +2,7 @@
 #define CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_MOTION_PLANNER_FRENET_LATTICE_PLANNER_FRENET_LATTICE_PLANNER_HPP_
 
 #include <planning_msgs/TrajectoryPoint.h>
+#include <planning_msgs/Trajectory.h>
 #include "motion_planner/trajectory_planner.hpp"
 #include "planning_context.hpp"
 #include "collision_checker/st_graph.hpp"
@@ -28,22 +29,10 @@ class FrenetLatticePlanner : public TrajectoryPlanner {
    */
   bool Process(const planning_msgs::TrajectoryPoint &init_trajectory_point,
                const ManeuverGoal &maneuver_goal,
-               std::shared_ptr<planning_msgs::Trajectory> pub_trajectory) override;
+               planning_msgs::Trajectory &pub_trajectory,
+               std::vector<planning_msgs::Trajectory> *valid_trajectories) override;
 
  protected:
-
-  /**
-   * @brief: planning on one reference line
-   * @param[in] init_trajectory_point
-   * @param[in] ptr_ref_line
-   * @param[in] maneuver_goal
-   * @param[out] pub_trajectory
-   * @return
-   */
-  static bool Plan(const planning_msgs::TrajectoryPoint &init_trajectory_point,
-                   size_t index,
-                   const ManeuverInfo &maneuver_info,
-                   std::vector<std::shared_ptr<planning_msgs::Trajectory>> *trajs_on_ref_line);
 
   /**
    * @brief: generate lon trajectories and lat trajectories
@@ -51,10 +40,10 @@ class FrenetLatticePlanner : public TrajectoryPlanner {
    * @param[out] ptr_lon_traj_vec: lon trajectories
    * @param[out] ptr_lat_traj_vec: lat trajectories
    */
-  static void GenerateTrajectories(const planning_msgs::TrajectoryPoint &init_trajectory_point,
-                                   const ManeuverInfo &maneuver_info,
-                                   std::vector<std::shared_ptr<Polynomial>> *ptr_lon_traj_vec,
-                                   std::vector<std::shared_ptr<Polynomial>> *ptr_lat_traj_vec);
+  static bool PlanningOnRef(const planning_msgs::TrajectoryPoint &init_trajectory_point,
+                            const ManeuverInfo &maneuver_info,
+                            std::pair<planning_msgs::Trajectory, double> &optimal_trajectory,
+                            std::vector<planning_msgs::Trajectory> *valid_trajectories);
 
   /**
    * @brief: combine the lon and lat trajectories
@@ -64,9 +53,10 @@ class FrenetLatticePlanner : public TrajectoryPlanner {
    * @param ptr_combined_pub_traj: combined trajectory
    * @return
    */
-  static bool CombineTrajectories(const std::shared_ptr<ReferenceLine> &ptr_ref_line,
-                                  const Polynomial &lon_traj_vec, const Polynomial &lat_traj_vec,
-                                  std::shared_ptr<planning_msgs::Trajectory> ptr_combined_pub_traj);
+  static planning_msgs::Trajectory CombineTrajectories(const std::shared_ptr<ReferenceLine> &ptr_ref_line,
+                                                       const Polynomial &lon_traj_vec,
+                                                       const Polynomial &lat_traj_vec,
+                                                       double start_time);
 
  private:
 

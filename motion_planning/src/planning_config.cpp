@@ -84,6 +84,10 @@ void PlanningConfig::UpdateParams(const ros::NodeHandle &nh) {
                    lattice_weight_lat_offset_, 20.0);
   nh.param<double>("/planning/motion_planning/lattice_weight_lat_jerk",
                    lattice_weight_lat_jerk_, 30);
+  nh.param<double>("/planning/motion_planning/min_kappa", min_kappa_, -10.0);
+  nh.param<double>("/planning/motion_planning/max_kappa", max_kappa_, 10.0);
+  nh.param<double>("/planning/motion_planning/min_lat_acc", min_lat_acc_, -2.0);
+  nh.param<double>("/planning/motion_planning/max_lat_acc", max_lat_acc_, 2.0);
 }
 
 void PlanningConfig::UpdateVehicleParams(const derived_object_msgs::Object &object,
@@ -113,13 +117,9 @@ double PlanningConfig::max_lookahead_distance() const { return max_lookahead_dis
 
 const VehicleParams &PlanningConfig::vehicle_params() const { return vehicle_params_; }
 
-double PlanningConfig::reference_smoother_distance_weight() const {
-  return reference_smoother_distance_weight_;
-}
+double PlanningConfig::reference_smoother_distance_weight() const { return reference_smoother_distance_weight_; }
 
-double PlanningConfig::reference_smoother_curvature_weight() const {
-  return reference_smoother_curvature_weight_;
-}
+double PlanningConfig::reference_smoother_curvature_weight() const { return reference_smoother_curvature_weight_; }
 
 double PlanningConfig::reference_smoother_deviation_weight() const {
   return reference_smoother_deviation_weight_;
@@ -225,5 +225,13 @@ double PlanningConfig::lattice_weight_lat_jerk() const {
 double PlanningConfig::lattice_weight_lat_offset() const {
   return lattice_weight_lat_offset_;
 }
+double PlanningConfig::min_kappa() const {
+  return min_kappa_;
+}
+double PlanningConfig::max_kappa() const {
+  return max_kappa_;
+}
+double PlanningConfig::min_lat_acc() const { return min_lat_acc_; }
+double PlanningConfig::max_lat_acc() const { return max_lat_acc_; }
 
 }

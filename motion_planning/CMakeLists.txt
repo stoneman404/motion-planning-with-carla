@@ -140,7 +140,7 @@ set(planning_SRC
         src/planning_config.cpp
         src/planner.cpp
         src/collision_checker/collision_checker.cpp
-        src/collision_checker/st_graph.cpp)
+        src/collision_checker/st_graph.cpp src/motion_planner/frenet_lattice_planner/constraint_checker.cpp)
 
 add_executable(${PROJECT_NAME}_node
         ${planning_SRC}

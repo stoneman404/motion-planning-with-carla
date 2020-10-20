@@ -20,6 +20,10 @@
 /planning/motion_planning/min_lon_velocity: 0.0
 /planning/motion_planning/max_lon_jerk: 5.0
 /planning/motion_planning/min_lon_jerk: -5.0
+/planning/motion_planning/min_kappa: -10.0
+/planning/motion_planning/max_kappa: 10.0
+/planning/motion_planning/min_lat_acc: -2.0
+/planning/motion_planning/max_lat_acc: 2.0
 /planning/motion_planning/target_speed: 8.333
 /planning/motion_planning/maneuver_forward_clear_threshold: 20.0
 /planning/motion_planning/maneuver_backward_clear_threshold: 10.0
@@ -40,3 +44,5 @@
 /planning/motion_planning/lattice_weight_lon_target: 20.0
 /planning/motion_planning/lattice_weight_lat_offset: 20.0
 /planning/motion_planning/lattice_weight_lat_jerk: 30
+
+

@@ -188,6 +188,10 @@ class PlanningConfig {
   double lattice_weight_lon_target() const;
   double lattice_weight_lat_jerk() const;
   double lattice_weight_lat_offset() const;
+  double min_kappa() const;
+  double max_kappa() const;
+  double min_lat_acc() const;
+  double max_lat_acc() const;
  private:
   VehicleParams vehicle_params_; // ego_vehicle's params
   double obstacle_trajectory_time_{}; // the trajectory total time of obstacles
@@ -223,6 +227,10 @@ class PlanningConfig {
   double maneuver_comfort_cost_gain_{};
   double min_lon_jerk_{};
   double max_lon_jerk_{};
+  double min_kappa_{};
+  double max_kappa_{};
+  double min_lat_acc_{};
+  double max_lat_acc_{};
   double lattice_weight_opposite_side_offset_{};
   double lattice_weight_same_side_offset_{};
   double lattice_weight_dist_travelled_{};

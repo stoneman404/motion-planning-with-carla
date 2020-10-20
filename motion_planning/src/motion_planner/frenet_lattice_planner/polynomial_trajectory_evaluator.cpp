@@ -1,5 +1,6 @@
 #include "motion_planner/frenet_lattice_planner/polynomial_trajectory_evaluator.hpp"
 #include <utility>
+#include "motion_planner/frenet_lattice_planner/constraint_checker.hpp"
 
 namespace planning {
 PolynomialTrajectoryEvaluator::PolynomialTrajectoryEvaluator(const std::array<double, 3> &init_s,
@@ -39,16 +40,20 @@ bool PolynomialTrajectoryEvaluator::IsValidLongitudinalTrajectory(const Polynomi
   double t = 0.0;
   while (t < lon_traj.ParamLength()) {
     double v = lon_traj.Evaluate(1, t);
-    if (!WithInRange(v, PlanningConfig::Instance().min_lon_velocity(),
-                     PlanningConfig::Instance().max_lon_velocity())) {
+    if (!ConstraintChecker::WithInRange(v, PlanningConfig::Instance().min_lon_velocity(),
+                                        PlanningConfig::Instance().max_lon_velocity())) {
       return false;
     }
     double a = lon_traj.Evaluate(2, t);
-    if (!WithInRange(a, PlanningConfig::Instance().min_lon_acc(), PlanningConfig::Instance().max_lon_acc())) {
+    if (!ConstraintChecker::WithInRange(a,
+                                        PlanningConfig::Instance().min_lon_acc(),
+                                        PlanningConfig::Instance().max_lon_acc())) {
       return false;
     }
     double j = lon_traj.Evaluate(3, t);
-    if (!WithInRange(j, PlanningConfig::Instance().min_lon_jerk(), PlanningConfig::Instance().max_lon_jerk())) {
+    if (!ConstraintChecker::WithInRange(j,
+                                        PlanningConfig::Instance().min_lon_jerk(),
+                                        PlanningConfig::Instance().max_lon_jerk())) {
       return false;
     }
     t + PlanningConfig::Instance().delta_t();
@@ -59,11 +64,11 @@ bool PolynomialTrajectoryEvaluator::IsValidLongitudinalTrajectory(const Polynomi
 double PolynomialTrajectoryEvaluator::Evaluate(const ManeuverInfo &maneuver_info,
                                                const std::shared_ptr<Polynomial> &lon_traj,
                                                const std::shared_ptr<Polynomial> &lat_traj) {
-  double lon_target_cost = LonTargetCost(lon_traj, maneuver_info);
-  double lon_jerk_cost = LonJerkCost(lon_traj);
-  double lon_collision_cost = LonCollisionCost(lon_traj);
-  double lat_offset_cost = LatOffsetCost(lat_traj, lon_traj);
-  double lat_jerk_cost = LatJerkCost(lat_traj, lon_traj);
+  double lon_target_cost = PolynomialTrajectoryEvaluator::LonTargetCost(lon_traj, maneuver_info);
+  double lon_jerk_cost = PolynomialTrajectoryEvaluator::LonJerkCost(lon_traj);
+  double lon_collision_cost = this->LonCollisionCost(lon_traj);
+  double lat_offset_cost = PolynomialTrajectoryEvaluator::LatOffsetCost(lat_traj, lon_traj);
+  double lat_jerk_cost = this->LatJerkCost(lat_traj, lon_traj);
   return lon_collision_cost * PlanningConfig::Instance().lattice_weight_collision() +
       lon_jerk_cost * PlanningConfig::Instance().lattice_weight_lon_jerk() +
       lon_target_cost * PlanningConfig::Instance().lattice_weight_lon_target() +
@@ -71,14 +76,11 @@ double PolynomialTrajectoryEvaluator::Evaluate(const ManeuverInfo &maneuver_info
       lat_offset_cost * PlanningConfig::Instance().lattice_weight_lat_offset();
 }
 
-bool PolynomialTrajectoryEvaluator::WithInRange(double value, double lower, double upper, double eps) {
-  return value > lower - eps && value < upper + eps;
-}
-size_t PolynomialTrajectoryEvaluator::TrajectoryPairSize() const {
+size_t PolynomialTrajectoryEvaluator::num_of_trajectory_pairs() const {
   return cost_queue_.size();
 }
-bool PolynomialTrajectoryEvaluator::TrajectoryPairsIsEmpty() const {
-  return cost_queue_.empty();
+bool PolynomialTrajectoryEvaluator::has_more_trajectory_pairs() const {
+  return !cost_queue_.empty();
 }
 
 double PolynomialTrajectoryEvaluator::LatJerkCost(const std::shared_ptr<Polynomial> &lat_trajectory,
@@ -124,7 +126,7 @@ double PolynomialTrajectoryEvaluator::LatOffsetCost(const std::shared_ptr<Polyno
   return cost_sqr_sum / (cost_abs_sum + 1e-3);
 }
 
-double PolynomialTrajectoryEvaluator::LonJerkCost(const std::shared_ptr<Polynomial> &lon_trajectory) const {
+double PolynomialTrajectoryEvaluator::LonJerkCost(const std::shared_ptr<Polynomial> &lon_trajectory) {
   double cost = 0.0;
   double cost_sqr_sum = 0.0;
   double cost_abs_sum = 0.0;
@@ -138,7 +140,7 @@ double PolynomialTrajectoryEvaluator::LonJerkCost(const std::shared_ptr<Polynomi
 }
 
 double PolynomialTrajectoryEvaluator::LonTargetCost(const std::shared_ptr<Polynomial> &lon_trajectory,
-                                                    const ManeuverInfo &maneuver_info) const {
+                                                    const ManeuverInfo &maneuver_info) {
 
   double t_max = lon_trajectory->ParamLength();
   double dist_s = lon_trajectory->Evaluate(0, t_max) - lon_trajectory->Evaluate(0, 0.0);
