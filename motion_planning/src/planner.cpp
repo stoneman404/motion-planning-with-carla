@@ -14,6 +14,7 @@ Planner::Planner(const ros::NodeHandle &nh) : nh_(nh) {
   this->InitPublisher();
   this->InitSubscriber();
   this->InitServiceClient();
+  ROS_INFO("**Planner**");
 }
 
 void Planner::RunOnce() {
@@ -35,6 +36,7 @@ void Planner::InitPublisher() {
       topic::kPublishedTrajectoryName, 10);
   this->visualized_trajectory_publisher_ = nh_.advertise<visualization_msgs::Marker>(
       topic::kVisualizedTrajectoryName, 10);
+  ROS_DEBUG("Planner::InitPublisher finished");
 }
 
 void Planner::InitSubscriber() {
@@ -106,6 +108,7 @@ void Planner::InitSubscriber() {
         ROS_INFO("the goal_pose_ : x: %lf, y: %lf",
                  goal_pose_.pose.position.x, goal_pose_.pose.position.y);
       });
+  ROS_DEBUG("Planner::InitSubscriber finished");
 }
 
 void Planner::InitServiceClient() {
@@ -113,7 +116,7 @@ void Planner::InitServiceClient() {
       service::kGetEgoWaypontServiceName);
   this->get_actor_waypoint_client_ = nh_.serviceClient<carla_waypoint_types::GetActorWaypoint>(
       service::kGetActorWaypointServiceName);
-
+  ROS_DEBUG("Planner::InitServiceClient finished");
 }
 
 // main loop function

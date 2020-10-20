@@ -201,8 +201,8 @@ target_link_libraries(${PROJECT_NAME}_node
 # )
 install(DIRECTORY launch/
         DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch)
-install(DIRECTORY config/
-        DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/config)
+install(DIRECTORY param/
+        DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/param)
 
 ## Mark other files for installation (e.g. launch and bag files, etc.)
 # install(FILES

@@ -2,6 +2,7 @@
 <launch>
 
     <node pkg="motion_planning" type="motion_planning_node" name="motion_planning" output="screen">
+        <rosparam command="load" file="$(find motion_planning)/param/params.yaml"/>
     </node>
 
 </launch>
