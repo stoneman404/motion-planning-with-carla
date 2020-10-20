@@ -10,8 +10,8 @@ CollisionChecker::CollisionChecker(const std::shared_ptr<ReferenceLine> &ptr_ref
   ptr_ref_line_ = ptr_ref_line;
   ptr_st_graph_ = ptr_st_graph;
   const auto &obstacles = ObstacleFilter::Instance().Obstacles();
-  this->Init(obstacles, ego_vehicle_s, ego_vehicle_d, ptr_ref_line_);
   predicted_obstacle_box_.clear();
+  this->Init(obstacles, ego_vehicle_s, ego_vehicle_d, ptr_ref_line_);
 }
 
 bool CollisionChecker::IsCollision(const planning_msgs::Trajectory &trajectory) const {
@@ -73,7 +73,7 @@ bool CollisionChecker::IsEgoVehicleInLane(double ego_vehicle_s, double ego_vehic
 bool CollisionChecker::IsObstacleBehindEgoVehicle(const std::shared_ptr<Obstacle> &obstacle,
                                                   double ego_s,
                                                   const std::shared_ptr<ReferenceLine> &ref_line) const {
-  double default_lane_width = 4.0;
+  double default_lane_width = 3.0;
   planning_msgs::TrajectoryPoint point = obstacle->GetPointAtTime(0.0);
   ReferencePoint matched_ref_point;
   double matched_s;

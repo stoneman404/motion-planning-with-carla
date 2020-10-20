@@ -1,5 +1,6 @@
 
 #include <planning_srvs/Route.h>
+#include <memory>
 #include <reference_line/reference_line.hpp>
 #include <tf/transform_datatypes.h>
 #include "maneuver_planner/maneuver_planner.hpp"
@@ -12,6 +13,7 @@
 #include "string_name.hpp"
 #include "planning_context.hpp"
 #include "planning_config.hpp"
+#include "motion_planner/frenet_lattice_planner/frenet_lattice_planner.hpp"
 
 namespace planning {
 
@@ -20,6 +22,8 @@ ManeuverPlanner::ManeuverPlanner(const ros::NodeHandle &nh) : nh_(nh) {
 }
 
 void ManeuverPlanner::InitPlanner() {
+  trajectory_planner_ = std::make_unique<FrenetLatticePlanner>();
+  valid_trajectories_.clear();
   this->route_service_client_ = nh_.serviceClient<planning_srvs::Route>(
       service::kRouteServiceName);
   auto ego_pose = VehicleState::Instance().pose();
@@ -40,15 +44,14 @@ void ManeuverPlanner::InitPlanner() {
   maneuver_goal_.maneuver_infos.front().ptr_ref_line = ref_lines_.front();
   maneuver_goal_.maneuver_infos.front().has_stop_point = false;
   maneuver_goal_.maneuver_infos.front().lane_id = VehicleState::Instance().lane_id();
-  prev_status_ = ManeuverStatus::kInProcess;
+  prev_status_ = ManeuverStatus::kUnknown;
   ROS_ASSERT(current_state_->Enter(this));
 }
 
-bool ManeuverPlanner::Process(const planning_msgs::TrajectoryPoint &init_trajectory_point,
-                              planning_msgs::Trajectory::Ptr pub_trajectory) {
+ManeuverStatus ManeuverPlanner::Process(const planning_msgs::TrajectoryPoint &init_trajectory_point) {
   if (current_state_ == nullptr) {
     ROS_FATAL("[ManeuverPlanner::Process], the current state is nullptr");
-    return false;
+    return ManeuverStatus::kError;
   }
   ROS_DEBUG("[ManeuverPlanner::Process], current state is [%s]", current_state_->Name().c_str());
   ref_lines_.clear();
@@ -57,57 +60,30 @@ bool ManeuverPlanner::Process(const planning_msgs::TrajectoryPoint &init_traject
     ManeuverPlanner::GenerateReferenceLine(route_response, ptr_ref_line);
     ref_lines_.push_back(ptr_ref_line);
   }
-  prev_status_ = current_state_->Execute(this);
-  std::unique_ptr<State> state(current_state_->NextState(this));
-
+  valid_trajectories_.clear();
+  if (maneuver_goal_.decision_type == DecisionType::kEmergencyStop) {
+    GenerateEmergencyStopTrajectory(init_trajectory_point, optimal_trajectory_);
+    return ManeuverStatus::kSuccess;
+  }
+  auto trajectory_plan_result = trajectory_planner_->Process(init_trajectory_point,
+                                                             maneuver_goal_,
+                                                             optimal_trajectory_,
+                                                             &valid_trajectories_);
+  if (!trajectory_plan_result) {
+    GenerateEmergencyStopTrajectory(init_trajectory_point, optimal_trajectory_);
+    ROS_FATAL("ManeuverPlanner::Process Failed, [State:%s, init_trajectory_point: {x: %f, y: %f}]",
+              current_state_->Name().c_str(), init_trajectory_point.path_point.x,
+              init_trajectory_point.path_point.y);
+    return ManeuverStatus::kError;
+  }
+  ROS_DEBUG("[ManeuverPlanner::Process], the size of [valid_trajectories_] is %zu", valid_trajectories_.size());
+  std::unique_ptr<State> state(current_state_->Transition(this));
   if (state != nullptr && state->Name() != current_state_->Name()) {
     current_state_->Exit(this);
     current_state_ = std::move(state);
     current_state_->Enter(this);
   }
-  return true;
-}
-
-bool ManeuverPlanner::UpdateRouteInfo() {
-  if (this->NeedReRoute()) {
-    auto ego_pose = VehicleState::Instance().ego_waypoint();
-    auto destination = PlanningContext::Instance().global_goal_pose();
-    const double theta = MathUtils::NormalizeAngle(tf::getYaw(ego_pose.pose.orientation));
-    const double sin_theta = std::sin(theta);
-    const double cos_theta = std::cos(theta);
-    const double offset_length = VehicleState::Instance().ego_waypoint().lane_width;
-    planning_srvs::RouteResponse route_response;
-    switch (maneuver_goal_.decision_type) {
-      case DecisionType::kChangeLeft: {
-        auto new_pose = ego_pose.pose;
-        new_pose.position.x = ego_pose.pose.position.x - sin_theta * offset_length;
-        new_pose.position.y = ego_pose.pose.position.y + cos_theta * offset_length;
-        this->ReRoute(ego_pose.pose, destination.pose, route_response);
-        break;
-      }
-      case DecisionType::kChangeRight: {
-        auto new_pose = ego_pose.pose;
-        new_pose.position.x = ego_pose.pose.position.x + sin_theta * offset_length;
-        new_pose.position.y = ego_pose.pose.position.y + cos_theta * offset_length;
-        this->ReRoute(ego_pose.pose, destination.pose, route_response);
-        break;
-      }
-      case DecisionType::kStopAtDestination:
-      case DecisionType::kStopAtTrafficSign:
-      case DecisionType::kEmergencyStop:
-      case DecisionType::kFollowLane: {
-        this->ReRoute(ego_pose.pose, destination.pose, route_response);
-        break;
-      }
-      default: break;
-    }
-    PlanningContext::Instance().mutable_route_infos().push_back(route_response);
-  }
-  auto &routes = PlanningContext::Instance().mutable_route_infos();
-  for (const auto &route : routes) {
-
-  }
-  return false;
+  return ManeuverStatus::kSuccess;
 }
 
 bool ManeuverPlanner::ReRoute(const geometry_msgs::Pose &start,
@@ -224,10 +200,6 @@ std::vector<planning_msgs::WayPoint> ManeuverPlanner::GetWayPointsFromStartToEnd
   return sampled_way_points;
 }
 
-const planning_msgs::TrajectoryPoint &ManeuverPlanner::init_trajectory_point() const {
-  return init_trajectory_point_;
-}
-
 ManeuverPlanner::~ManeuverPlanner() {
   current_state_->Exit(this);
   current_state_.reset(nullptr);
@@ -237,22 +209,62 @@ void ManeuverPlanner::SetManeuverGoal(const ManeuverGoal &maneuver_goal) {
   this->maneuver_goal_ = maneuver_goal;
 }
 
-bool ManeuverPlanner::NeedReRoute() const {
-  if (PlanningContext::Instance().route_infos().empty()
-      || PlanningContext::Instance().reference_lines().empty()) {
-    return true;
-  }
-  if (current_state_->Name() == "FollowLane" &&
-      (maneuver_goal_.decision_type == DecisionType::kChangeLeft
-          || maneuver_goal_.decision_type == DecisionType::kChangeRight)) {
-    return true;
-  }
-  return false;
-}
-
 const ManeuverGoal &ManeuverPlanner::maneuver_goal() const {
   return maneuver_goal_;
 }
 
 ManeuverGoal &ManeuverPlanner::multable_maneuver_goal() { return maneuver_goal_; }
+
+int ManeuverPlanner::GetLaneId() const { return current_lane_id_; }
+
+std::list<planning_srvs::RouteResponse> &ManeuverPlanner::multable_routes() { return routes_; }
+
+std::list<std::shared_ptr<ReferenceLine>> &ManeuverPlanner::multable_ref_line() { return ref_lines_; }
+
+void ManeuverPlanner::GenerateEmergencyStopTrajectory(const planning_msgs::TrajectoryPoint &init_trajectory_point,
+                                                      planning_msgs::Trajectory &emergency_trajectory) {
+  const double kMaxTrajectoryTime = PlanningConfig::Instance().max_lookahead_time();
+  const double kTimeGap = PlanningConfig::Instance().delta_t();
+  emergency_trajectory.trajectory_points.clear();
+  auto num_traj_point = static_cast<int>(kMaxTrajectoryTime / kTimeGap);
+  emergency_trajectory.trajectory_points.resize(num_traj_point);
+  const double max_decel = PlanningConfig::Instance().max_lon_acc();
+  double stop_time = init_trajectory_point.vel / max_decel;
+  emergency_trajectory.header.stamp = ros::Time::now();
+  double last_x = init_trajectory_point.path_point.x;
+  double last_y = init_trajectory_point.path_point.y;
+  double last_v = init_trajectory_point.vel;
+  double last_a = max_decel;
+  double last_theta = init_trajectory_point.path_point.theta;
+  double last_s = init_trajectory_point.path_point.s;
+  planning_msgs::TrajectoryPoint tp;
+  tp = init_trajectory_point;
+  tp.relative_time = 0.0;
+  tp.acc = -max_decel;
+  emergency_trajectory.trajectory_points.push_back(tp);
+  for (int i = 1; i < num_traj_point; ++i) {
+    double t = i * kTimeGap;
+    tp.relative_time = t;
+    tp.vel = init_trajectory_point.vel - last_a * kTimeGap;
+    tp.acc = t <= stop_time ? -max_decel : 0.0;
+    tp.jerk = 0.0;
+    double ds = (0.5 * last_a * kTimeGap + last_v) * kTimeGap;
+    tp.path_point.x = last_x + std::cos(last_theta) * ds;
+    tp.path_point.y = last_y + std::sin(last_theta) * ds;
+    tp.path_point.theta = last_theta;
+    tp.path_point.s = last_s + ds;
+    tp.path_point.dkappa = 0.0;
+    tp.path_point.kappa = 0.0;
+    tp.steer_angle = init_trajectory_point.steer_angle;
+    emergency_trajectory.trajectory_points.push_back(tp);
+    last_s = tp.path_point.s;
+    last_x = tp.path_point.x;
+    last_y = tp.path_point.y;
+    last_theta = tp.path_point.theta;
+    last_v = tp.vel;
+    last_a = tp.acc;
+  }
+
+}
+
 }

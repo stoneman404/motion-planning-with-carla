@@ -7,12 +7,12 @@ class EmergencyStop : public State {
  public:
   bool Enter(ManeuverPlanner *maneuver_planner) override;
   void Exit(ManeuverPlanner *maneuver_planner) override;
-  ManeuverStatus Execute(ManeuverPlanner *maneuver_planner) override;
   static State &Instance();
   std::string Name() const override;
-  State *NextState(ManeuverPlanner *maneuver_planner) const override;
+  State *Transition(ManeuverPlanner *maneuver_planner) override;
  protected:
   void ObstacleDecision(ManeuverGoal *maneuver_goal) const override;
+
  private:
   EmergencyStop() = default;
   EmergencyStop(const EmergencyStop &other);

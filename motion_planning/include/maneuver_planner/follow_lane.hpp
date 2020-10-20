@@ -26,7 +26,7 @@ class FollowLane : public State {
    * @param maneuver_planner
    * @return
    */
-  ManeuverStatus Execute(ManeuverPlanner *maneuver_planner) override;
+//  ManeuverStatus Execute(ManeuverPlanner *maneuver_planner) override;
 
   /**
    * @brief: exit action
@@ -50,7 +50,7 @@ class FollowLane : public State {
    * @param[in, out] maneuver_planner
    * @return : return the next state if current state transition
    */
-  State *NextState(ManeuverPlanner *maneuver_planner) const override;
+  State *Transition(ManeuverPlanner *maneuver_planner) override;
 
  protected:
   /**

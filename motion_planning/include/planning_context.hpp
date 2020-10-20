@@ -37,7 +37,6 @@ struct ManeuverInfo {
 
 enum class ManeuverStatus : uint32_t {
   kSuccess,
-  kInProcess,
   kError,
   kUnknown
 };

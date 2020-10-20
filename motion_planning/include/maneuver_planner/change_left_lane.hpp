@@ -19,7 +19,7 @@ class ChangeLeftLane : public State {
    * @param maneuver_planner
    * @return
    */
-  ManeuverStatus Execute(ManeuverPlanner *maneuver_planner) override;
+//  ManeuverStatus Execute(ManeuverPlanner *maneuver_planner) override;
 
   /**
    *
@@ -44,7 +44,7 @@ class ChangeLeftLane : public State {
    * @param maneuver_planner
    * @return
    */
-  State *NextState(ManeuverPlanner *maneuver_planner) const override;
+  State *Transition(ManeuverPlanner *maneuver_planner) override;
  protected:
 
   /**

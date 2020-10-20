@@ -21,6 +21,9 @@ class ManeuverPlanner {
  public:
   explicit ManeuverPlanner(const ros::NodeHandle &nh);
   ~ManeuverPlanner();
+  /**
+   * @brief: init the planner
+   */
   void InitPlanner();
 
   /**
@@ -29,13 +32,12 @@ class ManeuverPlanner {
    * @param[out] pub_trajectory
    * @return
    */
-  bool Process(const planning_msgs::TrajectoryPoint &init_trajectory_point,
-               planning_msgs::Trajectory::Ptr pub_trajectory);
+  ManeuverStatus Process(const planning_msgs::TrajectoryPoint &init_trajectory_point);
 
   /**
    * @return
    */
-  int GetLaneId() const { return current_lane_id_; }
+  int GetLaneId() const;
 
   /**
    * @brief: reroute
@@ -57,30 +59,38 @@ class ManeuverPlanner {
                                     std::shared_ptr<ReferenceLine> reference_line);
 
   /**
-   * @brief: init_trajectory_point
-   * @return
-   */
-  const planning_msgs::TrajectoryPoint &init_trajectory_point() const;
-
-  /**
    * @brief: set maneuver goal
    * @param maneuver_goal
    */
   void SetManeuverGoal(const ManeuverGoal &maneuver_goal);
-  const ManeuverGoal &maneuver_goal() const;
-  ManeuverGoal &multable_maneuver_goal();
-  std::list<planning_srvs::RouteResponse> &multable_routes() { return routes_; }
-  std::list<std::shared_ptr<ReferenceLine>> &multable_ref_line() { return ref_lines_; }
 
   /**
    *
    * @return
    */
-  bool NeedReRoute() const;
+  const ManeuverGoal &maneuver_goal() const;
+
+  /**
+   *
+   * @return
+   */
+  ManeuverGoal &multable_maneuver_goal();
+
+  /**
+   *
+   * @return
+   */
+  std::list<planning_srvs::RouteResponse> &multable_routes();
+
+  /**
+   * @return
+   */
+  std::list<std::shared_ptr<ReferenceLine>> &multable_ref_line();
+
+  const std::vector<planning_msgs::Trajectory> &valid_trajectories() const;
+  const planning_msgs::Trajectory &optimal_trajectory() const;
 
  private:
-
-  bool UpdateRouteInfo();
 
   /**
    * @brief:
@@ -120,20 +130,26 @@ class ManeuverPlanner {
    * @param[in] way_points
    * @return
    */
-  static std::vector<planning_msgs::WayPoint> GetWayPointsFromStartToEndIndex(const int start_index,
-                                                                              const int end_index,
-                                                                              const std::vector<planning_msgs::WayPoint> &way_points);
+  static std::vector<planning_msgs::WayPoint>
+  GetWayPointsFromStartToEndIndex(const int start_index,
+                                  const int end_index,
+                                  const std::vector<planning_msgs::WayPoint> &way_points);
+
+  static void GenerateEmergencyStopTrajectory(const planning_msgs::TrajectoryPoint &init_trajectory_point,
+                                              planning_msgs::Trajectory &emergency_trajectory);
 
  private:
   ManeuverGoal maneuver_goal_;
   ros::NodeHandle nh_;
-  planning_msgs::TrajectoryPoint init_trajectory_point_;
   ros::ServiceClient route_service_client_;
   std::unique_ptr<State> current_state_;
   int current_lane_id_{};
   std::list<planning_srvs::RouteResponse> routes_;
   std::list<std::shared_ptr<ReferenceLine>> ref_lines_;
   ManeuverStatus prev_status_;
+  std::vector<planning_msgs::Trajectory> valid_trajectories_;
+  planning_msgs::Trajectory optimal_trajectory_;
+  std::unique_ptr<TrajectoryPlanner> trajectory_planner_;
 
 };
 }

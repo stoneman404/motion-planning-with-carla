@@ -15,20 +15,6 @@ void Stop::Exit(ManeuverPlanner *maneuver_planner) {
 
 }
 
-ManeuverStatus Stop::Execute(ManeuverPlanner *maneuver_planner) {
-  if (nullptr == maneuver_planner) {
-    return ManeuverStatus::kError;
-  }
-  reference_line_ = maneuver_planner->multable_ref_line().front();
-  SLPoint sl_point;
-  reference_line_->XYToSL(VehicleState::Instance().pose().position.x,
-                          VehicleState::Instance().pose().position.y,
-                          &sl_point);
-  current_lane_id_ = reference_line_->NearestWayPoint(sl_point.s + 5.0).lane_id;
-  // todo stop trajectory motion_planner
-  return ManeuverStatus::kError;
-}
-
 State &Stop::Instance() {
   static Stop instance;
   return instance;
@@ -36,10 +22,16 @@ State &Stop::Instance() {
 
 std::string Stop::Name() const { return "Stop"; }
 
-State *Stop::NextState(ManeuverPlanner *maneuver_planner) const {
+State *Stop::Transition(ManeuverPlanner *maneuver_planner) {
   if (maneuver_planner == nullptr) {
     return nullptr;
   }
+  reference_line_ = maneuver_planner->multable_ref_line().front();
+  SLPoint sl_point;
+  reference_line_->XYToSL(VehicleState::Instance().pose().position.x,
+                          VehicleState::Instance().pose().position.y,
+                          &sl_point);
+  current_lane_id_ = reference_line_->NearestWayPoint(sl_point.s + 5.0).lane_id;
   ManeuverGoal obstacle_maneuver;
   ManeuverGoal traffic_light_maneuver;
   this->ObstacleDecision(&obstacle_maneuver);

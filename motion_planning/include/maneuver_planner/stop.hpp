@@ -6,11 +6,11 @@ namespace planning {
 class Stop : public State {
  public:
   bool Enter(ManeuverPlanner *maneuver_planner) override;
-  ManeuverStatus Execute(ManeuverPlanner *maneuver_planner) override;
+//  ManeuverStatus Execute(ManeuverPlanner *maneuver_planner) override;
   void Exit(ManeuverPlanner *maneuver_planner) override;
   std::string Name() const override;
   static State &Instance();
-  State *NextState(ManeuverPlanner *maneuver_planner) const override;
+  State *Transition(ManeuverPlanner *maneuver_planner) override;
  protected:
   void ObstacleDecision(ManeuverGoal *maneuver_goal) const override;
 

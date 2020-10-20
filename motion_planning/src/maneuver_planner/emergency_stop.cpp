@@ -12,21 +12,6 @@ bool EmergencyStop::Enter(ManeuverPlanner *maneuver_planner) {
 
 }
 
-ManeuverStatus EmergencyStop::Execute(ManeuverPlanner *maneuver_planner) {
-  if (maneuver_planner == nullptr) {
-    return ManeuverStatus::kError;
-  }
-  reference_line_ = maneuver_planner->multable_ref_line().front();
-  SLPoint ego_sl;
-  reference_line_->XYToSL(VehicleState::Instance().pose().position.x,
-                          VehicleState::Instance().pose().position.y,
-                          &ego_sl);
-  reference_line_->NearestWayPoint(ego_sl.s);
-  current_lane_id_ = reference_line_->NearestWayPoint(ego_sl.s + 5.0).lane_id;
-  // todo emergency stop trajectory motion_planner
-  return ManeuverStatus::kError;
-}
-
 void EmergencyStop::Exit(ManeuverPlanner *maneuver_planner) {
   ROS_INFO("We are exiting **EmergencyStop**");
 }
@@ -37,10 +22,17 @@ State &EmergencyStop::Instance() {
 }
 std::string EmergencyStop::Name() const { return "EmergencyStop"; }
 
-State *EmergencyStop::NextState(ManeuverPlanner *maneuver_planner) const {
+State *EmergencyStop::Transition(ManeuverPlanner *maneuver_planner) {
   if (maneuver_planner == nullptr) {
     return nullptr;
   }
+  reference_line_ = maneuver_planner->multable_ref_line().front();
+  SLPoint ego_sl;
+  reference_line_->XYToSL(VehicleState::Instance().pose().position.x,
+                          VehicleState::Instance().pose().position.y,
+                          &ego_sl);
+  reference_line_->NearestWayPoint(ego_sl.s);
+  current_lane_id_ = reference_line_->NearestWayPoint(ego_sl.s + 5.0).lane_id;
   ManeuverGoal obstacle_maneuver;
   ManeuverGoal traffic_light_maneuver;
   this->ObstacleDecision(&obstacle_maneuver);
@@ -92,4 +84,5 @@ void EmergencyStop::ObstacleDecision(ManeuverGoal *maneuver_goal) const {
     maneuver_goal->maneuver_infos.front().ptr_ref_line = reference_line_;
   }
 }
+
 }

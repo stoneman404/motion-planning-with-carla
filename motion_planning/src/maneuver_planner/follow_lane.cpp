@@ -44,12 +44,13 @@ State &FollowLane::Instance() {
 
 std::string FollowLane::Name() const { return "FollowLane"; }
 
-State *FollowLane::NextState(ManeuverPlanner *maneuver_planner) const {
+State *FollowLane::Transition(ManeuverPlanner *maneuver_planner) {
 
   if (maneuver_planner == nullptr) {
     ROS_ERROR("the ManeuverPlanner is nullptr");
     return nullptr;
   }
+  reference_line_ = maneuver_planner->multable_ref_line().front();
   ManeuverGoal traffic_maneuver_goal;
   ManeuverGoal obstacle_maneuver_goal;
   // traffic decision

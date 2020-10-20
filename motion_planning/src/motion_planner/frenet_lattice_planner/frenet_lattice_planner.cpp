@@ -42,7 +42,7 @@ bool FrenetLatticePlanner::Process(const planning_msgs::TrajectoryPoint &init_tr
               return p0.second < p1.second;
             });
 
-  pub_trajectory = optimal_trajectories.front().first;
+  pub_trajectory = std::move(optimal_trajectories.front().first);
   return true;
 }
 

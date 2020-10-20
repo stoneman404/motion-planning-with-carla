@@ -25,28 +25,6 @@ bool ChangeLeftLane::Enter(ManeuverPlanner *maneuver_planner) {
   ROS_ASSERT(maneuver_planner->multable_routes().size() == 2);
 }
 
-ManeuverStatus ChangeLeftLane::Execute(ManeuverPlanner *maneuver_planner) {
-
-  if (maneuver_planner == nullptr) {
-    ROS_FATAL("[ChangeLeftLane::Execute] failed, maneuver_planner == nullptr");
-    return ManeuverStatus::kError;
-  }
-  before_reference_line_ = maneuver_planner->multable_ref_line().front();
-  after_reference_line_ = maneuver_planner->multable_ref_line().back();
-  SLPoint ego_sl;
-  before_reference_line_->XYToSL(VehicleState::Instance().pose().position.x,
-                                 VehicleState::Instance().pose().position.y,
-                                 &ego_sl);
-  before_lane_id_ = before_reference_line_->NearestWayPoint(ego_sl.s + 5.0).lane_id;
-  after_reference_line_->XYToSL(VehicleState::Instance().pose().position.x,
-                                VehicleState::Instance().pose().position.y,
-                                &ego_sl);
-  after_lane_id_ = after_reference_line_->NearestWayPoint(ego_sl.s + 5.0).lane_id;
-
-  // todo: trajectory motion_planner
-
-  return ManeuverStatus::kError;
-}
 void ChangeLeftLane::Exit(ManeuverPlanner *maneuver_planner) {
   ROS_INFO("We are currently exit the **ChangeLeftLane**");
   switch (maneuver_planner->multable_maneuver_goal().decision_type) {
@@ -74,10 +52,22 @@ State &ChangeLeftLane::Instance() {
 
 std::string ChangeLeftLane::Name() const { return "ChangeLeftLane"; }
 
-State *ChangeLeftLane::NextState(ManeuverPlanner *maneuver_planner) const {
+State *ChangeLeftLane::Transition(ManeuverPlanner *maneuver_planner) {
   if (maneuver_planner == nullptr) {
     return nullptr;
   }
+  before_reference_line_ = maneuver_planner->multable_ref_line().front();
+  after_reference_line_ = maneuver_planner->multable_ref_line().back();
+  SLPoint ego_sl;
+  before_reference_line_->XYToSL(VehicleState::Instance().pose().position.x,
+                                 VehicleState::Instance().pose().position.y,
+                                 &ego_sl);
+  before_lane_id_ = before_reference_line_->NearestWayPoint(ego_sl.s + 5.0).lane_id;
+  after_reference_line_->XYToSL(VehicleState::Instance().pose().position.x,
+                                VehicleState::Instance().pose().position.y,
+                                &ego_sl);
+  after_lane_id_ = after_reference_line_->NearestWayPoint(ego_sl.s + 5.0).lane_id;
+
   ManeuverGoal obstacle_maneuver;
   this->ObstacleDecision(&obstacle_maneuver);
   ManeuverGoal traffic_light_maneuver;
