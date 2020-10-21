@@ -8,6 +8,7 @@ PlanningConfig &PlanningConfig::Instance() {
 }
 
 void PlanningConfig::UpdateParams(const ros::NodeHandle &nh) {
+  nh.param<int>("/planning/motion_planning/loop_rate", planning_loop_rate_, 10);
   nh.param<double>("/planning/motion_planning/obstacle_trajectory_time",
                    obstacle_trajectory_time_, 8.0);
   ROS_INFO("obstacle_trajectory_time: %f", obstacle_trajectory_time_);

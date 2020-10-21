@@ -22,17 +22,6 @@ bool FollowLane::Enter(ManeuverPlanner *maneuver_planner) {
   return true;
 }
 
-ManeuverStatus FollowLane::Execute(ManeuverPlanner *maneuver_planner) {
-  ROS_INFO("We are executing the **LaneFollowState**");
-  if (maneuver_planner == nullptr) {
-    ROS_ERROR("the ManeuverPlanner is nullptr");
-    return ManeuverStatus::kError;
-  }
-  reference_line_ = maneuver_planner->multable_ref_line().front();
-
-  return ManeuverStatus::kError;
-}
-
 void FollowLane::Exit(ManeuverPlanner *maneuver_planner) {
   ROS_INFO("We are currently Exiting the FollowLane...");
 }

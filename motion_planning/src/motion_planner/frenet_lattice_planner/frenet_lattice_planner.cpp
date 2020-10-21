@@ -5,6 +5,7 @@
 #include "coordinate_transformer.hpp"
 #include "obstacle_filter/obstacle_filter.hpp"
 #include "collision_checker/collision_checker.hpp"
+#include "motion_planner/frenet_lattice_planner/lattice_trajectory1d.hpp"
 
 namespace planning {
 
@@ -139,10 +140,71 @@ bool FrenetLatticePlanner::PlanningOnRef(const planning_msgs::TrajectoryPoint &i
 }
 
 planning_msgs::Trajectory FrenetLatticePlanner::CombineTrajectories(const std::shared_ptr<ReferenceLine> &ptr_ref_line,
-                                                                    const Polynomial &lon_traj_vec,
-                                                                    const Polynomial &lat_traj_vec,
+                                                                    const Polynomial &lon_traj,
+                                                                    const Polynomial &lat_traj,
                                                                     double start_time) {
-  return planning_msgs::Trajectory();
+  double s0 = lon_traj.Evaluate(0, 0.0);
+  double s_ref_max = ptr_ref_line->Length();
+  double accumulated_s = 0.0;
+  double last_s = -1.0;
+  double t_param = 0.0;
+  planning_msgs::PathPoint prev_path_point;
+  planning_msgs::Trajectory combined_trajectory;
+  while (t_param < PlanningConfig::Instance().max_lookahead_time()) {
+    double s = lon_traj.Evaluate(0, t_param);
+    if (last_s > 0.0) {
+      s = std::max(last_s, s);
+    }
+    last_s = s;
+    double s_dot = std::max(1e-3, lon_traj.Evaluate(1, t_param));
+    double s_dot_dot = lon_traj.Evaluate(2, t_param);
+    if (s > s_ref_max) {
+      break;
+    }
+    double relative_s = s - s0;
+    double d = lat_traj.Evaluate(0, relative_s);
+    double d_prime = lat_traj.Evaluate(1, relative_s);
+    double d_prime_prime = lat_traj.Evaluate(2, relative_s);
+    auto matched_re_point = ptr_ref_line->GetReferencePoint(s);
+    double x = 0;
+    double y = 0.0;
+    double theta = 0.0;
+    double kappa = 0.0;
+    double v = 0.0;
+    double a = 0.0;
+    const double rs = s;
+    const double rx = matched_re_point.x();
+    const double ry = matched_re_point.y();
+    const double rtheta = matched_re_point.heading();
+    const double rkappa = matched_re_point.kappa();
+    const double rdkappa = matched_re_point.dkappa();
+    std::array<double, 3> s_conditions = {rs, s_dot, s_dot_dot};
+    std::array<double, 3> d_conditions = {d, d_prime, d_prime_prime};
+    CoordinateTransformer::FrenetToCartesian(rs, rx, ry,
+                                             rtheta, rkappa, rdkappa,
+                                             s_conditions, d_conditions,
+                                             &x, &y, &theta,
+                                             &kappa, &v, &a);
+    if (t_param > PlanningConfig::Instance().delta_t()) {
+      double delta_x = x - prev_path_point.x;
+      double delta_y = y - prev_path_point.y;
+      accumulated_s += std::hypot(delta_x, delta_y);
+    }
+    planning_msgs::TrajectoryPoint tp;
+    tp.path_point.x = x;
+    tp.path_point.y = y;
+    tp.path_point.theta = theta;
+    tp.path_point.kappa = kappa;
+    tp.path_point.s = accumulated_s;
+    tp.vel = v;
+    tp.acc = a;
+    tp.relative_time = start_time + t_param;
+    combined_trajectory.trajectory_points.push_back(tp);
+    t_param += PlanningConfig::Instance().delta_t();
+    prev_path_point = tp.path_point;
+  }
+  combined_trajectory.header.stamp = ros::Time::now();
+  return combined_trajectory;
 }
 
 void FrenetLatticePlanner::GenerateLatTrajectories(const std::array<double, 3> &init_d,
@@ -152,8 +214,8 @@ void FrenetLatticePlanner::GenerateLatTrajectories(const std::array<double, 3> &
     return;
   }
   ptr_lat_traj_vec->clear();
-  auto lat_end_condtions = end_condition_sampler->SampleLatEndCondition();
-  FrenetLatticePlanner::GeneratePolynomialTrajectories(init_d, lat_end_condtions, 5, ptr_lat_traj_vec);
+  auto lat_end_conditions = end_condition_sampler->SampleLatEndCondition();
+  FrenetLatticePlanner::GeneratePolynomialTrajectories(init_d, lat_end_conditions, 5, ptr_lat_traj_vec);
 }
 
 void FrenetLatticePlanner::GenerateLonTrajectories(const ManeuverInfo &maneuver_info,
@@ -219,17 +281,17 @@ void FrenetLatticePlanner::GeneratePolynomialTrajectories(const std::array<doubl
   switch (order) {
     case 4: {
       for (const auto &end_condition : end_conditions) {
-        auto ptr_trajectory =
+        auto ptr_trajectory = std::make_shared<LatticeTrajectory1d>(
             std::make_shared<QuarticPolynomial>(init_condition[0], init_condition[1], init_condition[2],
-                                                end_condition.first[1], end_condition.first[2], end_condition.second);
+                                                end_condition.first[1], end_condition.first[2], end_condition.second));
         ptr_traj_vec->push_back(ptr_trajectory);
       }
       break;
     }
     case 5: {
       for (const auto &end_condition : end_conditions) {
-        auto ptr_trajectory =
-            std::make_shared<QuinticPolynomial>(init_condition, end_condition.first, end_condition.second);
+        auto ptr_trajectory = std::make_shared<LatticeTrajectory1d>(
+            std::make_shared<QuinticPolynomial>(init_condition, end_condition.first, end_condition.second));
         ptr_traj_vec->push_back(ptr_trajectory);
         break;
       }

@@ -20,7 +20,7 @@ class VehicleState {
   Box2d GetEgoBox() const;
   const ros::Time &time_stamp() const;
   const geometry_msgs::Pose &pose() const;
-  double heading() const;
+  double theta() const;
   double linear_vel() const;
   double angular_vel() const;
   double linear_acc() const;

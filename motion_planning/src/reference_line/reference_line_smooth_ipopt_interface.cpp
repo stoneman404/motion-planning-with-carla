@@ -21,14 +21,14 @@ void ReferenceLineSmoothIpoptInterface::operator()(
 //                  + (x[index + 1] - ref_points_[i].y()) * (x[index + 1] - ref_points_[i].y()))
 //              << std::endl;
   }
-  // the heading error cost;
+  // the theta error cost;
   for (size_t i = 0; i < number_of_points_ - 2; ++i) {
     size_t findex = i * 2;
     size_t mindex = findex + 2;
     size_t lindex = mindex + 2;
     fg[0] += heading_weight_ * (CppAD::pow((x[findex] + x[lindex] - 2.0 * x[mindex]), 2) +
         CppAD::pow((x[findex + 1] + x[lindex + 1] - 2.0 * x[mindex + 1]), 2));
-//    std::cout << "heading cost : "
+//    std::cout << "theta cost : "
 //              << heading_weight_ * (CppAD::pow((x[findex] + x[lindex] - 2.0 * x[mindex]), 2) +
 //                  CppAD::pow((x[findex + 1] + x[lindex + 1] - 2.0 * x[mindex + 1]), 2))
 //              << std::endl;

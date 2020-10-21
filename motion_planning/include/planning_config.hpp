@@ -24,6 +24,7 @@ class PlanningConfig {
   void UpdateVehicleParams(const derived_object_msgs::Object &object,
                            const carla_msgs::CarlaEgoVehicleInfo &vehicle_info);
 
+  int loop_rate() const { return planning_loop_rate_; }
   /**
    * @brief : obstacle trajectory total time
    * @return
@@ -193,6 +194,7 @@ class PlanningConfig {
   double min_lat_acc() const;
   double max_lat_acc() const;
  private:
+  int planning_loop_rate_{};
   VehicleParams vehicle_params_; // ego_vehicle's params
   double obstacle_trajectory_time_{}; // the trajectory total time of obstacles
   double delta_t_{}; // the trajectory delta time

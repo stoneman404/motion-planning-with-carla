@@ -266,5 +266,7 @@ void ManeuverPlanner::GenerateEmergencyStopTrajectory(const planning_msgs::Traje
   }
 
 }
+const std::vector<planning_msgs::Trajectory> &ManeuverPlanner::valid_trajectories() const { return valid_trajectories_; }
+const planning_msgs::Trajectory &ManeuverPlanner::optimal_trajectory() const { return optimal_trajectory_; }
 
 }

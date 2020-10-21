@@ -48,14 +48,14 @@ class FrenetLatticePlanner : public TrajectoryPlanner {
   /**
    * @brief: combine the lon and lat trajectories
    * @param ptr_ref_line: reference line
-   * @param lon_traj_vec: lon trajectories
-   * @param lat_traj_vec: lat trajectories
+   * @param lon_traj: lon trajectories
+   * @param lat_traj: lat trajectories
    * @param ptr_combined_pub_traj: combined trajectory
    * @return
    */
   static planning_msgs::Trajectory CombineTrajectories(const std::shared_ptr<ReferenceLine> &ptr_ref_line,
-                                                       const Polynomial &lon_traj_vec,
-                                                       const Polynomial &lat_traj_vec,
+                                                       const Polynomial &lon_traj,
+                                                       const Polynomial &lat_traj,
                                                        double start_time);
 
  private:

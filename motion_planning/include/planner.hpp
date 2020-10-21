@@ -15,6 +15,7 @@
 #include <unordered_map>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <geometry_msgs/PoseStamped.h>
+#include "maneuver_planner/maneuver_planner.hpp"
 #include "vehicle_state/vehicle_state.hpp"
 
 namespace planning {
@@ -34,22 +35,12 @@ class Planner {
    */
   ~Planner() = default;
 
+  void MainLoop();
+
   /**
    *
    */
   void RunOnce();
-
-  /**
-   *
-   * @param ego_vehicle_info
-   * @param vehicle_status
-   * @param trajectory
-   * @return
-   */
-  bool Plan(
-      const carla_msgs::CarlaEgoVehicleInfo &ego_vehicle_info,
-      const carla_msgs::CarlaEgoVehicleStatus &vehicle_status,
-      planning_msgs::Trajectory::Ptr trajectory);
 
  protected:
 
@@ -95,8 +86,12 @@ class Planner {
   bool GetWayPoint(const int &object_id,
                    carla_waypoint_types::CarlaWaypoint &carla_waypoint);
 
+  planning_msgs::TrajectoryPoint GetInitTrajectoryPoint();
+
  private:
+  bool has_maneuver_planner_ = false;
   bool has_init_vehicle_params_ = false;
+  bool has_history_trajectory_ = false;
   int ego_vehicle_id_ = -1;
   nav_msgs::Odometry ego_odometry_;
   carla_msgs::CarlaEgoVehicleInfo ego_vehicle_info_;
@@ -108,6 +103,7 @@ class Planner {
   ros::NodeHandle nh_;
   geometry_msgs::PoseStamped goal_pose_;
   geometry_msgs::PoseWithCovarianceStamped init_pose_;
+  planning_msgs::Trajectory history_trajectory_;
 
   ////////////////// ServiceClinet //////////////////////
   ros::ServiceClient get_actor_waypoint_client_;
@@ -127,8 +123,10 @@ class Planner {
   ros::Publisher trajectory_publisher_;
   ros::Publisher visualized_trajectory_publisher_;
 
-};
+  //////////////////////maneuver planner///////////////
+  std::unique_ptr<ManeuverPlanner> maneuver_planner_;
 
+};
 }
 
 #endif //CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_PLANNER_HPP_

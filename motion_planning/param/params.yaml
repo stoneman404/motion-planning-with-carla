@@ -1,3 +1,4 @@
+/planning/motion_planning/loop_rate: 10
 /planning/motion_planning/obstacle_trajectory_time: 8.0
 /planning/motion_planning/delta_t: 0.1
 /planning/motion_planning/reference_smoother_deviation_weight: 10.0

@@ -147,17 +147,6 @@ std::vector<std::pair<double, double>> STGraph::GetPathBlockingIntervals(const d
   }
   return intervals;
 }
-std::vector<std::vector<std::pair<double, double>>> STGraph::GetPathBlockingInterval(const double t_start,
-                                                                                     const double t_end,
-                                                                                     const double t_resolution) const {
-  std::vector<std::vector<std::pair<double, double>>> intervals;
-  double t = t_start;
-  while (t <= t_end) {
-    intervals.push_back(GetPathBlockingIntervals(t));
-    t += t_resolution;
-  }
-  return intervals;
-}
 
 std::vector<STPoint> STGraph::GetObstacleSurroundingPoints(int obstacle_id, double s_dist, double t_density) const {
   ROS_ASSERT(t_density > 0.0);
@@ -206,6 +195,7 @@ std::vector<STPoint> STGraph::GetObstacleSurroundingPoints(int obstacle_id, doub
 bool STGraph::IsObstacleInGraph(int obstacle_id) {
   return obstacle_st_map_.find(obstacle_id) != obstacle_st_map_.end();
 }
+
 std::vector<std::vector<std::pair<double, double>>>
 STGraph::GetPathBlockingIntervals(double start_time,
                                   double end_time,

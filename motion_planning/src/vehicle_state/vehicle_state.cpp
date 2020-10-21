@@ -14,7 +14,7 @@ const geometry_msgs::Pose &VehicleState::pose() const { return pose_; }
 double VehicleState::linear_vel() const { return this->linear_vel_; }
 double VehicleState::linear_acc() const { return this->linear_acc_; }
 double VehicleState::angular_vel() const { return this->angular_vel_; }
-double VehicleState::heading() const { return this->heading_; }
+double VehicleState::theta() const { return this->heading_; }
 
 const ros::Time &VehicleState::time_stamp() const { return this->time_stamp_; }
 void VehicleState::set_pose(const geometry_msgs::Pose &pose) { this->pose_ = pose; }

@@ -46,17 +46,6 @@ class STGraph {
 
   /**
    *
-   * @param t_start
-   * @param t_end
-   * @param t_resolution
-   * @return
-   */
-  std::vector<std::vector<std::pair<double, double>>> GetPathBlockingInterval(const double t_start,
-                                                                              const double t_end,
-                                                                              const double t_resolution) const;
-
-  /**
-   *
    * @return
    */
   std::pair<double, double> get_s_range() const { return s_range_; }
