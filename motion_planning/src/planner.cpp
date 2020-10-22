@@ -53,11 +53,11 @@ void Planner::RunOnce() {
     return;
   }
   if (!has_maneuver_planner_) {
-    maneuver_planner_ = std::make_unique<ManeuverPlanner>(nh_);
+    maneuver_planner_ = std::make_unique<ManeuverPlanner>(nh_, thread_pool_.get());
     has_maneuver_planner_ = true;
   }
   auto init_trajectory_point = Planner::GetInitTrajectoryPoint();
-  auto maneuver_status = maneuver_planner_->Process(init_trajectory_point, thread_pool_.get());
+  auto maneuver_status = maneuver_planner_->Process(init_trajectory_point);
   switch (maneuver_status) {
     case ManeuverStatus::kSuccess: {
       auto optimal_trajectory = maneuver_planner_->optimal_trajectory();

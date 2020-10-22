@@ -57,11 +57,36 @@ ManeuverStatus ManeuverPlanner::Process(const planning_msgs::TrajectoryPoint &in
   }
   ROS_DEBUG("[ManeuverPlanner::Process], current state is [%s]", current_state_->Name().c_str());
   ref_lines_.clear();
-  for (const auto &route_response : routes_) {
-    auto ptr_ref_line = std::make_shared<ReferenceLine>();
-    ManeuverPlanner::GenerateReferenceLine(route_response, ptr_ref_line);
-    ref_lines_.push_back(ptr_ref_line);
+  if (thread_pool_ != nullptr) {
+    std::vector<std::future<std::pair<bool, std::shared_ptr<ReferenceLine>>>> futures;
+    for (const auto &route_response : routes_) {
+      auto ptr_ref_line = std::make_shared<ReferenceLine>();
+      auto task = [this, &route_response, &ptr_ref_line]() -> std::pair<bool, std::shared_ptr<ReferenceLine>> {
+        auto result = ManeuverPlanner::GenerateReferenceLine(route_response, ptr_ref_line);
+        return std::make_pair(result, ptr_ref_line);
+      };
+      futures.emplace_back(thread_pool_->Enqueue(task));
+    }
+    for (auto &future : futures) {
+      if (!future.get().first) {
+        GenerateEmergencyStopTrajectory(init_trajectory_point, optimal_trajectory_);
+        return ManeuverStatus::kError;
+      } else {
+        ref_lines_.push_back(future.get().second);
+      }
+    }
+  } else {
+    for (const auto &route_response : routes_) {
+      auto ptr_ref_line = std::make_shared<ReferenceLine>();
+      if (!ManeuverPlanner::GenerateReferenceLine(route_response, ptr_ref_line)) {
+        GenerateEmergencyStopTrajectory(init_trajectory_point, optimal_trajectory_);
+        return ManeuverStatus::kError;
+      } else {
+        ref_lines_.push_back(ptr_ref_line);
+      }
+    }
   }
+
   valid_trajectories_.clear();
   if (maneuver_goal_.decision_type == DecisionType::kEmergencyStop) {
     GenerateEmergencyStopTrajectory(init_trajectory_point, optimal_trajectory_);
@@ -268,7 +293,12 @@ void ManeuverPlanner::GenerateEmergencyStopTrajectory(const planning_msgs::Traje
   }
 
 }
-const std::vector<planning_msgs::Trajectory> &ManeuverPlanner::valid_trajectories() const { return valid_trajectories_; }
-const planning_msgs::Trajectory &ManeuverPlanner::optimal_trajectory() const { return optimal_trajectory_; }
+const std::vector<planning_msgs::Trajectory> &ManeuverPlanner::valid_trajectories() const {
+  return valid_trajectories_;
+}
+
+const planning_msgs::Trajectory &ManeuverPlanner::optimal_trajectory() const {
+  return optimal_trajectory_;
+}
 
 }
