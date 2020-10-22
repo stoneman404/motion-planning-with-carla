@@ -9,6 +9,7 @@
 #include "end_condition_sampler.hpp"
 #include "quartic_polynomial.hpp"
 #include "quintic_polynomial.hpp"
+#include "thread_pool.hpp"
 
 namespace planning {
 
@@ -16,6 +17,7 @@ class FrenetLatticePlanner : public TrajectoryPlanner {
  public:
 
   FrenetLatticePlanner() = default;
+  explicit FrenetLatticePlanner(ThreadPool *thread_pool);
 
   ~FrenetLatticePlanner() override = default;
 
@@ -40,10 +42,10 @@ class FrenetLatticePlanner : public TrajectoryPlanner {
    * @param[out] ptr_lon_traj_vec: lon trajectories
    * @param[out] ptr_lat_traj_vec: lat trajectories
    */
-  static bool PlanningOnRef(const planning_msgs::TrajectoryPoint &init_trajectory_point,
-                            const ManeuverInfo &maneuver_info,
-                            std::pair<planning_msgs::Trajectory, double> &optimal_trajectory,
-                            std::vector<planning_msgs::Trajectory> *valid_trajectories);
+  bool PlanningOnRef(const planning_msgs::TrajectoryPoint &init_trajectory_point,
+                     const ManeuverInfo &maneuver_info,
+                     std::pair<planning_msgs::Trajectory, double> &optimal_trajectory,
+                     std::vector<planning_msgs::Trajectory> *valid_trajectories) const;
 
   /**
    * @brief: combine the lon and lat trajectories
@@ -123,6 +125,8 @@ class FrenetLatticePlanner : public TrajectoryPlanner {
                                                                          double>> &end_conditions,
                                              size_t order,
                                              std::vector<std::shared_ptr<Polynomial>> *ptr_traj_vec);
+ private:
+  ThreadPool *thread_pool_ = nullptr;
 };
 
 }

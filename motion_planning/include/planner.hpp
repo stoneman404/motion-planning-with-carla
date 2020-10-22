@@ -17,6 +17,7 @@
 #include <geometry_msgs/PoseStamped.h>
 #include "maneuver_planner/maneuver_planner.hpp"
 #include "vehicle_state/vehicle_state.hpp"
+#include "thread_pool.hpp"
 
 namespace planning {
 
@@ -35,14 +36,14 @@ class Planner {
    */
   ~Planner() = default;
 
-  void MainLoop();
+  void Launch();
 
   /**
    *
    */
   void RunOnce();
 
- protected:
+ private:
 
   /**
    *
@@ -85,8 +86,9 @@ class Planner {
    */
   bool GetWayPoint(const int &object_id,
                    carla_waypoint_types::CarlaWaypoint &carla_waypoint);
-
-  planning_msgs::TrajectoryPoint GetInitTrajectoryPoint();
+  static planning_msgs::TrajectoryPoint GetInitTrajectoryPoint();
+  void VisualizeValidTrajectories(const std::vector<planning_msgs::Trajectory> &valid_trajectories) const;
+  void VisualizeOptimalTrajectory(const planning_msgs::Trajectory &optimal_trajectory) const;
 
  private:
   bool has_maneuver_planner_ = false;
@@ -122,9 +124,14 @@ class Planner {
   /////////////////////// Publisher /////////////////////
   ros::Publisher trajectory_publisher_;
   ros::Publisher visualized_trajectory_publisher_;
+  ros::Publisher visualized_valid_trajectories_publisher_;
 
   //////////////////////maneuver planner///////////////
   std::unique_ptr<ManeuverPlanner> maneuver_planner_;
+
+  /////////////////// thread pool///////////////////
+  size_t thread_pool_size_ = 8;
+  std::unique_ptr<ThreadPool> thread_pool_;
 
 };
 }

@@ -1,4 +1,3 @@
-
 #ifndef CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_VEHICLE_STATE_VEHICLE_STATE_HPP_
 #define CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_VEHICLE_STATE_VEHICLE_STATE_HPP_
 #include <ros/ros.h>
@@ -28,8 +27,8 @@ class VehicleState {
   double steer_percentage() const;
   geometry_msgs::Vector3 center_of_mass() const;
   const int &lane_id() const;
-  const int &road_id() const { return road_id_; }
-  const int &section_id() const { return section_id_; }
+  const int &road_id() const;
+  const int &section_id() const;
   const planning_msgs::WayPoint &ego_waypoint() const;
   // setter
   void set_waypoint(const planning_msgs::WayPoint &way_point);
@@ -43,6 +42,7 @@ class VehicleState {
   void set_center_of_mass(const geometry_msgs::Vector3 &center_of_mass);
   // predict the vehicle's last pose based on current pose, linear/angular acc and vel after time t;
   geometry_msgs::Pose PredictNextPose(double t) const;
+
   bool is_junction() const;
   void set_is_junction(bool is_junction);
 
@@ -50,13 +50,13 @@ class VehicleState {
 
   planning_msgs::WayPoint ego_waypoint_;
 
-  int lane_id_ = -1;
-  int section_id_ = -1;
-  int road_id_ = -1;
+  int lane_id_{};
+  int section_id_{};
+  int road_id_ = {};
   bool is_junction_ = false;
   geometry_msgs::Pose pose_;
 //    double kappa_;
-  double heading_{};
+  double theta_{};
   double linear_vel_{};
   double angular_vel_{};
   double linear_acc_{};
@@ -71,5 +71,4 @@ class VehicleState {
   ~VehicleState() = default;
 };
 }
-
-#endif
+#endif //CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_VEHICLE_STATE_VEHICLE_STATE_HPP_

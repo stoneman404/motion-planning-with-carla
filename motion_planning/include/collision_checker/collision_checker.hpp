@@ -5,6 +5,7 @@
 #include "box2d.hpp"
 #include <planning_msgs/Trajectory.h>
 #include "st_graph.hpp"
+#include "thread_pool.hpp"
 
 namespace planning {
 class CollisionChecker {
@@ -13,7 +14,8 @@ class CollisionChecker {
   ~CollisionChecker() = default;
   CollisionChecker(const std::shared_ptr<ReferenceLine> &ptr_ref_line,
                    const std::shared_ptr<STGraph> &ptr_st_graph,
-                   double ego_vehicle_s, double ego_vehicle_d);
+                   double ego_vehicle_s, double ego_vehicle_d,
+                   ThreadPool *thread_pool);
   bool IsCollision(const planning_msgs::Trajectory &trajectory) const;
  private:
   void Init(const std::unordered_map<int, std::shared_ptr<Obstacle>> &obstacles, double ego_vehicle_s,
@@ -25,6 +27,7 @@ class CollisionChecker {
   std::shared_ptr<ReferenceLine> ptr_ref_line_;
   std::shared_ptr<STGraph> ptr_st_graph_;
   std::vector<std::vector<Box2d>> predicted_obstacle_box_;
+  ThreadPool *thread_pool_ = nullptr;
 
 };
 

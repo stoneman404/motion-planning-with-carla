@@ -50,8 +50,7 @@ bool FrenetLatticePlanner::Process(const planning_msgs::TrajectoryPoint &init_tr
 bool FrenetLatticePlanner::PlanningOnRef(const planning_msgs::TrajectoryPoint &init_trajectory_point,
                                          const ManeuverInfo &maneuver_info,
                                          std::pair<planning_msgs::Trajectory, double> &optimal_trajectory,
-                                         std::vector<planning_msgs::Trajectory> *valid_trajectories) {
-
+                                         std::vector<planning_msgs::Trajectory> *valid_trajectories) const {
   const auto &ref_line = maneuver_info.ptr_ref_line;
   std::array<double, 3> init_s{};
   std::array<double, 3> init_d{};
@@ -78,7 +77,7 @@ bool FrenetLatticePlanner::PlanningOnRef(const planning_msgs::TrajectoryPoint &i
                                                                                      lon_traj_vec,
                                                                                      lat_traj_vec,
                                                                                      ref_line, st_graph);
-  CollisionChecker collision_checker = CollisionChecker(ref_line, st_graph, init_s[0], init_d[0]);
+  CollisionChecker collision_checker = CollisionChecker(ref_line, st_graph, init_s[0], init_d[0], thread_pool_);
   size_t collision_failure_count = 0;
   size_t combined_constraint_failure_count = 0;
   size_t lon_vel_failure_count = 0;
@@ -327,5 +326,6 @@ void FrenetLatticePlanner::GetInitCondition(const std::shared_ptr<ReferenceLine>
                                            init_trajectory_point.path_point.kappa,
                                            init_s, init_d);
 }
+FrenetLatticePlanner::FrenetLatticePlanner(ThreadPool *thread_pool) : thread_pool_(thread_pool) {}
 
 }

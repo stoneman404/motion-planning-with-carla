@@ -6,9 +6,12 @@ namespace planning {
 CollisionChecker::CollisionChecker(const std::shared_ptr<ReferenceLine> &ptr_ref_line,
                                    const std::shared_ptr<STGraph> &ptr_st_graph,
                                    double ego_vehicle_s,
-                                   double ego_vehicle_d) {
-  ptr_ref_line_ = ptr_ref_line;
-  ptr_st_graph_ = ptr_st_graph;
+                                   double ego_vehicle_d,
+                                   ThreadPool *thread_pool)
+    : ptr_ref_line_(ptr_ref_line),
+      ptr_st_graph_(ptr_st_graph),
+      thread_pool_(thread_pool) {
+
   const auto &obstacles = ObstacleFilter::Instance().Obstacles();
   predicted_obstacle_box_.clear();
   this->Init(obstacles, ego_vehicle_s, ego_vehicle_d, ptr_ref_line_);
@@ -17,19 +20,45 @@ CollisionChecker::CollisionChecker(const std::shared_ptr<ReferenceLine> &ptr_ref
 bool CollisionChecker::IsCollision(const planning_msgs::Trajectory &trajectory) const {
   double ego_width = PlanningConfig::Instance().vehicle_params().width;
   double ego_length = PlanningConfig::Instance().vehicle_params().length;
-  for (size_t i = 0; i < trajectory.trajectory_points.size(); ++i) {
-    const auto &traj_point = trajectory.trajectory_points.at(i);
-    double ego_theta = traj_point.path_point.theta;
-    Box2d ego_box = Box2d({traj_point.path_point.x, traj_point.path_point.y}, ego_theta, ego_length, ego_width);
+  if (this->thread_pool_ == nullptr) {
     double shift_distance = PlanningConfig::Instance().vehicle_params().back_axle_to_center_length;
-    ego_box.Shift({shift_distance * std::cos(ego_theta), shift_distance * std::sin(ego_theta)});
-    for (const auto &obstacle_box : predicted_obstacle_box_[i]) {
-      if (ego_box.HasOverlapWithBox2d(obstacle_box)) {
+    for (size_t i = 0; i < trajectory.trajectory_points.size(); ++i) {
+      const auto &traj_point = trajectory.trajectory_points.at(i);
+      double ego_theta = traj_point.path_point.theta;
+      Box2d ego_box = Box2d({traj_point.path_point.x, traj_point.path_point.y}, ego_theta, ego_length, ego_width);
+      ego_box.Shift({shift_distance * std::cos(ego_theta), shift_distance * std::sin(ego_theta)});
+      for (const auto &obstacle_box : predicted_obstacle_box_[i]) {
+        if (ego_box.HasOverlapWithBox2d(obstacle_box)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  } else {
+    std::vector<std::future<bool>> futures;
+    double shift_distance = PlanningConfig::Instance().vehicle_params().back_axle_to_center_length;
+    for (size_t i = 0; i < trajectory.trajectory_points.size(); ++i) {
+      const auto &traj_point = trajectory.trajectory_points[i];
+      const auto task = [this, &traj_point, &i, &shift_distance, &ego_length, &ego_width]() -> bool {
+        double ego_theta = traj_point.path_point.theta;
+        Box2d ego_box = Box2d({traj_point.path_point.x, traj_point.path_point.y}, ego_theta, ego_length, ego_width);
+        ego_box.Shift({shift_distance * std::cos(ego_theta), shift_distance * std::sin(ego_theta)});
+        for (const auto &obstacle_box : predicted_obstacle_box_[i]) {
+          if (ego_box.HasOverlapWithBox2d(obstacle_box)) {
+            return true;
+          }
+        }
+        return false;
+      };
+      futures.emplace_back(thread_pool_->Enqueue(task));
+    }
+    for (auto &future : futures) {
+      if (future.get()) {
         return true;
       }
     }
+    return false;
   }
-  return false;
 
 }
 void CollisionChecker::Init(const std::unordered_map<int, std::shared_ptr<Obstacle>> &obstacles,

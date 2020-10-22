@@ -14,7 +14,7 @@ const geometry_msgs::Pose &VehicleState::pose() const { return pose_; }
 double VehicleState::linear_vel() const { return this->linear_vel_; }
 double VehicleState::linear_acc() const { return this->linear_acc_; }
 double VehicleState::angular_vel() const { return this->angular_vel_; }
-double VehicleState::theta() const { return this->heading_; }
+double VehicleState::theta() const { return this->theta_; }
 
 const ros::Time &VehicleState::time_stamp() const { return this->time_stamp_; }
 void VehicleState::set_pose(const geometry_msgs::Pose &pose) { this->pose_ = pose; }
@@ -27,7 +27,7 @@ bool VehicleState::Update(const carla_msgs::CarlaEgoVehicleStatus &ego_vehicle_s
                           const carla_msgs::CarlaEgoVehicleInfo &vehicle_info) {
   this->pose_ = odometry.pose.pose;
   this->time_stamp_ = ego_vehicle_status.header.stamp;
-  this->heading_ = tf::getYaw(odometry.pose.pose.orientation);
+  this->theta_ = tf::getYaw(odometry.pose.pose.orientation);
   this->linear_vel_ = ego_vehicle_status.velocity;
   this->angular_vel_ = odometry.twist.twist.angular.z;
   this->linear_acc_ = std::sqrt(
@@ -90,11 +90,13 @@ void VehicleState::set_section_id(int section_id) { this->section_id_ = section_
 Box2d VehicleState::GetEgoBox() const {
   Eigen::Vector2d ego_center;
   ego_center << pose_.position.x, pose_.position.y;
-  const double ego_heading = heading_;
+  const double ego_heading = theta_;
   const double length = PlanningConfig::Instance().vehicle_params().length;
   const double width = PlanningConfig::Instance().vehicle_params().width;
   Box2d ego_box = Box2d(ego_center, ego_heading, length, width);
   return ego_box;
 }
+const int &VehicleState::section_id() const { return section_id_; }
+const int &VehicleState::road_id() const { return road_id_; }
 
 }

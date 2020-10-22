@@ -17,12 +17,13 @@
 
 namespace planning {
 
-ManeuverPlanner::ManeuverPlanner(const ros::NodeHandle &nh) : nh_(nh) {
+ManeuverPlanner::ManeuverPlanner(const ros::NodeHandle &nh, ThreadPool *thread_pool)
+    : nh_(nh), thread_pool_(thread_pool) {
   this->InitPlanner();
 }
 
 void ManeuverPlanner::InitPlanner() {
-  trajectory_planner_ = std::make_unique<FrenetLatticePlanner>();
+  trajectory_planner_ = std::make_unique<FrenetLatticePlanner>(thread_pool_);
   valid_trajectories_.clear();
   this->route_service_client_ = nh_.serviceClient<planning_srvs::Route>(
       service::kRouteServiceName);
@@ -50,6 +51,7 @@ void ManeuverPlanner::InitPlanner() {
 
 ManeuverStatus ManeuverPlanner::Process(const planning_msgs::TrajectoryPoint &init_trajectory_point) {
   if (current_state_ == nullptr) {
+    GenerateEmergencyStopTrajectory(init_trajectory_point, optimal_trajectory_);
     ROS_FATAL("[ManeuverPlanner::Process], the current state is nullptr");
     return ManeuverStatus::kError;
   }
@@ -65,6 +67,7 @@ ManeuverStatus ManeuverPlanner::Process(const planning_msgs::TrajectoryPoint &in
     GenerateEmergencyStopTrajectory(init_trajectory_point, optimal_trajectory_);
     return ManeuverStatus::kSuccess;
   }
+
   auto trajectory_plan_result = trajectory_planner_->Process(init_trajectory_point,
                                                              maneuver_goal_,
                                                              optimal_trajectory_,
@@ -230,7 +233,6 @@ void ManeuverPlanner::GenerateEmergencyStopTrajectory(const planning_msgs::Traje
   emergency_trajectory.trajectory_points.resize(num_traj_point);
   const double max_decel = PlanningConfig::Instance().max_lon_acc();
   double stop_time = init_trajectory_point.vel / max_decel;
-  emergency_trajectory.header.stamp = ros::Time::now();
   double last_x = init_trajectory_point.path_point.x;
   double last_y = init_trajectory_point.path_point.y;
   double last_v = init_trajectory_point.vel;
@@ -243,7 +245,7 @@ void ManeuverPlanner::GenerateEmergencyStopTrajectory(const planning_msgs::Traje
   tp.acc = -max_decel;
   emergency_trajectory.trajectory_points.push_back(tp);
   for (int i = 1; i < num_traj_point; ++i) {
-    double t = i * kTimeGap;
+    double t = i * kTimeGap + init_trajectory_point.relative_time;
     tp.relative_time = t;
     tp.vel = init_trajectory_point.vel - last_a * kTimeGap;
     tp.acc = t <= stop_time ? -max_decel : 0.0;

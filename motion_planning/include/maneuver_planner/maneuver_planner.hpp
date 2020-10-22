@@ -13,13 +13,14 @@
 #include "vehicle_state/vehicle_state.hpp"
 #include "reference_line/reference_line.hpp"
 #include "motion_planner/trajectory_planner.hpp"
+#include "thread_pool.hpp"
 
 namespace planning {
 
 class State;
 class ManeuverPlanner {
  public:
-  explicit ManeuverPlanner(const ros::NodeHandle &nh);
+  explicit ManeuverPlanner(const ros::NodeHandle &nh, ThreadPool *thread_pool = nullptr);
   ~ManeuverPlanner();
   /**
    * @brief: init the planner
@@ -150,6 +151,7 @@ class ManeuverPlanner {
   std::vector<planning_msgs::Trajectory> valid_trajectories_;
   planning_msgs::Trajectory optimal_trajectory_;
   std::unique_ptr<TrajectoryPlanner> trajectory_planner_;
+  ThreadPool *thread_pool_ = nullptr;
 
 };
 }
