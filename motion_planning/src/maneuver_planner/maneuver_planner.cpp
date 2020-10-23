@@ -90,19 +90,19 @@ ManeuverStatus ManeuverPlanner::Process(const planning_msgs::TrajectoryPoint &in
   valid_trajectories_.clear();
   if (maneuver_goal_.decision_type == DecisionType::kEmergencyStop) {
     GenerateEmergencyStopTrajectory(init_trajectory_point, optimal_trajectory_);
-    return ManeuverStatus::kSuccess;
-  }
-
-  auto trajectory_plan_result = trajectory_planner_->Process(init_trajectory_point,
-                                                             maneuver_goal_,
-                                                             optimal_trajectory_,
-                                                             &valid_trajectories_);
-  if (!trajectory_plan_result) {
-    GenerateEmergencyStopTrajectory(init_trajectory_point, optimal_trajectory_);
-    ROS_FATAL("ManeuverPlanner::Process Failed, [State:%s, init_trajectory_point: {x: %f, y: %f}]",
-              current_state_->Name().c_str(), init_trajectory_point.path_point.x,
-              init_trajectory_point.path_point.y);
-    return ManeuverStatus::kError;
+//    return ManeuverStatus::kSuccess;
+  } else {
+    auto trajectory_plan_result = trajectory_planner_->Process(init_trajectory_point,
+                                                               maneuver_goal_,
+                                                               optimal_trajectory_,
+                                                               &valid_trajectories_);
+    if (!trajectory_plan_result) {
+      GenerateEmergencyStopTrajectory(init_trajectory_point, optimal_trajectory_);
+      ROS_FATAL("ManeuverPlanner::Process Failed, [State:%s, init_trajectory_point: {x: %f, y: %f}]",
+                current_state_->Name().c_str(), init_trajectory_point.path_point.x,
+                init_trajectory_point.path_point.y);
+      return ManeuverStatus::kError;
+    }
   }
   ROS_DEBUG("[ManeuverPlanner::Process], the size of [valid_trajectories_] is %zu", valid_trajectories_.size());
   std::unique_ptr<State> state(current_state_->Transition(this));

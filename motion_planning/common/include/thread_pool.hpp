@@ -56,6 +56,7 @@ inline ThreadPool::~ThreadPool() {
     worker.join();
   }
 }
+
 template<typename Func, typename... Args>
 std::future<typename std::result_of<Func(Args...)>::type> ThreadPool::Enqueue(Func &&f, Args &&... args) {
 

@@ -86,7 +86,13 @@ class Planner {
    */
   bool GetWayPoint(const int &object_id,
                    carla_waypoint_types::CarlaWaypoint &carla_waypoint);
-  static planning_msgs::TrajectoryPoint GetInitTrajectoryPoint();
+  /**
+   *
+   * @return
+   */
+  std::vector<planning_msgs::TrajectoryPoint> GetStitchingTrajectory(const ros::Time &current_time_stamp,
+                                                                     double planning_cycle_time,
+                                                                     size_t preserve_points_num);
   void VisualizeValidTrajectories(const std::vector<planning_msgs::Trajectory> &valid_trajectories) const;
   void VisualizeOptimalTrajectory(const planning_msgs::Trajectory &optimal_trajectory) const;
 
