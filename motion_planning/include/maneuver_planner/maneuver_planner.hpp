@@ -77,6 +77,10 @@ class ManeuverPlanner {
    */
   ManeuverGoal &multable_maneuver_goal();
 
+  const ManeuverStatus &prev_maneuver_status() const { return prev_status_; }
+
+  void SetPrevManeuverStatus(const ManeuverStatus &prev_status) { this->prev_status_ = prev_status; }
+
   /**
    *
    * @return
@@ -91,6 +95,7 @@ class ManeuverPlanner {
   const std::vector<planning_msgs::Trajectory> &valid_trajectories() const;
   const planning_msgs::Trajectory &optimal_trajectory() const;
 
+  const planning_msgs::TrajectoryPoint &init_trajectory_point() const;
  private:
 
   /**
@@ -136,8 +141,7 @@ class ManeuverPlanner {
                                   const int end_index,
                                   const std::vector<planning_msgs::WayPoint> &way_points);
 
-  static void GenerateEmergencyStopTrajectory(const planning_msgs::TrajectoryPoint &init_trajectory_point,
-                                              planning_msgs::Trajectory &emergency_trajectory);
+
 
  private:
   ManeuverGoal maneuver_goal_;
@@ -152,8 +156,9 @@ class ManeuverPlanner {
   planning_msgs::Trajectory optimal_trajectory_;
   std::unique_ptr<TrajectoryPlanner> trajectory_planner_;
   ThreadPool *thread_pool_ = nullptr;
+  planning_msgs::TrajectoryPoint init_trajectory_point_{};
 
 };
 }
 
-#endif
+#endif // CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_MANEUVER_PLANNER_MANEUVER_PLANNER_HPP_

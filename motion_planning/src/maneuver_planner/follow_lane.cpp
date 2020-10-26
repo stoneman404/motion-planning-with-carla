@@ -13,6 +13,7 @@ namespace planning {
 bool FollowLane::Enter(ManeuverPlanner *maneuver_planner) {
   ROS_INFO("We are current switching to **FollowLane**...");
   if (maneuver_planner->multable_routes().empty()) {
+    // for routing, we use vehicle status real time, but for decision, we should use planning start point
     auto ego_pose = VehicleState::Instance().pose();
     auto destination = PlanningContext::Instance().global_goal_pose();
     planning_srvs::RouteResponse route_response;
@@ -39,12 +40,24 @@ State *FollowLane::Transition(ManeuverPlanner *maneuver_planner) {
     ROS_ERROR("the ManeuverPlanner is nullptr");
     return nullptr;
   }
+  if (maneuver_planner->prev_maneuver_status() == ManeuverStatus::kUnknown ||
+      maneuver_planner->prev_maneuver_status() == ManeuverStatus::kError) {
+    ManeuverGoal maneuver_goal;
+    maneuver_goal.maneuver_infos.resize(1);
+    maneuver_goal.decision_type = DecisionType::kEmergencyStop;
+    maneuver_goal.maneuver_infos.front().has_stop_point = true;
+    maneuver_planner->SetManeuverGoal(maneuver_goal);
+    return &(EmergencyStop::Instance());
+  }
   reference_line_ = maneuver_planner->multable_ref_line().front();
   ManeuverGoal traffic_maneuver_goal;
   ManeuverGoal obstacle_maneuver_goal;
   // traffic decision
-  this->TrafficLightDecision(reference_line_, &traffic_maneuver_goal);
-  this->ObstacleDecision(&obstacle_maneuver_goal);
+  SLPoint ego_sl_point;
+  auto init_point = maneuver_planner->init_trajectory_point();
+  reference_line_->XYToSL(init_point.path_point.x, init_point.path_point.y, &ego_sl_point);
+  this->TrafficLightDecision(reference_line_, ego_sl_point, &traffic_maneuver_goal);
+  this->ObstacleDecision(init_point, &obstacle_maneuver_goal);
   ManeuverGoal combined_maneuver = CombineManeuver(traffic_maneuver_goal, obstacle_maneuver_goal);
   maneuver_planner->SetManeuverGoal(combined_maneuver);
   switch (combined_maneuver.decision_type) {
@@ -58,17 +71,22 @@ State *FollowLane::Transition(ManeuverPlanner *maneuver_planner) {
   }
 }
 
-void FollowLane::ObstacleDecision(ManeuverGoal *maneuver_goal) const {
+void FollowLane::ObstacleDecision(const planning_msgs::TrajectoryPoint &init_trajectory_point,
+                                  ManeuverGoal *maneuver_goal) const {
   const auto obstacles = ObstacleFilter::Instance().Obstacles();
-  SLPoint ego_sl;
-  const double ego_vel = VehicleState::Instance().linear_vel();
-  reference_line_->XYToSL(VehicleState::Instance().pose().position.x,
-                          VehicleState::Instance().pose().position.y,
-                          &ego_sl);
+  Eigen::Vector2d ego_xy{init_trajectory_point.path_point.x, init_trajectory_point.path_point.y};
+  const double ego_vel = init_trajectory_point.vel;
+  const double ego_length = PlanningConfig::Instance().vehicle_params().length;
+  const double ego_width = PlanningConfig::Instance().vehicle_params().width;
+  auto ego_box = Box2d(ego_xy, init_trajectory_point.path_point.theta, ego_length, ego_width);
+  SLBoundary ego_sl_boundary;
+  reference_line_->GetSLBoundary(ego_box, &ego_sl_boundary);
+  double ego_s = 0.5 * (ego_sl_boundary.start_s + ego_sl_boundary.end_s);
+
   double forward_clear_distance, backward_clear_distance;
   //  check current lane
   int forward_obstacle_id, backward_obstacle_id;
-  this->GetLaneClearDistance(0,
+  this->GetLaneClearDistance(0, ego_sl_boundary,
                              reference_line_,
                              &forward_clear_distance,
                              &backward_clear_distance,
@@ -76,7 +94,8 @@ void FollowLane::ObstacleDecision(ManeuverGoal *maneuver_goal) const {
                              &backward_obstacle_id);
 
   // determine the road option for vehicle
-  auto incoming_way_point = reference_line_->NearestWayPoint(std::min(ego_sl.s + 5.0, reference_line_->Length()));
+  auto incoming_way_point =
+      reference_line_->NearestWayPoint(std::min(ego_sl_boundary.start_s + 5.0, reference_line_->Length()));
   double lookahead_distance =
       std::min(std::max(forward_clear_distance - PlanningConfig::Instance().lon_safety_buffer(),
                         PlanningConfig::Instance().min_lookahead_distance()),
@@ -85,7 +104,7 @@ void FollowLane::ObstacleDecision(ManeuverGoal *maneuver_goal) const {
   // 0. no leading vehicle
   if (forward_obstacle_id < 0) {
     // 0.1 no leading vehicle and near the reference line's end
-    if (ego_sl.s + lookahead_distance > reference_line_length) {
+    if (ego_s + lookahead_distance > reference_line_length) {
       maneuver_goal->maneuver_infos.resize(1);
       maneuver_goal->maneuver_infos.front().maneuver_target.target_s = reference_line_->Length();
       maneuver_goal->maneuver_infos.front().has_stop_point = true;
@@ -96,11 +115,9 @@ void FollowLane::ObstacleDecision(ManeuverGoal *maneuver_goal) const {
     } else {
       // 0.2 no leading vehicle and not near the reference line's end
       maneuver_goal->maneuver_infos.resize(1);
-
       maneuver_goal->maneuver_infos.front().maneuver_target.target_speed = PlanningConfig::Instance().target_speed();
-//      maneuver_goal->maneuver_infos.front().target_s = ego_sl.s + lookahead_distance;
       maneuver_goal->maneuver_infos.front().lane_id =
-          reference_line_->NearestWayPoint(ego_sl.s + lookahead_distance).lane_id;
+          reference_line_->NearestWayPoint(ego_s + lookahead_distance).lane_id;
       maneuver_goal->maneuver_infos.front().has_stop_point = false;
       maneuver_goal->maneuver_infos.front().ptr_ref_line = reference_line_;
       maneuver_goal->decision_type = DecisionType::kFollowLane;
@@ -109,10 +126,9 @@ void FollowLane::ObstacleDecision(ManeuverGoal *maneuver_goal) const {
   }
   const auto &forward_obstacle = obstacles.at(forward_obstacle_id);
   // 1. if there is a vehicle is so close
-  const double vel_diff = forward_obstacle->Speed() - ego_vel;
   if (forward_clear_distance < PlanningConfig::Instance().lon_safety_buffer()) {
     maneuver_goal->maneuver_infos.resize(1);
-    maneuver_goal->maneuver_infos.front().maneuver_target.target_s = ego_sl.s + forward_clear_distance;
+    maneuver_goal->maneuver_infos.front().maneuver_target.target_s = ego_s + forward_clear_distance;
 //    maneuver_goal->maneuver_infos.front().target_speed = 0.0;
     maneuver_goal->maneuver_infos.front().lane_id =
         reference_line_->NearestWayPoint(maneuver_goal->maneuver_infos.front().maneuver_target.target_s).lane_id;
@@ -123,58 +139,20 @@ void FollowLane::ObstacleDecision(ManeuverGoal *maneuver_goal) const {
   }
 
   // 2. has leading vehicle
+  if (ego_s + lookahead_distance < reference_line_length) {
+    // 2.2.1 check to left and right lane
+    if (0.3 * ego_vel > forward_obstacle->Speed()) {
+      if (incoming_way_point.road_option.option == planning_msgs::CarlaRoadOption::LANEFOLLOW) {
+        this->ChangeLaneDecision(ego_vel, ego_sl_boundary, forward_clear_distance, backward_clear_distance,
+                                 forward_obstacle_id, backward_obstacle_id,
+                                 maneuver_goal, incoming_way_point);
 
-  // 2.1 leading vehicle is far away the ego vehicle
-  if (lookahead_distance > PlanningConfig::Instance().max_lookahead_distance()) {
-    // 2.1.1 has stop point
-    if (ego_sl.s + lookahead_distance > reference_line_length) {
-      maneuver_goal->maneuver_infos.resize(1);
-      maneuver_goal->maneuver_infos.front().has_stop_point = true;
-      maneuver_goal->maneuver_infos.front().maneuver_target.target_s = reference_line_->Length();
-//      maneuver_goal->maneuver_infos.front().target_speed = 0.0;
-      maneuver_goal->maneuver_infos.front().ptr_ref_line = reference_line_;
-      maneuver_goal->maneuver_infos.front().lane_id =
-          reference_line_->NearestWayPoint(maneuver_goal->maneuver_infos.front().maneuver_target.target_s).lane_id;
-      maneuver_goal->decision_type = DecisionType::kStopAtDestination;
-    } else {
-      // 2.1.2 does not have stop point
-      maneuver_goal->maneuver_infos.front().has_stop_point = false;
-//      maneuver_goal->maneuver_infos.front().maneuver_target.target_s = ego_sl.s + lookahead_distance;
-      maneuver_goal->maneuver_infos.front().maneuver_target.target_speed = PlanningConfig::Instance().target_speed();
-      maneuver_goal->maneuver_infos.front().lane_id =
-          reference_line_->NearestWayPoint(ego_sl.s + lookahead_distance).lane_id;
-      maneuver_goal->maneuver_infos.front().ptr_ref_line = reference_line_;
-      maneuver_goal->decision_type = DecisionType::kFollowLane;
-    }
-  } else {
-    // 2.2 leading vehicle is in lookahead distance
-    if (ego_sl.s + lookahead_distance < reference_line_length) {
-      // 2.2.1 check to left and right lane
-      if (0.3 * ego_vel > forward_obstacle->Speed()) {
-        if (incoming_way_point.road_option.option == planning_msgs::CarlaRoadOption::LANEFOLLOW) {
-          this->ChangeLaneDecision(ego_sl.s, forward_clear_distance, backward_clear_distance,
-                                   forward_obstacle_id, backward_obstacle_id, incoming_way_point,
-                                   maneuver_goal);
-
-        } else {
-          // follow the leading vehicle
-          maneuver_goal->maneuver_infos.resize(1);
-          maneuver_goal->decision_type = DecisionType::kFollowLane;
-          maneuver_goal->maneuver_infos.front().lane_id =
-              reference_line_->NearestWayPoint(std::min(ego_sl.s + lookahead_distance,
-                                                        reference_line_->Length())).lane_id;
-          maneuver_goal->maneuver_infos.front().has_stop_point = false;
-          maneuver_goal->maneuver_infos.front().ptr_ref_line = reference_line_;
-          maneuver_goal->maneuver_infos.front().maneuver_target.target_speed =
-              std::min(forward_obstacle->Speed(), PlanningConfig::Instance().target_speed());
-        }
       } else {
-        // 2.2.2 the leading vehicle is not so slow, just follow
+        // follow the leading vehicle
         maneuver_goal->maneuver_infos.resize(1);
         maneuver_goal->decision_type = DecisionType::kFollowLane;
-//        maneuver_goal->maneuver_infos.front().target_s = std::min(ego_sl.s + lookahead_distance, reference_line_->Length());
         maneuver_goal->maneuver_infos.front().lane_id =
-            reference_line_->NearestWayPoint(std::min(ego_sl.s + lookahead_distance,
+            reference_line_->NearestWayPoint(std::min(ego_s + lookahead_distance,
                                                       reference_line_->Length())).lane_id;
         maneuver_goal->maneuver_infos.front().has_stop_point = false;
         maneuver_goal->maneuver_infos.front().ptr_ref_line = reference_line_;
@@ -182,24 +160,37 @@ void FollowLane::ObstacleDecision(ManeuverGoal *maneuver_goal) const {
             std::min(forward_obstacle->Speed(), PlanningConfig::Instance().target_speed());
       }
     } else {
-      // 2.3 the vehicle is approach the reference end, we don't want to change the lane
+      // 2.2.2 the leading vehicle is not so slow, just follow
       maneuver_goal->maneuver_infos.resize(1);
-      maneuver_goal->maneuver_infos.front().has_stop_point = true;
-      maneuver_goal->maneuver_infos.front().maneuver_target.target_s = reference_line_length;
+      maneuver_goal->decision_type = DecisionType::kFollowLane;
+//        maneuver_goal->maneuver_infos.front().target_s = std::min(ego_sl.s + lookahead_distance, reference_line_->Length());
       maneuver_goal->maneuver_infos.front().lane_id =
-          reference_line_->NearestWayPoint(reference_line_length).lane_id;
-      maneuver_goal->decision_type = DecisionType::kStopAtDestination;
+          reference_line_->NearestWayPoint(std::min(ego_s + lookahead_distance,
+                                                    reference_line_->Length())).lane_id;
+      maneuver_goal->maneuver_infos.front().has_stop_point = false;
+      maneuver_goal->maneuver_infos.front().ptr_ref_line = reference_line_;
+      maneuver_goal->maneuver_infos.front().maneuver_target.target_speed =
+          std::min(forward_obstacle->Speed(), PlanningConfig::Instance().target_speed());
     }
+  } else {
+    // 2.3 the vehicle is approach the reference end, we don't want to change the lane
+    maneuver_goal->maneuver_infos.resize(1);
+    maneuver_goal->maneuver_infos.front().has_stop_point = true;
+    maneuver_goal->maneuver_infos.front().maneuver_target.target_s = reference_line_length;
+    maneuver_goal->maneuver_infos.front().lane_id =
+        reference_line_->NearestWayPoint(reference_line_length).lane_id;
+    maneuver_goal->decision_type = DecisionType::kStopAtDestination;
   }
 }
 
-void FollowLane::ChangeLaneDecision(double ego_s,
+void FollowLane::ChangeLaneDecision(double ego_vel,
+                                    const SLBoundary &ego_sl_boundary,
                                     double current_lane_forward_clear_distance,
                                     double current_lane_backward_clear_distance,
                                     int current_lane_forward_obstacle_id,
                                     int current_lane_backward_obstacle_id,
-                                    const planning_msgs::WayPoint &incoming_way_point,
-                                    ManeuverGoal *maneuver_goal) const {
+                                    ManeuverGoal *maneuver_goal,
+                                    const planning_msgs::WayPoint &incoming_way_point) const {
   double left_forward_clear_distance = -10.0;
   double left_backward_clear_distance = -10.0;
   int left_forward_obstacle_id;
@@ -210,7 +201,6 @@ void FollowLane::ChangeLaneDecision(double ego_s,
   int right_backward_obstacle_id;
   bool can_change_left = false;
   bool can_change_right = false;
-  const double ego_vel = VehicleState::Instance().linear_vel();
   const auto &rear_obstacle = ObstacleFilter::Instance().Obstacles().at(current_lane_backward_obstacle_id);
   const auto &front_obstacle = ObstacleFilter::Instance().Obstacles().at(current_lane_forward_obstacle_id);
   // check current lane is clear to change lane
@@ -224,7 +214,7 @@ void FollowLane::ChangeLaneDecision(double ego_s,
     if ((incoming_way_point.lane_change.type == planning_msgs::LaneChangeType::LEFT ||
         incoming_way_point.lane_change.type == planning_msgs::LaneChangeType::BOTH) &&
         incoming_way_point.has_left_lane) {
-      this->GetLaneClearDistance(-1,
+      this->GetLaneClearDistance(-1, ego_sl_boundary,
                                  reference_line_,
                                  &left_forward_clear_distance,
                                  &left_backward_clear_distance,
@@ -253,7 +243,7 @@ void FollowLane::ChangeLaneDecision(double ego_s,
     if ((incoming_way_point.lane_change.type == planning_msgs::LaneChangeType::RIGHT ||
         incoming_way_point.lane_change.type == planning_msgs::LaneChangeType::BOTH) &&
         incoming_way_point.has_right_lane) {
-      this->GetLaneClearDistance(1,
+      this->GetLaneClearDistance(1, ego_sl_boundary,
                                  reference_line_,
                                  &right_forward_clear_distance,
                                  &right_backward_clear_distance,
@@ -280,10 +270,7 @@ void FollowLane::ChangeLaneDecision(double ego_s,
     }
   }
   if (!can_change_right && !can_change_left) {
-    const double lookahead_distance = std::max(PlanningConfig::Instance().min_lookahead_distance(),
-                                               std::min(PlanningConfig::Instance().max_lookahead_distance(),
-                                                        current_lane_forward_clear_distance
-                                                            - PlanningConfig::Instance().lon_safety_buffer()));
+
     maneuver_goal->maneuver_infos.resize(1);
     maneuver_goal->decision_type = DecisionType::kFollowLane;
     maneuver_goal->maneuver_infos.front().lane_id = incoming_way_point.lane_id;
@@ -294,11 +281,7 @@ void FollowLane::ChangeLaneDecision(double ego_s,
     maneuver_goal->maneuver_infos.front().has_stop_point = false;
     maneuver_goal->maneuver_infos.front().ptr_ref_line = reference_line_;
   } else if (can_change_left && !can_change_right) {
-    // only can change left
-    const double lookahead_distance = std::max(PlanningConfig::Instance().min_lookahead_distance(),
-                                               std::min(PlanningConfig::Instance().max_lookahead_distance(),
-                                                        left_forward_clear_distance
-                                                            - PlanningConfig::Instance().lon_safety_buffer()));
+
     /// current lane target;
     maneuver_goal->decision_type = DecisionType::kChangeLeft;
     maneuver_goal->maneuver_infos.resize(2);
@@ -316,10 +299,7 @@ void FollowLane::ChangeLaneDecision(double ego_s,
     maneuver_goal->maneuver_infos.back().ptr_ref_line = nullptr;
   } else if (!can_change_left) {
     // only can change right
-    const double lookahead_distance = std::max(PlanningConfig::Instance().min_lookahead_distance(),
-                                               std::min(PlanningConfig::Instance().max_lookahead_distance(),
-                                                        right_forward_clear_distance
-                                                            - PlanningConfig::Instance().lon_safety_buffer()));
+
     maneuver_goal->maneuver_infos.resize(2);
     // current lane
     maneuver_goal->decision_type = DecisionType::kChangeRight;
@@ -369,7 +349,7 @@ void FollowLane::ChangeLaneDecision(double ego_s,
     const double right_following_vel = right_forward_obstacle_id < 0 ? PlanningConfig::Instance().target_speed()
                                                                      : ObstacleFilter::Instance().Obstacles().at(
             right_backward_obstacle_id)->Speed();
-
+    // we assume the obstacle in other lane is move along the center lane, fix it
     leading_velocity.push_back(left_leading_vel);
     leading_velocity.push_back(current_leading_vel);
     leading_velocity.push_back(right_leading_vel);
@@ -386,8 +366,7 @@ void FollowLane::ChangeLaneDecision(double ego_s,
     following_clear_distance.push_back(current_lane_backward_clear_distance);
     following_clear_distance.push_back(right_backward_clear_distance);
 
-    int target_lane_offset = SelectLane(ego_s,
-                                        ego_vel,
+    int target_lane_offset = SelectLane(ego_vel,
                                         leading_velocity,
                                         following_velocity,
                                         leading_clear_distance,
@@ -446,8 +425,7 @@ void FollowLane::ChangeLaneDecision(double ego_s,
   }
 }
 
-int FollowLane::SelectLane(double ego_s,
-                           double ego_vel,
+int FollowLane::SelectLane(double ego_vel,
                            const std::vector<double> &leading_velocity,
                            const std::vector<double> &following_velocity,
                            const std::vector<double> &leading_clear_distance,

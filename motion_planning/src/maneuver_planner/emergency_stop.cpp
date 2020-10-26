@@ -9,7 +9,6 @@ namespace planning {
 
 bool EmergencyStop::Enter(ManeuverPlanner *maneuver_planner) {
   ROS_INFO("Oops, something going wrong, we enter the **EmergencyStop**");
-
 }
 
 void EmergencyStop::Exit(ManeuverPlanner *maneuver_planner) {
@@ -26,17 +25,27 @@ State *EmergencyStop::Transition(ManeuverPlanner *maneuver_planner) {
   if (maneuver_planner == nullptr) {
     return nullptr;
   }
+  if (maneuver_planner->prev_maneuver_status() == ManeuverStatus::kUnknown ||
+      maneuver_planner->prev_maneuver_status() == ManeuverStatus::kError) {
+    ManeuverGoal maneuver_goal;
+    maneuver_goal.maneuver_infos.resize(1);
+    maneuver_goal.decision_type = DecisionType::kEmergencyStop;
+    maneuver_goal.maneuver_infos.front().has_stop_point = true;
+    maneuver_planner->SetManeuverGoal(maneuver_goal);
+    return &(EmergencyStop::Instance());
+  }
+  auto init_trajectory_point = maneuver_planner->init_trajectory_point();
   reference_line_ = maneuver_planner->multable_ref_line().front();
   SLPoint ego_sl;
-  reference_line_->XYToSL(VehicleState::Instance().pose().position.x,
-                          VehicleState::Instance().pose().position.y,
+  reference_line_->XYToSL(init_trajectory_point.path_point.x,
+                          init_trajectory_point.path_point.y,
                           &ego_sl);
   reference_line_->NearestWayPoint(ego_sl.s);
   current_lane_id_ = reference_line_->NearestWayPoint(ego_sl.s + 5.0).lane_id;
   ManeuverGoal obstacle_maneuver;
   ManeuverGoal traffic_light_maneuver;
-  this->ObstacleDecision(&obstacle_maneuver);
-  this->TrafficLightDecision(reference_line_, &traffic_light_maneuver);
+  this->ObstacleDecision(init_trajectory_point, &obstacle_maneuver);
+  this->TrafficLightDecision(reference_line_, ego_sl, &traffic_light_maneuver);
   auto combined_maneuver = CombineManeuver(traffic_light_maneuver, obstacle_maneuver);
   switch (combined_maneuver.decision_type) {
     case DecisionType::kFollowLane: return &(FollowLane::Instance());
@@ -49,14 +58,22 @@ State *EmergencyStop::Transition(ManeuverPlanner *maneuver_planner) {
   }
 }
 
-void EmergencyStop::ObstacleDecision(ManeuverGoal *maneuver_goal) const {
+void EmergencyStop::ObstacleDecision(const planning_msgs::TrajectoryPoint &init_trajectory_point,
+                                     ManeuverGoal *maneuver_goal) const {
   double forward_clear_distance, backward_clear_distance;
   int leading_vehicle_id, following_vehicle_id;
   SLPoint ego_sl;
-  reference_line_->XYToSL(VehicleState::Instance().pose().position.x,
-                          VehicleState::Instance().pose().position.y,
+  reference_line_->XYToSL(init_trajectory_point.path_point.x,
+                          init_trajectory_point.path_point.y,
                           &ego_sl);
-  this->GetLaneClearDistance(0,
+  Eigen::Vector2d ego_center{init_trajectory_point.path_point.x, init_trajectory_point.path_point.y};
+  const double ego_theta = init_trajectory_point.path_point.theta;
+  const double ego_length = PlanningConfig::Instance().vehicle_params().length;
+  const double ego_width = PlanningConfig::Instance().vehicle_params().width;
+  SLBoundary sl_boundary;
+  Box2d ego_box = Box2d(ego_center, ego_theta, ego_length, ego_width);
+  reference_line_->GetSLBoundary(ego_box, &sl_boundary);
+  this->GetLaneClearDistance(0, sl_boundary,
                              reference_line_,
                              &forward_clear_distance,
                              &backward_clear_distance,

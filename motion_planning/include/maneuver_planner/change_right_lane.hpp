@@ -49,7 +49,8 @@ class ChangeRightLane : public State {
    *
    * @param maneuver_goal
    */
-  void ObstacleDecision(ManeuverGoal *maneuver_goal) const override;
+  void ObstacleDecision(const planning_msgs::TrajectoryPoint &init_trajectory_point,
+                        ManeuverGoal *maneuver_goal) const override;
 
  private:
   ChangeRightLane() = default;

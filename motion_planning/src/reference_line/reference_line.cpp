@@ -187,6 +187,17 @@ double ReferenceLine::Length() const {
   return length_;
 }
 
+bool ReferenceLine::IsOnLane(const SLPoint &sl_point) const {
+  if (sl_point.s < 0 || sl_point.s > Length()) {
+    return false;
+  }
+  double left_width, right_width;
+  if (!this->GetLaneWidth(sl_point.s, &left_width, &right_width)) {
+    return false;
+  }
+  return sl_point.l <= left_width && sl_point.l >= -right_width;
+}
+
 bool ReferenceLine::IsOnLane(const SLBoundary &sl_boundary) const {
 
   // if the obstacle is out of range
@@ -466,4 +477,5 @@ bool ReferenceLine::GetMatchedPoint(double x, double y, ReferencePoint *matched_
   *matched_s = nearest_s;
   return true;
 }
+
 }

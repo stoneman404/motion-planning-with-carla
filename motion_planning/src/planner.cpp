@@ -59,10 +59,11 @@ void Planner::RunOnce() {
 //  auto init_trajectory_point = Planner::GetStitchingTrajectory();
   planning_msgs::TrajectoryPoint init_trajectory_point;
   auto maneuver_status = maneuver_planner_->Process(init_trajectory_point);
+  maneuver_planner_->SetPrevManeuverStatus(maneuver_status);
   if (maneuver_status != ManeuverStatus::kSuccess) {
-    ROS_FATAL("ManeuverPlanner failed, [maneuver_status: %u]", maneuver_status);
+    ROS_FATAL("ManeuverPlanner failed, [maneuver_status: %ud]", static_cast<uint32_t>(maneuver_status));
   } else {
-    ROS_DEBUG("ManeuverPlanner success, [maneuver_status: %u]", maneuver_status);
+    ROS_DEBUG("ManeuverPlanner success, [maneuver_status: %ud]", static_cast<uint32_t>(maneuver_status));
   }
   auto optimal_trajectory = maneuver_planner_->optimal_trajectory();
   optimal_trajectory.header.stamp = current_time_stamp;
@@ -87,40 +88,40 @@ void Planner::InitSubscriber() {
 
   this->ego_vehicle_subscriber_ = nh_.subscribe<carla_msgs::CarlaEgoVehicleStatus>(
       topic::kEgoVehicleStatusName, 10,
-      [this](const carla_msgs::CarlaEgoVehicleStatus &ego_vehicle_status) {
-        this->ego_vehicle_status_ = ego_vehicle_status;
+      [this](const carla_msgs::CarlaEgoVehicleStatus::ConstPtr &ego_vehicle_status) {
+        this->ego_vehicle_status_ = *ego_vehicle_status;
       });
 
   this->traffic_lights_subscriber_ = nh_.subscribe<carla_msgs::CarlaTrafficLightStatusList>(
       topic::kTrafficLigthsName, 10,
-      [this](const carla_msgs::CarlaTrafficLightStatusList &traffic_light_status_list) {
-        this->traffic_light_status_list_ = traffic_light_status_list;
+      [this](const carla_msgs::CarlaTrafficLightStatusList::ConstPtr &traffic_light_status_list) {
+        this->traffic_light_status_list_ = *traffic_light_status_list;
         ROS_INFO("the traffic light status list size: %zu",
                  traffic_light_status_list_.traffic_lights.size());
       });
   this->traffic_lights_info_subscriber_ = nh_.subscribe<carla_msgs::CarlaTrafficLightInfoList>(
       topic::kTrafficLightsInfoName,
       10,
-      [this](const carla_msgs::CarlaTrafficLightInfoList &traffic_lights_info_list) {
+      [this](const carla_msgs::CarlaTrafficLightInfoList::ConstPtr &traffic_lights_info_list) {
         traffic_lights_info_list_ = decltype(traffic_lights_info_list_)();
-        for (const auto &traffic_light_info : traffic_lights_info_list.traffic_lights) {
+        for (const auto &traffic_light_info : traffic_lights_info_list->traffic_lights) {
           traffic_lights_info_list_.emplace(traffic_light_info.id, traffic_light_info);
         }
       });
 
   this->ego_vehicle_info_subscriber_ = nh_.subscribe<carla_msgs::CarlaEgoVehicleInfo>(
       topic::kEgoVehicleInfoName, 10,
-      [this](const carla_msgs::CarlaEgoVehicleInfo &ego_vehicle_info) {
-        ego_vehicle_info_ = ego_vehicle_info;
+      [this](const carla_msgs::CarlaEgoVehicleInfo::ConstPtr &ego_vehicle_info) {
+        ego_vehicle_info_ = *ego_vehicle_info;
         this->ego_vehicle_id_ = ego_vehicle_info_.id;
         ROS_INFO("the ego_vehicle_id_: %i", ego_vehicle_id_);
       });
 
   this->objects_subscriber_ = nh_.subscribe<derived_object_msgs::ObjectArray>(
       topic::kObjectsName, 10,
-      [this](const derived_object_msgs::ObjectArray &object_array) {
+      [this](const derived_object_msgs::ObjectArray::ConstPtr &object_array) {
         this->objects_map_.clear();
-        for (const auto &object : object_array.objects) {
+        for (const auto &object : object_array->objects) {
           objects_map_.emplace(object.id, object);
         }
         if (ego_vehicle_id_ != -1) {
@@ -131,14 +132,14 @@ void Planner::InitSubscriber() {
 
   this->ego_vehicle_odometry_subscriber_ = nh_.subscribe<nav_msgs::Odometry>(
       topic::kEgoVehicleOdometryName, 10,
-      [this](const nav_msgs::Odometry &odometry) {
-        this->ego_odometry_ = odometry;
+      [this](const nav_msgs::Odometry::ConstPtr &odometry) {
+        this->ego_odometry_ = *odometry;
       });
 
   this->init_pose_subscriber_ = nh_.subscribe<geometry_msgs::PoseWithCovarianceStamped>(
       topic::kInitialPoseName, 10,
-      [this](const geometry_msgs::PoseWithCovarianceStamped &init_pose) {
-        this->init_pose_ = init_pose;
+      [this](const geometry_msgs::PoseWithCovarianceStamped::ConstPtr init_pose) {
+        this->init_pose_ = *init_pose;
         PlanningContext::Instance().UpdateGlobalInitPose(init_pose_);
         ROS_INFO("the init_pose_: x: %lf, y: %lf",
                  init_pose_.pose.pose.position.x, init_pose_.pose.pose.position.y);
@@ -146,8 +147,8 @@ void Planner::InitSubscriber() {
 
   this->goal_pose_subscriber_ = nh_.subscribe<geometry_msgs::PoseStamped>(
       topic::kGoalPoseName, 10,
-      [this](const geometry_msgs::PoseStamped &goal_pose) {
-        this->goal_pose_ = goal_pose;
+      [this](const geometry_msgs::PoseStamped::ConstPtr &goal_pose) {
+        this->goal_pose_ = *goal_pose;
         PlanningContext::Instance().UpdateGlobalGoalPose(goal_pose_);
         ROS_INFO("the goal_pose_ : x: %lf, y: %lf",
                  goal_pose_.pose.position.x, goal_pose_.pose.position.y);

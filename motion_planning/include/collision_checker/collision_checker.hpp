@@ -12,8 +12,8 @@ class CollisionChecker {
  public:
   CollisionChecker() = default;
   ~CollisionChecker() = default;
-  CollisionChecker(const std::shared_ptr<ReferenceLine> &ptr_ref_line,
-                   const std::shared_ptr<STGraph> &ptr_st_graph,
+  CollisionChecker(std::shared_ptr<ReferenceLine> ptr_ref_line,
+                   std::shared_ptr<STGraph> ptr_st_graph,
                    double ego_vehicle_s, double ego_vehicle_d,
                    ThreadPool *thread_pool = nullptr);
   /**

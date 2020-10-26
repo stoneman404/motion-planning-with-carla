@@ -1,15 +1,17 @@
 #include "obstacle_filter/obstacle_filter.hpp"
 #include "collision_checker/collision_checker.hpp"
 
+#include <utility>
+
 namespace planning {
 
-CollisionChecker::CollisionChecker(const std::shared_ptr<ReferenceLine> &ptr_ref_line,
-                                   const std::shared_ptr<STGraph> &ptr_st_graph,
+CollisionChecker::CollisionChecker(std::shared_ptr<ReferenceLine> ptr_ref_line,
+                                   std::shared_ptr<STGraph> ptr_st_graph,
                                    double ego_vehicle_s,
                                    double ego_vehicle_d,
                                    ThreadPool *thread_pool)
-    : ptr_ref_line_(ptr_ref_line),
-      ptr_st_graph_(ptr_st_graph),
+    : ptr_ref_line_(std::move(ptr_ref_line)),
+      ptr_st_graph_(std::move(ptr_st_graph)),
       thread_pool_(thread_pool) {
 
   const auto &obstacles = ObstacleFilter::Instance().Obstacles();
@@ -21,12 +23,11 @@ bool CollisionChecker::IsCollision(const planning_msgs::Trajectory &trajectory) 
   double ego_width = PlanningConfig::Instance().vehicle_params().width;
   double ego_length = PlanningConfig::Instance().vehicle_params().length;
   if (this->thread_pool_ == nullptr) {
-    double shift_distance = PlanningConfig::Instance().vehicle_params().back_axle_to_center_length;
     for (size_t i = 0; i < trajectory.trajectory_points.size(); ++i) {
       const auto &traj_point = trajectory.trajectory_points.at(i);
       double ego_theta = traj_point.path_point.theta;
       Box2d ego_box = Box2d({traj_point.path_point.x, traj_point.path_point.y}, ego_theta, ego_length, ego_width);
-      ego_box.Shift({shift_distance * std::cos(ego_theta), shift_distance * std::sin(ego_theta)});
+//      ego_box.Shift({shift_distance * std::cos(ego_theta), shift_distance * std::sin(ego_theta)});
       for (const auto &obstacle_box : predicted_obstacle_box_[i]) {
         if (ego_box.HasOverlapWithBox2d(obstacle_box)) {
           return true;
@@ -42,7 +43,6 @@ bool CollisionChecker::IsCollision(const planning_msgs::Trajectory &trajectory) 
       const auto task = [this, &traj_point, &i, &shift_distance, &ego_length, &ego_width]() -> bool {
         double ego_theta = traj_point.path_point.theta;
         Box2d ego_box = Box2d({traj_point.path_point.x, traj_point.path_point.y}, ego_theta, ego_length, ego_width);
-        ego_box.Shift({shift_distance * std::cos(ego_theta), shift_distance * std::sin(ego_theta)});
         for (const auto &obstacle_box : predicted_obstacle_box_[i]) {
           if (ego_box.HasOverlapWithBox2d(obstacle_box)) {
             return true;

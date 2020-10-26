@@ -45,13 +45,13 @@ void ManeuverPlanner::InitPlanner() {
   maneuver_goal_.maneuver_infos.front().ptr_ref_line = ref_lines_.front();
   maneuver_goal_.maneuver_infos.front().has_stop_point = false;
   maneuver_goal_.maneuver_infos.front().lane_id = VehicleState::Instance().lane_id();
-  prev_status_ = ManeuverStatus::kUnknown;
+  prev_status_ = ManeuverStatus::kSuccess;
   ROS_ASSERT(current_state_->Enter(this));
 }
 
 ManeuverStatus ManeuverPlanner::Process(const planning_msgs::TrajectoryPoint &init_trajectory_point) {
+  init_trajectory_point_ = init_trajectory_point;
   if (current_state_ == nullptr) {
-    GenerateEmergencyStopTrajectory(init_trajectory_point, optimal_trajectory_);
     ROS_FATAL("[ManeuverPlanner::Process], the current state is nullptr");
     return ManeuverStatus::kError;
   }
@@ -69,7 +69,6 @@ ManeuverStatus ManeuverPlanner::Process(const planning_msgs::TrajectoryPoint &in
     }
     for (auto &future : futures) {
       if (!future.get().first) {
-        GenerateEmergencyStopTrajectory(init_trajectory_point, optimal_trajectory_);
         return ManeuverStatus::kError;
       } else {
         ref_lines_.push_back(future.get().second);
@@ -79,38 +78,30 @@ ManeuverStatus ManeuverPlanner::Process(const planning_msgs::TrajectoryPoint &in
     for (const auto &route_response : routes_) {
       auto ptr_ref_line = std::make_shared<ReferenceLine>();
       if (!ManeuverPlanner::GenerateReferenceLine(route_response, ptr_ref_line)) {
-        GenerateEmergencyStopTrajectory(init_trajectory_point, optimal_trajectory_);
         return ManeuverStatus::kError;
       } else {
         ref_lines_.push_back(ptr_ref_line);
       }
     }
   }
-
-  valid_trajectories_.clear();
-  if (maneuver_goal_.decision_type == DecisionType::kEmergencyStop) {
-    GenerateEmergencyStopTrajectory(init_trajectory_point, optimal_trajectory_);
-//    return ManeuverStatus::kSuccess;
-  } else {
-    auto trajectory_plan_result = trajectory_planner_->Process(init_trajectory_point,
-                                                               maneuver_goal_,
-                                                               optimal_trajectory_,
-                                                               &valid_trajectories_);
-    if (!trajectory_plan_result) {
-      GenerateEmergencyStopTrajectory(init_trajectory_point, optimal_trajectory_);
-      ROS_FATAL("ManeuverPlanner::Process Failed, [State:%s, init_trajectory_point: {x: %f, y: %f}]",
-                current_state_->Name().c_str(), init_trajectory_point.path_point.x,
-                init_trajectory_point.path_point.y);
-      return ManeuverStatus::kError;
-    }
-  }
-  ROS_DEBUG("[ManeuverPlanner::Process], the size of [valid_trajectories_] is %zu", valid_trajectories_.size());
   std::unique_ptr<State> state(current_state_->Transition(this));
   if (state != nullptr && state->Name() != current_state_->Name()) {
     current_state_->Exit(this);
     current_state_ = std::move(state);
     current_state_->Enter(this);
   }
+  valid_trajectories_.clear();
+  auto trajectory_plan_result = trajectory_planner_->Process(init_trajectory_point,
+                                                             maneuver_goal_,
+                                                             optimal_trajectory_,
+                                                             &valid_trajectories_);
+  if (!trajectory_plan_result) {
+    ROS_FATAL("ManeuverPlanner::Process Failed, [State:%s, init_trajectory_point: {x: %f, y: %f}]",
+              current_state_->Name().c_str(), init_trajectory_point.path_point.x,
+              init_trajectory_point.path_point.y);
+    return ManeuverStatus::kError;
+  }
+  ROS_DEBUG("[ManeuverPlanner::Process], the size of [valid_trajectories_] is %zu", valid_trajectories_.size());
   return ManeuverStatus::kSuccess;
 }
 
@@ -249,56 +240,15 @@ std::list<planning_srvs::RouteResponse> &ManeuverPlanner::multable_routes() { re
 
 std::list<std::shared_ptr<ReferenceLine>> &ManeuverPlanner::multable_ref_line() { return ref_lines_; }
 
-void ManeuverPlanner::GenerateEmergencyStopTrajectory(const planning_msgs::TrajectoryPoint &init_trajectory_point,
-                                                      planning_msgs::Trajectory &emergency_trajectory) {
-  const double kMaxTrajectoryTime = PlanningConfig::Instance().max_lookahead_time();
-  const double kTimeGap = PlanningConfig::Instance().delta_t();
-  emergency_trajectory.trajectory_points.clear();
-  auto num_traj_point = static_cast<int>(kMaxTrajectoryTime / kTimeGap);
-  emergency_trajectory.trajectory_points.resize(num_traj_point);
-  const double max_decel = PlanningConfig::Instance().max_lon_acc();
-  double stop_time = init_trajectory_point.vel / max_decel;
-  double last_x = init_trajectory_point.path_point.x;
-  double last_y = init_trajectory_point.path_point.y;
-  double last_v = init_trajectory_point.vel;
-  double last_a = max_decel;
-  double last_theta = init_trajectory_point.path_point.theta;
-  double last_s = init_trajectory_point.path_point.s;
-  planning_msgs::TrajectoryPoint tp;
-  tp = init_trajectory_point;
-  tp.relative_time = 0.0;
-  tp.acc = -max_decel;
-  emergency_trajectory.trajectory_points.push_back(tp);
-  for (int i = 1; i < num_traj_point; ++i) {
-    double t = i * kTimeGap + init_trajectory_point.relative_time;
-    tp.relative_time = t;
-    tp.vel = init_trajectory_point.vel - last_a * kTimeGap;
-    tp.acc = t <= stop_time ? -max_decel : 0.0;
-    tp.jerk = 0.0;
-    double ds = (0.5 * last_a * kTimeGap + last_v) * kTimeGap;
-    tp.path_point.x = last_x + std::cos(last_theta) * ds;
-    tp.path_point.y = last_y + std::sin(last_theta) * ds;
-    tp.path_point.theta = last_theta;
-    tp.path_point.s = last_s + ds;
-    tp.path_point.dkappa = 0.0;
-    tp.path_point.kappa = 0.0;
-    tp.steer_angle = init_trajectory_point.steer_angle;
-    emergency_trajectory.trajectory_points.push_back(tp);
-    last_s = tp.path_point.s;
-    last_x = tp.path_point.x;
-    last_y = tp.path_point.y;
-    last_theta = tp.path_point.theta;
-    last_v = tp.vel;
-    last_a = tp.acc;
-  }
-
-}
 const std::vector<planning_msgs::Trajectory> &ManeuverPlanner::valid_trajectories() const {
   return valid_trajectories_;
 }
 
 const planning_msgs::Trajectory &ManeuverPlanner::optimal_trajectory() const {
   return optimal_trajectory_;
+}
+const planning_msgs::TrajectoryPoint &ManeuverPlanner::init_trajectory_point() const {
+  return init_trajectory_point_;
 }
 
 }

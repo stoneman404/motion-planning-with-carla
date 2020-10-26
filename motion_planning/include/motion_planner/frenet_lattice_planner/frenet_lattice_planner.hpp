@@ -36,6 +36,8 @@ class FrenetLatticePlanner : public TrajectoryPlanner {
 
  protected:
 
+  static void GenerateEmergencyStopTrajectory(const planning_msgs::TrajectoryPoint &init_trajectory_point,
+                                              planning_msgs::Trajectory &stop_trajectory);
   /**
    * @brief: generate lon trajectories and lat trajectories
    * @param maneuver_info: maneuver goal, comes from maneuver planner

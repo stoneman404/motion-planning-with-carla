@@ -17,6 +17,10 @@ bool FrenetLatticePlanner::Process(const planning_msgs::TrajectoryPoint &init_tr
     ROS_FATAL("[FrenetLatticePlanner::Process]: No reference line provided");
     return false;
   }
+  if (maneuver_goal.decision_type == DecisionType::kEmergencyStop) {
+    FrenetLatticePlanner::GenerateEmergencyStopTrajectory(init_trajectory_point, pub_trajectory);
+    return true;
+  }
   size_t index = 0;
   size_t failed_ref_plan_num = 0;
   std::vector<std::pair<planning_msgs::Trajectory, double>> optimal_trajectories;
@@ -28,7 +32,7 @@ bool FrenetLatticePlanner::Process(const planning_msgs::TrajectoryPoint &init_tr
       failed_ref_plan_num++;
     }
     if (index == 0) {
-      optimal_trajectory.second += 20.0;
+      optimal_trajectory.second += 50.0;
     }
     optimal_trajectories.push_back(optimal_trajectory);
     index++;
@@ -327,5 +331,50 @@ void FrenetLatticePlanner::GetInitCondition(const std::shared_ptr<ReferenceLine>
                                            init_s, init_d);
 }
 FrenetLatticePlanner::FrenetLatticePlanner(ThreadPool *thread_pool) : thread_pool_(thread_pool) {}
+
+void FrenetLatticePlanner::GenerateEmergencyStopTrajectory(const planning_msgs::TrajectoryPoint &init_trajectory_point,
+                                                           planning_msgs::Trajectory &stop_trajectory) {
+  const double kMaxTrajectoryTime = PlanningConfig::Instance().max_lookahead_time();
+  const double kTimeGap = PlanningConfig::Instance().delta_t();
+  stop_trajectory.trajectory_points.clear();
+  auto num_traj_point = static_cast<int>(kMaxTrajectoryTime / kTimeGap);
+  stop_trajectory.trajectory_points.resize(num_traj_point);
+  const double max_decel = PlanningConfig::Instance().max_lon_acc();
+  double stop_time = init_trajectory_point.vel / max_decel;
+  double last_x = init_trajectory_point.path_point.x;
+  double last_y = init_trajectory_point.path_point.y;
+  double last_v = init_trajectory_point.vel;
+  double last_a = max_decel;
+  double last_theta = init_trajectory_point.path_point.theta;
+  double last_s = init_trajectory_point.path_point.s;
+  planning_msgs::TrajectoryPoint tp;
+  tp = init_trajectory_point;
+  tp.relative_time = 0.0;
+  tp.acc = -max_decel;
+  stop_trajectory.trajectory_points.push_back(tp);
+  for (int i = 1; i < num_traj_point; ++i) {
+    double t = i * kTimeGap + init_trajectory_point.relative_time;
+    tp.relative_time = t;
+    tp.vel = init_trajectory_point.vel - last_a * kTimeGap;
+    tp.acc = t <= stop_time ? -max_decel : 0.0;
+    tp.jerk = 0.0;
+    double ds = (0.5 * last_a * kTimeGap + last_v) * kTimeGap;
+    tp.path_point.x = last_x + std::cos(last_theta) * ds;
+    tp.path_point.y = last_y + std::sin(last_theta) * ds;
+    tp.path_point.theta = last_theta;
+    tp.path_point.s = last_s + ds;
+    tp.path_point.dkappa = 0.0;
+    tp.path_point.kappa = 0.0;
+    tp.steer_angle = init_trajectory_point.steer_angle;
+    stop_trajectory.trajectory_points.push_back(tp);
+    last_s = tp.path_point.s;
+    last_x = tp.path_point.x;
+    last_y = tp.path_point.y;
+    last_theta = tp.path_point.theta;
+    last_v = tp.vel;
+    last_a = tp.acc;
+  }
+
+}
 
 }

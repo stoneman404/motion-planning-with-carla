@@ -57,7 +57,8 @@ class FollowLane : public State {
    * @brief: obstacle decision
    * @param maneuver_goal
    */
-  void ObstacleDecision(ManeuverGoal *maneuver_goal) const override;
+  void ObstacleDecision(const planning_msgs::TrajectoryPoint &init_trajectory_point,
+                        ManeuverGoal *maneuver_goal) const override;
 
  private:
 
@@ -70,13 +71,14 @@ class FollowLane : public State {
    * @param incoming_way_point
    * @param maneuver_goal
    */
-  void ChangeLaneDecision(double ego_s,
+  void ChangeLaneDecision(double ego_vel,
+                          const SLBoundary &ego_sl_boundary,
                           double current_lane_forward_clear_distance,
                           double current_lane_backward_clear_distance,
                           int current_lane_forward_obstacle_id,
                           int current_lane_backward_obstacle_id,
-                          const planning_msgs::WayPoint &incoming_way_point,
-                          ManeuverGoal *maneuver_goal) const;
+                          ManeuverGoal *maneuver_goal,
+                          const planning_msgs::WayPoint &incoming_way_point) const;
 
   /**
    *
@@ -88,7 +90,7 @@ class FollowLane : public State {
    * @param following_clear_distance [left_lane, current_lane, right_lane]
    * @return
    */
-  static int SelectLane(double ego_s, double ego_vel,
+  static int SelectLane(double ego_vel,
                         const std::vector<double> &leading_velocity,
                         const std::vector<double> &following_velocity,
                         const std::vector<double> &leading_clear_distance,

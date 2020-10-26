@@ -12,7 +12,8 @@ class Stop : public State {
   static State &Instance();
   State *Transition(ManeuverPlanner *maneuver_planner) override;
  protected:
-  void ObstacleDecision(ManeuverGoal *maneuver_goal) const override;
+  void ObstacleDecision(const planning_msgs::TrajectoryPoint &init_trajectory_point,
+                        ManeuverGoal *maneuver_goal) const override;
 
  private:
   Stop() = default;

@@ -180,6 +180,8 @@ class ReferenceLine {
    */
   bool IsOnLane(const SLBoundary &sl_boundary) const;
 
+  bool IsOnLane(const SLPoint &sl_point) const;
+
   double GetDrivingWidth(const SLBoundary &sl_boudary) const;
 
   /**

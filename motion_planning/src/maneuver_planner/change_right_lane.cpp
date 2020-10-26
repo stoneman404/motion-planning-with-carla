@@ -28,8 +28,6 @@ bool ChangeRightLane::Enter(ManeuverPlanner *maneuver_planner) {
   ROS_ASSERT(maneuver_planner->multable_routes().size() == 2);
 }
 
-
-
 void ChangeRightLane::Exit(ManeuverPlanner *maneuver_planner) {
   ROS_INFO("We are current exit the **ChangeRightLane**");
   switch (maneuver_planner->multable_maneuver_goal().decision_type) {
@@ -61,19 +59,29 @@ State *ChangeRightLane::Transition(ManeuverPlanner *maneuver_planner) {
   if (maneuver_planner == nullptr) {
     return nullptr;
   }
+  if (maneuver_planner->prev_maneuver_status() == ManeuverStatus::kUnknown ||
+      maneuver_planner->prev_maneuver_status() == ManeuverStatus::kError) {
+    ManeuverGoal maneuver_goal;
+    maneuver_goal.maneuver_infos.resize(1);
+    maneuver_goal.decision_type = DecisionType::kEmergencyStop;
+    maneuver_goal.maneuver_infos.front().has_stop_point = true;
+    maneuver_planner->SetManeuverGoal(maneuver_goal);
+    return &(EmergencyStop::Instance());
+  }
+  auto init_trajectory_point = maneuver_planner->init_trajectory_point();
   before_reference_line_ = maneuver_planner->multable_ref_line().front();
   after_reference_line_ = maneuver_planner->multable_ref_line().back();
   SLPoint ego_sl;
-  before_reference_line_->XYToSL(VehicleState::Instance().pose().position.x,
-                                 VehicleState::Instance().pose().position.y,
+  before_reference_line_->XYToSL(init_trajectory_point.path_point.x,
+                                 init_trajectory_point.path_point.y,
                                  &ego_sl);
   before_lane_id_ = before_reference_line_->NearestWayPoint(ego_sl.s + 5.0).lane_id;
-  after_reference_line_->XYToSL(VehicleState::Instance().pose().position.x,
-                                VehicleState::Instance().pose().position.y,
+  after_reference_line_->XYToSL(init_trajectory_point.path_point.x,
+                                init_trajectory_point.path_point.y,
                                 &ego_sl);
   after_lane_id_ = after_reference_line_->NearestWayPoint(ego_sl.s + 5.0).lane_id;
   ManeuverGoal obstacle_maneuver;
-  this->ObstacleDecision(&obstacle_maneuver);
+  this->ObstacleDecision(init_trajectory_point, &obstacle_maneuver);
   maneuver_planner->SetManeuverGoal(obstacle_maneuver);
   switch (obstacle_maneuver.decision_type) {
     case DecisionType::kChangeRight:return &(ChangeRightLane::Instance());
@@ -86,17 +94,26 @@ State *ChangeRightLane::Transition(ManeuverPlanner *maneuver_planner) {
   }
 }
 
-void ChangeRightLane::ObstacleDecision(ManeuverGoal *maneuver_goal) const {
+void ChangeRightLane::ObstacleDecision(const planning_msgs::TrajectoryPoint &init_trajectory_point,
+                                       ManeuverGoal *maneuver_goal) const {
   double leading_clear_distance;
   double following_clear_distance;
   int leading_vehicle_id;
   int following_vehicle_id;
   SLPoint ego_sl;
-  after_reference_line_->XYToSL(VehicleState::Instance().pose().position.x,
-                                VehicleState::Instance().pose().position.y, &ego_sl);
+  Eigen::Vector2d ego_center{init_trajectory_point.path_point.x, init_trajectory_point.path_point.y};
+  double ego_theta = init_trajectory_point.path_point.theta;
+  const double ego_length = PlanningConfig::Instance().vehicle_params().length;
+  const double ego_width = PlanningConfig::Instance().vehicle_params().width;
+  after_reference_line_->XYToSL(init_trajectory_point.path_point.x,
+                                init_trajectory_point.path_point.y, &ego_sl);
+  Box2d ego_box = Box2d(ego_center, ego_theta, ego_length, ego_width);
+  SLBoundary sl_boundary_in_after_lane;
+  after_reference_line_->GetSLBoundary(ego_box, &sl_boundary_in_after_lane);
   if (IsOnLane(ego_sl.s, ego_sl.l, after_reference_line_)) {
     // enter the target_lane
-    this->GetLaneClearDistance(0, after_reference_line_,
+    this->GetLaneClearDistance(0, sl_boundary_in_after_lane,
+                               after_reference_line_,
                                &leading_clear_distance,
                                &following_clear_distance,
                                &leading_vehicle_id,
@@ -183,14 +200,17 @@ void ChangeRightLane::ObstacleDecision(ManeuverGoal *maneuver_goal) const {
                                    VehicleState::Instance().pose().position.y,
                                    &current_ego_sl);
 
-    this->GetLaneClearDistance(0, before_reference_line_,
+    SLBoundary sl_boundary_in_before_lane;
+    before_reference_line_->GetSLBoundary(ego_box, &sl_boundary_in_before_lane);
+    this->GetLaneClearDistance(0, sl_boundary_in_before_lane,
+                               before_reference_line_,
                                &leading_clear_distance,
                                &following_clear_distance,
                                &leading_vehicle_id,
                                &following_vehicle_id);
     if (leading_clear_distance < PlanningConfig::Instance().lon_safety_buffer()) {
       maneuver_goal->maneuver_infos.resize(1);
-      maneuver_goal->maneuver_infos.front().maneuver_target.target_s = leading_clear_distance;
+      maneuver_goal->maneuver_infos.front().maneuver_target.target_s = leading_clear_distance + current_ego_sl.s;
       maneuver_goal->decision_type = DecisionType::kEmergencyStop;
       maneuver_goal->maneuver_infos.front().has_stop_point = true;
       maneuver_goal->maneuver_infos.front().lane_id = before_lane_id_;
@@ -221,7 +241,7 @@ void ChangeRightLane::ObstacleDecision(ManeuverGoal *maneuver_goal) const {
         // can continue change lane, but should check the target lane's condition
         double target_leading_clear_distance, target_following_clear_distance;
         int target_leading_vehicle_id, target_following_vehicle_id;
-        this->GetLaneClearDistance(0, after_reference_line_,
+        this->GetLaneClearDistance(0, sl_boundary_in_after_lane, after_reference_line_,
                                    &target_leading_clear_distance,
                                    &target_following_clear_distance,
                                    &target_leading_vehicle_id,
@@ -243,10 +263,6 @@ void ChangeRightLane::ObstacleDecision(ManeuverGoal *maneuver_goal) const {
           maneuver_goal->decision_type = DecisionType::kFollowLane;
         } else {
           //  can continue change lane
-          SLPoint ego_sl_target_lane;
-          after_reference_line_->XYToSL(VehicleState::Instance().pose().position.x,
-                                        VehicleState::Instance().pose().position.y,
-                                        &ego_sl_target_lane);
           maneuver_goal->decision_type = DecisionType::kChangeRight;
           maneuver_goal->maneuver_infos.resize(2);
           maneuver_goal->maneuver_infos.front().lane_id = before_lane_id_;
