@@ -77,9 +77,9 @@ class ManeuverPlanner {
    */
   ManeuverGoal &multable_maneuver_goal();
 
-  const ManeuverStatus &prev_maneuver_status() const { return prev_status_; }
+  const ManeuverStatus &prev_maneuver_status() const { return maneuver_status_; }
 
-  void SetPrevManeuverStatus(const ManeuverStatus &prev_status) { this->prev_status_ = prev_status; }
+  void SetPrevManeuverStatus(const ManeuverStatus &prev_status) { this->maneuver_status_ = prev_status; }
 
   /**
    *
@@ -136,12 +136,9 @@ class ManeuverPlanner {
    * @param[in] way_points
    * @return
    */
-  static std::vector<planning_msgs::WayPoint>
-  GetWayPointsFromStartToEndIndex(const int start_index,
-                                  const int end_index,
-                                  const std::vector<planning_msgs::WayPoint> &way_points);
-
-
+  static std::vector<planning_msgs::WayPoint> GetWayPoints(const int start_index,
+                                                           const int end_index,
+                                                           const std::vector<planning_msgs::WayPoint> &way_points);
 
  private:
   ManeuverGoal maneuver_goal_;
@@ -151,7 +148,7 @@ class ManeuverPlanner {
   int current_lane_id_{};
   std::list<planning_srvs::RouteResponse> routes_;
   std::list<std::shared_ptr<ReferenceLine>> ref_lines_;
-  ManeuverStatus prev_status_;
+  ManeuverStatus maneuver_status_;
   std::vector<planning_msgs::Trajectory> valid_trajectories_;
   planning_msgs::Trajectory optimal_trajectory_;
   std::unique_ptr<TrajectoryPlanner> trajectory_planner_;

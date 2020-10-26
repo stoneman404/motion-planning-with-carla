@@ -45,45 +45,51 @@ void ManeuverPlanner::InitPlanner() {
   maneuver_goal_.maneuver_infos.front().ptr_ref_line = ref_lines_.front();
   maneuver_goal_.maneuver_infos.front().has_stop_point = false;
   maneuver_goal_.maneuver_infos.front().lane_id = VehicleState::Instance().lane_id();
-  prev_status_ = ManeuverStatus::kSuccess;
+  maneuver_status_ = ManeuverStatus::kSuccess;
   ROS_ASSERT(current_state_->Enter(this));
 }
 
 ManeuverStatus ManeuverPlanner::Process(const planning_msgs::TrajectoryPoint &init_trajectory_point) {
   init_trajectory_point_ = init_trajectory_point;
+//  ManeuverStatus maneuver_status = ManeuverStatus::kSuccess;
   if (current_state_ == nullptr) {
     ROS_FATAL("[ManeuverPlanner::Process], the current state is nullptr");
-    return ManeuverStatus::kError;
-  }
-  ROS_DEBUG("[ManeuverPlanner::Process], current state is [%s]", current_state_->Name().c_str());
-  ref_lines_.clear();
-  if (thread_pool_ != nullptr) {
-    std::vector<std::future<std::pair<bool, std::shared_ptr<ReferenceLine>>>> futures;
-    for (const auto &route_response : routes_) {
-      auto ptr_ref_line = std::make_shared<ReferenceLine>();
-      auto task = [this, &route_response, &ptr_ref_line]() -> std::pair<bool, std::shared_ptr<ReferenceLine>> {
-        auto result = ManeuverPlanner::GenerateReferenceLine(route_response, ptr_ref_line);
-        return std::make_pair(result, ptr_ref_line);
-      };
-      futures.emplace_back(thread_pool_->Enqueue(task));
-    }
-    for (auto &future : futures) {
-      if (!future.get().first) {
-        return ManeuverStatus::kError;
-      } else {
-        ref_lines_.push_back(future.get().second);
-      }
-    }
+    maneuver_status_ = ManeuverStatus::kError;
+//    return ManeuverStatus::kError;
   } else {
-    for (const auto &route_response : routes_) {
-      auto ptr_ref_line = std::make_shared<ReferenceLine>();
-      if (!ManeuverPlanner::GenerateReferenceLine(route_response, ptr_ref_line)) {
-        return ManeuverStatus::kError;
-      } else {
-        ref_lines_.push_back(ptr_ref_line);
+    ROS_DEBUG("[ManeuverPlanner::Process], current state is [%s]", current_state_->Name().c_str());
+    ref_lines_.clear();
+    if (thread_pool_ != nullptr) {
+      std::vector<std::future<std::pair<bool, std::shared_ptr<ReferenceLine>>>> futures;
+      for (const auto &route_response : routes_) {
+        auto ptr_ref_line = std::make_shared<ReferenceLine>();
+        auto task = [this, &route_response, &ptr_ref_line]() -> std::pair<bool, std::shared_ptr<ReferenceLine>> {
+          auto result = ManeuverPlanner::GenerateReferenceLine(route_response, ptr_ref_line);
+          return std::make_pair(result, ptr_ref_line);
+        };
+        futures.emplace_back(thread_pool_->Enqueue(task));
+      }
+      for (auto &future : futures) {
+        if (!future.get().first) {
+          maneuver_status_ = ManeuverStatus::kError;
+//          return ManeuverStatus::kError;
+        } else {
+          ref_lines_.push_back(future.get().second);
+        }
+      }
+    } else {
+      for (const auto &route_response : routes_) {
+        auto ptr_ref_line = std::make_shared<ReferenceLine>();
+        if (!ManeuverPlanner::GenerateReferenceLine(route_response, ptr_ref_line)) {
+          maneuver_status_ = ManeuverStatus::kError;
+//          return ManeuverStatus::kError;
+        } else {
+          ref_lines_.push_back(ptr_ref_line);
+        }
       }
     }
   }
+
   std::unique_ptr<State> state(current_state_->Transition(this));
   if (state != nullptr && state->Name() != current_state_->Name()) {
     current_state_->Exit(this);
@@ -99,10 +105,12 @@ ManeuverStatus ManeuverPlanner::Process(const planning_msgs::TrajectoryPoint &in
     ROS_FATAL("ManeuverPlanner::Process Failed, [State:%s, init_trajectory_point: {x: %f, y: %f}]",
               current_state_->Name().c_str(), init_trajectory_point.path_point.x,
               init_trajectory_point.path_point.y);
-    return ManeuverStatus::kError;
+    maneuver_status_ = ManeuverStatus::kError;
+  } else {
+    maneuver_status_ = ManeuverStatus::kSuccess;
   }
   ROS_DEBUG("[ManeuverPlanner::Process], the size of [valid_trajectories_] is %zu", valid_trajectories_.size());
-  return ManeuverStatus::kSuccess;
+  return maneuver_status_;
 }
 
 bool ManeuverPlanner::ReRoute(const geometry_msgs::Pose &start,
@@ -135,7 +143,7 @@ bool ManeuverPlanner::GenerateReferenceLine(const planning_srvs::RouteResponse &
   if (end_index - start_index < 1) {
     return false;
   }
-  const auto sample_way_points = GetWayPointsFromStartToEndIndex(start_index, end_index, route.route);
+  const auto sample_way_points = GetWayPoints(start_index, end_index, route.route);
   if (sample_way_points.empty()) {
     ROS_FATAL("[GenerateReferenceLine], failed to get sampled way points");
     return false;
@@ -203,12 +211,12 @@ int ManeuverPlanner::GetEndIndex(const int matched_index,
   return next_index;
 }
 
-std::vector<planning_msgs::WayPoint> ManeuverPlanner::GetWayPointsFromStartToEndIndex(
+std::vector<planning_msgs::WayPoint> ManeuverPlanner::GetWayPoints(
     const int start_index,
     const int end_index,
     const std::vector<planning_msgs::WayPoint> &way_points) {
   if (start_index >= end_index) {
-    ROS_ERROR("[ManeuverPlanner::GetWayPointsFromStartToEndIndex], "
+    ROS_ERROR("[ManeuverPlanner::GetWayPoints], "
               "Failed to get waypoints because start_index >= end_index");
     return {};
   }

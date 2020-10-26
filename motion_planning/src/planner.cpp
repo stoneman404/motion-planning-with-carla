@@ -59,7 +59,6 @@ void Planner::RunOnce() {
 //  auto init_trajectory_point = Planner::GetStitchingTrajectory();
   planning_msgs::TrajectoryPoint init_trajectory_point;
   auto maneuver_status = maneuver_planner_->Process(init_trajectory_point);
-  maneuver_planner_->SetPrevManeuverStatus(maneuver_status);
   if (maneuver_status != ManeuverStatus::kSuccess) {
     ROS_FATAL("ManeuverPlanner failed, [maneuver_status: %ud]", static_cast<uint32_t>(maneuver_status));
   } else {
@@ -146,8 +145,7 @@ void Planner::InitSubscriber() {
       });
 
   this->goal_pose_subscriber_ = nh_.subscribe<geometry_msgs::PoseStamped>(
-      topic::kGoalPoseName, 10,
-      [this](const geometry_msgs::PoseStamped::ConstPtr &goal_pose) {
+      topic::kGoalPoseName, 10, [this](const geometry_msgs::PoseStamped::ConstPtr &goal_pose) {
         this->goal_pose_ = *goal_pose;
         PlanningContext::Instance().UpdateGlobalGoalPose(goal_pose_);
         ROS_INFO("the goal_pose_ : x: %lf, y: %lf",
