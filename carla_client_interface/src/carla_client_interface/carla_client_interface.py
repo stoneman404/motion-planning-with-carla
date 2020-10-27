@@ -11,10 +11,9 @@ from agents.navigation.local_planner import RoadOption
 from carla_msgs.msg import CarlaWorldInfo
 from carla_waypoint_types.srv import GetActorWaypointResponse, GetActorWaypoint
 from carla_waypoint_types.srv import GetWaypointResponse, GetWaypoint
-from geometry_msgs.msg import PoseStamped, Pose
 from nav_msgs.msg import Path
-from planning_msgs.msg import WayPoint, LaneType, LaneChangeType, LaneMarking, \
-    LaneMarkingColor, LaneMarkingType, Junction, CarlaRoadOption, LaneChangeType
+from planning_msgs.msg import WayPoint, LaneType, LaneMarking, \
+    LaneMarkingColor, Junction, CarlaRoadOption, LaneChangeType
 from planning_srvs.srv import Route, RouteResponse
 from tf.transformations import euler_from_quaternion
 
@@ -193,19 +192,20 @@ class ClinetInterface(object):
             elif lane_change_type == carla.LaneChange.Right:
                 waypoint.lane_change = LaneChangeType.RIGHT
 
-            waypoint.road_option = self.set_road_option()
+            waypoint.road_option = self.set_road_option(wp)
             if waypoint.is_junction:
-                waypoint.junction.id = wp[0].junction.id
-                waypoint.junction.bounding_box.location.x = wp[0].junction.location.x
-                waypoint.junction.bounding_box.location.y = -wp[0].junction.location.y
-                waypoint.junction.bounding_box.location.z = wp[0].junction.location.z
-                waypoint.junction.bounding_box.extent.x = wp[0].junction.extent.x
-                waypoint.junction.bounding_box.extent.y = wp[0].junction.extent.y
-                waypoint.junction.bounding_box.extent.z = wp[0].junction.extent.z
+                junction = wp[0].get_junction()
+                waypoint.junction.id = junction.id
+                waypoint.junction.bounding_box.location.x = junction.bounding_box.location.x
+                waypoint.junction.bounding_box.location.y = -junction.bounding_box.location.y
+                waypoint.junction.bounding_box.location.z = junction.bounding_box.location.z
+                waypoint.junction.bounding_box.extent.x = junction.bounding_box.extent.x
+                waypoint.junction.bounding_box.extent.y = junction.bounding_box.extent.y
+                waypoint.junction.bounding_box.extent.z = junction.bounding_box.extent.z
 
             waypoint.s = wp[0].s
             response.route.append(waypoint)
-        if response.route:
+        if len(response.route) == 0:
             rospy.logerr("the response.route is empty")
         else:
             rospy.loginfo(
@@ -234,7 +234,7 @@ class ClinetInterface(object):
 
     def set_lane_type(self, wp):
 
-        lane_type = wp[0].lane_type
+        lane_type = wp.lane_type
         waypoint_lane_type = LaneType()
         if lane_type == carla.LaneType.Bidirectional:
             waypoint_lane_type = LaneType.BIDIRECTIONAL

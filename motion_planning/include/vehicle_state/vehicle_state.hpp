@@ -8,6 +8,18 @@
 #include "box2d.hpp"
 
 namespace planning {
+
+struct KinoDynamicState {
+
+  double x;
+  double y;
+  double z;
+  double theta;
+  double kappa;
+  double v;
+  double a;
+};
+
 class VehicleState {
  public:
 
@@ -25,6 +37,7 @@ class VehicleState {
   double linear_acc() const;
   double centripential_acc() const;
   double steer_percentage() const;
+  double kappa() const;
   geometry_msgs::Vector3 center_of_mass() const;
   const int &lane_id() const;
   const int &road_id() const;
@@ -42,6 +55,8 @@ class VehicleState {
   void set_center_of_mass(const geometry_msgs::Vector3 &center_of_mass);
   // predict the vehicle's last pose based on current pose, linear/angular acc and vel after time t;
   geometry_msgs::Pose PredictNextPose(double t) const;
+  void PredictNextKinoDynamicState(double predict_time, KinoDynamicState *predicted_state) const;
+  KinoDynamicState GetKinoDynamicVehicleState() const;
 
   bool is_junction() const;
   void set_is_junction(bool is_junction);
@@ -55,7 +70,7 @@ class VehicleState {
   int road_id_ = {};
   bool is_junction_ = false;
   geometry_msgs::Pose pose_;
-//    double kappa_;
+  double kappa_{};
   double theta_{};
   double linear_vel_{};
   double angular_vel_{};

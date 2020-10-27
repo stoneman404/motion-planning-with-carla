@@ -137,7 +137,7 @@ void Planner::InitSubscriber() {
 
   this->init_pose_subscriber_ = nh_.subscribe<geometry_msgs::PoseWithCovarianceStamped>(
       topic::kInitialPoseName, 10,
-      [this](const geometry_msgs::PoseWithCovarianceStamped::ConstPtr init_pose) {
+      [this](const geometry_msgs::PoseWithCovarianceStamped::ConstPtr &init_pose) {
         this->init_pose_ = *init_pose;
         PlanningContext::Instance().UpdateGlobalInitPose(init_pose_);
         ROS_INFO("the init_pose_: x: %lf, y: %lf",
@@ -166,7 +166,11 @@ bool Planner::UpdateObstacleStatus() {
   /// update the obstacle at each run
   int failed_count = 0;
   std::list<std::shared_ptr<Obstacle>> obstacles;
+
   for (auto &item : objects_map_) {
+    if (item.first == ego_vehicle_id_) {
+      continue;
+    }
     carla_waypoint_types::CarlaWaypoint way_point;
     if (!this->GetWayPoint(item.first, way_point)) {
       failed_count++;
@@ -179,8 +183,8 @@ bool Planner::UpdateObstacleStatus() {
     obstacles.push_back(obstacle);
   }
   ObstacleFilter::Instance().UpdateObstacles(obstacles);
-  // if all obstacles are failed to get way_point, something going wrong
-  return failed_count < ObstacleFilter::Instance().ObstaclesSize();
+  ROS_INFO("Update Obstacles, the failed count: %d", failed_count);
+  return true;
 }
 
 bool Planner::UpdateVehicleStatus() {
@@ -192,12 +196,15 @@ bool Planner::UpdateVehicleStatus() {
   if (!this->GetWayPoint(ego_id, carla_way_point)) {
     return false;
   }
-
+  ROS_INFO("Vehicle state: X: %lf, y: %lf, z: %lf",
+           VehicleState::Instance().GetKinoDynamicVehicleState().x,
+           VehicleState::Instance().GetKinoDynamicVehicleState().y,
+           VehicleState::Instance().GetKinoDynamicVehicleState().z);
   VehicleState::Instance().set_lane_id(carla_way_point.lane_id);
   VehicleState::Instance().set_section_id(carla_way_point.section_id);
   VehicleState::Instance().set_road_id(carla_way_point.road_id);
   VehicleState::Instance().set_is_junction(carla_way_point.is_junction);
-
+  return true;
 }
 
 bool Planner::GetWayPoint(const int &object_id,

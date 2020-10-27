@@ -120,7 +120,7 @@ bool ManeuverPlanner::ReRoute(const geometry_msgs::Pose &start,
   srv.request.start_pose = start;
   srv.request.end_pose = destination;
   if (!route_service_client_.call(srv)) {
-    ROS_FATAL("[Planner::Reroute], Failed to ReRoute!");
+    ROS_FATAL("[ManeuverPlanner::Reroute], Failed to ReRoute!");
     return false;
   } else {
     response = srv.response;

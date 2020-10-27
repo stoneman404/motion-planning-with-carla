@@ -18,8 +18,9 @@ const std::string kTrafficLightsInfoName = "/carla/traffic_lights_infos";       
 
 }
 
-namespace service{
-const std::string kRouteServiceName = "/carla/ego_vehicle/get_route";                                        //NOLINT
+namespace service {
+const std::string
+    kRouteServiceName = "/carla_client_interface/ego_vehicle/get_route";                                        //NOLINT
 const std::string kGetActorWaypointServiceName = "/carla_waypoint_publisher/ego_vehicle/get_actor_waypoint"; //NOLINT
 const std::string kGetEgoWaypontServiceName = "/carla_waypoint_publisher/ego_vehicle/get_waypoint";          //NOLINT
 

@@ -30,6 +30,11 @@ bool VehicleState::Update(const carla_msgs::CarlaEgoVehicleStatus &ego_vehicle_s
   this->theta_ = tf::getYaw(odometry.pose.pose.orientation);
   this->linear_vel_ = ego_vehicle_status.velocity;
   this->angular_vel_ = odometry.twist.twist.angular.z;
+  if (this->linear_vel_ < 1e-6) {
+    this->kappa_ = 0.0;
+  } else {
+    this->kappa_ = angular_vel_ / linear_vel_;
+  }
   this->linear_acc_ = std::sqrt(
       ego_vehicle_status.acceleration.linear.x * ego_vehicle_status.acceleration.linear.x +
           ego_vehicle_status.acceleration.linear.y * ego_vehicle_status.acceleration.linear.y +
@@ -97,6 +102,56 @@ Box2d VehicleState::GetEgoBox() const {
   return ego_box;
 }
 const int &VehicleState::section_id() const { return section_id_; }
+
 const int &VehicleState::road_id() const { return road_id_; }
+
+double VehicleState::kappa() const { return kappa_; }
+
+KinoDynamicState VehicleState::GetKinoDynamicVehicleState() const {
+  KinoDynamicState kino_dynamic_state{};
+  kino_dynamic_state.x = pose_.position.x;
+  kino_dynamic_state.y = pose_.position.y;
+  kino_dynamic_state.z = pose_.position.z;
+  kino_dynamic_state.theta = theta_;
+  kino_dynamic_state.v = linear_vel_;
+  kino_dynamic_state.a = linear_acc_;
+  kino_dynamic_state.kappa = kappa_;
+  return kino_dynamic_state;
+}
+void VehicleState::PredictNextKinoDynamicState(double predict_time, KinoDynamicState *predicted_state) const {
+  double dt = 0.05;
+  ROS_ASSERT(predict_time > 0.0);
+  KinoDynamicState cur_state = GetKinoDynamicVehicleState();
+  double next_x = cur_state.x;
+  double next_y = cur_state.y;
+  double next_z = cur_state.z;
+  double next_v = cur_state.v;
+  double next_a = cur_state.a;
+  double next_theta = cur_state.theta;
+  double next_kappa = cur_state.kappa;
+  if (dt > predict_time) {
+    dt = predict_time;
+  }
+  double t = dt;
+  while (t <= predict_time + 1e-8) {
+    t += dt;
+    double intermidiate_theta = cur_state.theta + 0.5 * dt * cur_state.v * cur_state.kappa;
+    next_theta = cur_state.theta + dt * (cur_state.v + 0.5 * cur_state.a * dt) * cur_state.kappa;
+    next_x = cur_state.x + dt * (cur_state.v + 0.5 * cur_state.a * dt) * std::cos(intermidiate_theta);
+    next_y = cur_state.y + dt * (cur_state.v + 0.5 * cur_state.a * dt) * std::sin(intermidiate_theta);
+    next_v = (cur_state.v + 0.5 * cur_state.a * dt);
+    cur_state.x = next_x;
+    cur_state.y = next_y;
+    cur_state.theta = next_theta;
+    cur_state.v = next_v;
+  }
+  predicted_state->x = next_x;
+  predicted_state->y = next_y;
+  predicted_state->z = next_z;
+  predicted_state->v = next_v;
+  predicted_state->theta = next_theta;
+  predicted_state->kappa = next_kappa;
+  predicted_state->a = next_a;
+}
 
 }
