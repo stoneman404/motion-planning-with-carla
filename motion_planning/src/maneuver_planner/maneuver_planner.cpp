@@ -62,7 +62,7 @@ ManeuverStatus ManeuverPlanner::Process(const planning_msgs::TrajectoryPoint &in
       std::vector<std::future<std::pair<bool, std::shared_ptr<ReferenceLine>>>> futures;
       for (const auto &route_response : routes_) {
         auto ptr_ref_line = std::make_shared<ReferenceLine>();
-        auto task = [this, &route_response, &ptr_ref_line]() -> std::pair<bool, std::shared_ptr<ReferenceLine>> {
+        auto task = [&route_response, &ptr_ref_line]() -> std::pair<bool, std::shared_ptr<ReferenceLine>> {
           auto result = ManeuverPlanner::GenerateReferenceLine(route_response, ptr_ref_line);
           return std::make_pair(result, ptr_ref_line);
         };
@@ -71,7 +71,6 @@ ManeuverStatus ManeuverPlanner::Process(const planning_msgs::TrajectoryPoint &in
       for (auto &future : futures) {
         if (!future.get().first) {
           maneuver_status_ = ManeuverStatus::kError;
-//          return ManeuverStatus::kError;
         } else {
           ref_lines_.push_back(future.get().second);
         }
