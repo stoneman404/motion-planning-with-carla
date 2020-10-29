@@ -59,6 +59,9 @@ State *FollowLane::Transition(ManeuverPlanner *maneuver_planner) {
   this->TrafficLightDecision(reference_line_, ego_sl_point, &traffic_maneuver_goal);
   this->ObstacleDecision(init_point, &obstacle_maneuver_goal);
   ManeuverGoal combined_maneuver = CombineManeuver(traffic_maneuver_goal, obstacle_maneuver_goal);
+  ROS_INFO("FollowLane, obstacle decision type: %d, traffic_light_decision type: %d",
+           static_cast<int>(obstacle_maneuver_goal.decision_type),
+           static_cast<int>(traffic_maneuver_goal.decision_type));
   maneuver_planner->SetManeuverGoal(combined_maneuver);
   switch (combined_maneuver.decision_type) {
     case DecisionType::kStopAtDestination:
@@ -74,6 +77,7 @@ State *FollowLane::Transition(ManeuverPlanner *maneuver_planner) {
 void FollowLane::ObstacleDecision(const planning_msgs::TrajectoryPoint &init_trajectory_point,
                                   ManeuverGoal *maneuver_goal) const {
   const auto obstacles = ObstacleFilter::Instance().Obstacles();
+  ROS_INFO("obstacles size : %zu", obstacles.size());
   Eigen::Vector2d ego_xy{init_trajectory_point.path_point.x, init_trajectory_point.path_point.y};
   const double ego_vel = init_trajectory_point.vel;
   const double ego_length = PlanningConfig::Instance().vehicle_params().length;

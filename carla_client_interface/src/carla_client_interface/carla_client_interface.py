@@ -2,6 +2,7 @@
 import math
 import sys
 import threading
+
 import carla
 import rospy
 import tf
@@ -11,12 +12,9 @@ from agents.navigation.local_planner import RoadOption
 from carla_msgs.msg import CarlaWorldInfo
 from carla_waypoint_types.srv import GetActorWaypointResponse, GetActorWaypoint
 from carla_waypoint_types.srv import GetWaypointResponse, GetWaypoint
-from nav_msgs.msg import Path
-from planning_msgs.msg import WayPoint, LaneType, LaneMarking, \
-    LaneMarkingColor, Junction, CarlaRoadOption, LaneChangeType
+from planning_msgs.msg import WayPoint, LaneType, CarlaRoadOption, LaneChangeType
 from planning_srvs.srv import Route, RouteResponse
 from tf.transformations import euler_from_quaternion
-
 
 
 class ClinetInterface(object):
@@ -148,8 +146,17 @@ class ClinetInterface(object):
                                                carla_goal.location.z))
         response = RouteResponse()
         # waypoint
-        waypoint = WayPoint()
+        last_x = float("inf")
+        last_y = float("inf")
         for wp in route:
+            if math.fabs(wp[0].transform.location.x - last_x) < 0.1 and math.fabs(
+                    wp[0].transform.location.y - last_y) < 0.1:
+                last_x = wp[0].transform.location.x
+                last_y = wp[0].transform.location.y
+                continue
+            last_x = wp[0].transform.location.x
+            last_y = wp[0].transform.location.y
+            waypoint = WayPoint()
             waypoint.pose.position.x = wp[0].transform.location.x
             waypoint.pose.position.y = -wp[0].transform.location.y
             waypoint.pose.position.z = wp[0].transform.location.z
@@ -159,8 +166,9 @@ class ClinetInterface(object):
             waypoint.pose.orientation.y = quaternion[1]
             waypoint.pose.orientation.z = quaternion[2]
             waypoint.pose.orientation.w = quaternion[3]
-            waypoint.id = wp[0].id
+            # print(wp[0].id)
             waypoint.road_id = wp[0].lane_id
+            # print(wp[0].lane_id)
             waypoint.section_id = wp[0].section_id
             waypoint.lane_id = wp[0].lane_id
             waypoint.is_junction = wp[0].is_junction
@@ -180,19 +188,20 @@ class ClinetInterface(object):
                 waypoint.right_lane_width = wp[0].get_right_lane().lane_width
                 waypoint.has_right_lane = True
             waypoint.lane_width = wp[0].lane_width
-            waypoint.lane_type = self.set_lane_type(wp[0])
+            waypoint.lane_type.type = self.set_lane_type(wp[0])
 
             lane_change_type = wp[0].lane_change
             if lane_change_type == carla.LaneChange.NONE:
-                waypoint.lane_change = LaneChangeType.FORWARD
+                waypoint.lane_change.type = LaneChangeType.FORWARD
             elif lane_change_type == carla.LaneChange.Both:
-                waypoint.lane_change = LaneChangeType.BOTH
+                waypoint.lane_change.type = LaneChangeType.BOTH
             elif lane_change_type == carla.LaneChange.Left:
-                waypoint.lane_change = LaneChangeType.LEFT
+                waypoint.lane_change.type = LaneChangeType.LEFT
             elif lane_change_type == carla.LaneChange.Right:
-                waypoint.lane_change = LaneChangeType.RIGHT
+                waypoint.lane_change.type = LaneChangeType.RIGHT
 
-            waypoint.road_option = self.set_road_option(wp)
+            waypoint.road_option.option = self.set_road_option(wp)
+            # print(waypoint.road_option)
             if waypoint.is_junction:
                 junction = wp[0].get_junction()
                 waypoint.junction.id = junction.id
@@ -204,12 +213,20 @@ class ClinetInterface(object):
                 waypoint.junction.bounding_box.extent.z = junction.bounding_box.extent.z
 
             waypoint.s = wp[0].s
+
             response.route.append(waypoint)
+
         if len(response.route) == 0:
             rospy.logerr("the response.route is empty")
         else:
             rospy.loginfo(
                 "update the response, success, the waypoints in response.route is {}".format(len(response.route)))
+
+            # for wp in response.route:
+
+            #     print("waypoint x: {}, y:{}".format(wp.pose.position.x,
+            #                                         wp.pose.position.y))
+
         return response
 
     def set_road_option(self, wp):

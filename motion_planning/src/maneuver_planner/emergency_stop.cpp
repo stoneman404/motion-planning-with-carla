@@ -9,6 +9,7 @@ namespace planning {
 
 bool EmergencyStop::Enter(ManeuverPlanner *maneuver_planner) {
   ROS_INFO("Oops, something going wrong, we enter the **EmergencyStop**");
+  return true;
 }
 
 void EmergencyStop::Exit(ManeuverPlanner *maneuver_planner) {

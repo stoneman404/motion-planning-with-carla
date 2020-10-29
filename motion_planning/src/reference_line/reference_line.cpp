@@ -286,6 +286,8 @@ ReferencePoint ReferenceLine::Interpolate(const ReferencePoint &p0,
 
 bool ReferenceLine::XYToSL(const Eigen::Vector2d &xy, SLPoint *sl_point) const {
   double nearest_x, nearest_y, nearest_s;
+  std::cout << "ReferenceLine::XYToSL: " << xy.x() << " , " << xy.y() << std::endl;
+  std::cout << "XYToSL: referenceline's arc length: " << ref_line_spline_->ArcLength();
   if (!ref_line_spline_->GetNearestPointOnSpline(
       xy(0), xy(1), &nearest_x, &nearest_y, &nearest_s)) {
     return false;
@@ -380,14 +382,18 @@ bool ReferenceLine::BuildReferenceLineWithSpline() {
   for (const auto &ref_point : reference_points_) {
     xs.push_back(ref_point.x());
     ys.push_back(ref_point.y());
+//    std::cout << "ref_point: x" << ref_point.x() << " , y : " << ref_point.y() << std::endl;
+
   }
   ref_line_spline_ = std::make_shared<Spline2d>(xs, ys, PlanningConfig::Instance().spline_order());
+//  std::cout << "ref_line_spline's length " << ref_line_spline_->ArcLength() << std::endl;
   std::vector<double> xs_left, ys_left;
   xs_left.reserve(left_boundary_.size());
   ys_left.reserve(left_boundary_.size());
   for (const auto &left : left_boundary_) {
     xs_left.push_back(left.x());
     ys_left.push_back(left.y());
+//    std::cout << "left: x" << left.x() << " , y : " << left.y() << std::endl;
   }
   left_boundary_spline_ = std::make_shared<Spline2d>(xs_left, ys_left, PlanningConfig::Instance().spline_order());
 
@@ -397,6 +403,8 @@ bool ReferenceLine::BuildReferenceLineWithSpline() {
   for (const auto &right : right_boundary_) {
     xs_right.push_back(right.x());
     ys_right.push_back(right.y());
+//    std::cout << "right: x" << right.x() << " , y : " << right.y() << std::endl;
+
   }
   right_boundary_spline_ = std::make_shared<Spline2d>(xs_right, ys_right, PlanningConfig::Instance().spline_order());
   return true;

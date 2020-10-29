@@ -57,7 +57,7 @@ class ManeuverPlanner {
    * @return: true if the reference line generation success, otherwise return false
    */
   static bool GenerateReferenceLine(const planning_srvs::RouteResponse &route,
-                                    std::shared_ptr<ReferenceLine> reference_line);
+                                    std::shared_ptr<ReferenceLine> &reference_line);
 
   /**
    * @brief: set maneuver goal
@@ -100,12 +100,11 @@ class ManeuverPlanner {
 
   /**
    * @brief:
-   * @param[in] ego_pose
+   * @param[in] x
    * @param[in] way_points
    * @return
    */
-  static int GetNearestIndex(const geometry_msgs::Pose &ego_pose,
-                             const std::vector<planning_msgs::WayPoint> &way_points);
+  static int GetNearestIndex(double x, double y, const std::vector<planning_msgs::WayPoint> &way_points);
 
   /**
    * @brief:
@@ -144,7 +143,7 @@ class ManeuverPlanner {
   ManeuverGoal maneuver_goal_;
   ros::NodeHandle nh_;
   ros::ServiceClient route_service_client_;
-  std::unique_ptr<State> current_state_;
+  State *current_state_;
   int current_lane_id_{};
   std::list<planning_srvs::RouteResponse> routes_;
   std::list<std::shared_ptr<ReferenceLine>> ref_lines_;

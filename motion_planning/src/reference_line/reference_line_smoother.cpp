@@ -105,32 +105,26 @@ bool ReferenceLineSmoother::SetUpConstraint() {
   size_t number_of_curvature_constraints = number_of_points - 2;
   x_l_.resize(number_of_points * 2);
   x_u_.resize(number_of_points * 2);
-  g_l_.resize(0);
-  g_u_.resize(0);
   g_l_.resize(number_of_curvature_constraints);
   g_u_.resize(number_of_curvature_constraints);
   std::cout << "number_of_curvature_constraints: " << number_of_curvature_constraints << std::endl;
-  double half_vehicle_width = PlanningConfig::Instance().vehicle_params().width / 2.0;
   for (size_t i = 0; i < number_of_points; ++i) {
     size_t index = i * 2;
-    double left_lane_width = way_points[i].lane_width / 2.0;
-    double right_lane_width = way_points[i].lane_width / 2.0;
-    double boundary_radius = (std::max(std::min(left_lane_width, right_lane_width) -
-        half_vehicle_width, half_vehicle_width));
+    double boundary_radius = 2.0;
     x_l_[index] = way_points[i].pose.position.x - boundary_radius;
     x_u_[index] = way_points[i].pose.position.x + boundary_radius;
     x_l_[index + 1] = way_points[i].pose.position.y - boundary_radius;
     x_u_[index + 1] = way_points[i].pose.position.y + boundary_radius;
   }
   // for the last and begin point
-  x_l_[0] = way_points[0].pose.position.x - 0.1;
-  x_u_[0] = way_points[0].pose.position.x + 0.1;
-  x_l_[1] = way_points[0].pose.position.y - 0.1;
-  x_u_[1] = way_points[0].pose.position.y + 0.1;
-  x_l_[2 * (number_of_points - 1)] = way_points.back().pose.position.x - 0.2;
-  x_u_[2 * (number_of_points - 1)] = way_points.back().pose.position.x + 0.2;
-  x_l_[2 * (number_of_points - 1) + 1] = way_points.back().pose.position.y - 0.2;
-  x_u_[2 * (number_of_points - 1) + 1] = way_points.back().pose.position.y + 0.2;
+  x_l_[0] = way_points[0].pose.position.x - 0.3;
+  x_u_[0] = way_points[0].pose.position.x + 0.3;
+  x_l_[1] = way_points[0].pose.position.y - 0.3;
+  x_u_[1] = way_points[0].pose.position.y + 0.3;
+  x_l_[2 * (number_of_points - 1)] = way_points.back().pose.position.x - 0.3;
+  x_u_[2 * (number_of_points - 1)] = way_points.back().pose.position.x + 0.3;
+  x_l_[2 * (number_of_points - 1) + 1] = way_points.back().pose.position.y - 0.3;
+  x_u_[2 * (number_of_points - 1) + 1] = way_points.back().pose.position.y + 0.3;
   for (size_t i = 0; i < number_of_curvature_constraints; ++i) {
     g_l_[i] = -PlanningConfig::Instance().reference_smoother_max_curvature();
     g_u_[i] = PlanningConfig::Instance().reference_smoother_max_curvature();
@@ -144,7 +138,7 @@ void ReferenceLineSmoother::SetUpOptions() {
   options_ += "Integer print_level  0\n";
   options_ += "Sparse  true        forward\n";
   options_ += "Sparse  true        reverse\n";
-  options_ += "Numeric max_cpu_time  0.05\n";
+//  options_ += "Numeric max_cpu_time  0.05\n";
   options_ += "Integer max_iter     20\n";
 }
 

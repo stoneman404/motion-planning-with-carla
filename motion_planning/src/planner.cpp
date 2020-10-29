@@ -58,13 +58,20 @@ void Planner::RunOnce() {
   }
 //  auto init_trajectory_point = Planner::GetStitchingTrajectory();
   planning_msgs::TrajectoryPoint init_trajectory_point;
+  init_trajectory_point.path_point.x = VehicleState::Instance().GetKinoDynamicVehicleState().x;
+  init_trajectory_point.path_point.y = VehicleState::Instance().GetKinoDynamicVehicleState().y;
+  init_trajectory_point.path_point.theta = VehicleState::Instance().GetKinoDynamicVehicleState().theta;
   auto maneuver_status = maneuver_planner_->Process(init_trajectory_point);
   if (maneuver_status != ManeuverStatus::kSuccess) {
     ROS_FATAL("ManeuverPlanner failed, [maneuver_status: %ud]", static_cast<uint32_t>(maneuver_status));
   } else {
-    ROS_DEBUG("ManeuverPlanner success, [maneuver_status: %ud]", static_cast<uint32_t>(maneuver_status));
+    ROS_INFO("ManeuverPlanner success, [maneuver_status: %ud]", static_cast<uint32_t>(maneuver_status));
   }
   auto optimal_trajectory = maneuver_planner_->optimal_trajectory();
+  for (const auto &tp : optimal_trajectory.trajectory_points) {
+    std::cout << "x : " << tp.path_point.x << " y: " << tp.path_point.y << " vel : " << tp.vel << " acc : " << tp.acc
+              << std::endl;
+  }
   optimal_trajectory.header.stamp = current_time_stamp;
   history_trajectory_ = optimal_trajectory;
   trajectory_publisher_.publish(optimal_trajectory);
@@ -226,7 +233,7 @@ bool Planner::GetWayPoint(const int &object_id,
 }
 bool Planner::UpdateTrafficLights() {
   auto &instance = TrafficLightList::Instance();
-
+  ROS_INFO("Planner::UpdateTrafficLights, traffic_lights size %zu", traffic_lights_info_list_.size());
   for (const auto &traffic_light : traffic_light_status_list_.traffic_lights) {
     carla_waypoint_types::CarlaWaypoint waypoint;
     if (!this->GetWayPoint(traffic_light.id, waypoint)) {
@@ -322,6 +329,7 @@ void Planner::VisualizeOptimalTrajectory(const planning_msgs::Trajectory &optima
 std::vector<planning_msgs::TrajectoryPoint> Planner::GetStitchingTrajectory(const ros::Time &current_time_stamp,
                                                                             double planning_cycle_time,
                                                                             size_t preserve_points_num) {
+  return std::vector<planning_msgs::TrajectoryPoint>();
 
 }
 

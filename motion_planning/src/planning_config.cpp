@@ -98,6 +98,9 @@ void PlanningConfig::UpdateVehicleParams(const derived_object_msgs::Object &obje
   this->vehicle_params_.width = object.shape.dimensions[1];
   this->vehicle_params_.half_length = object.shape.dimensions[0] / 2.0;
   this->vehicle_params_.half_width = object.shape.dimensions[1] / 2.0;
+  ROS_INFO("PlanningConfig::UpdateVehicleParams: vehicle length: %lf, width: %lf",
+           this->vehicle_params_.length,
+           this->vehicle_params_.width);
   this->vehicle_params_.back_axle_to_center_length = std::fabs(
       vehicle_info.wheels[3].position.x);
   this->vehicle_params_.front_axle_to_center_length = std::fabs(

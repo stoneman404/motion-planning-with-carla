@@ -53,6 +53,7 @@ bool VehicleState::Update(const carla_msgs::CarlaEgoVehicleStatus &ego_vehicle_s
   this->steer_percentage_ = ego_vehicle_status.control.steer;
   this->reverse_ = ego_vehicle_status.control.reverse;
   this->center_of_mass_ = vehicle_info.center_of_mass;
+  return true;
 }
 
 geometry_msgs::Pose VehicleState::PredictNextPose(double t) const {

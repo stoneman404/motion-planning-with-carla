@@ -100,6 +100,7 @@ void State::TrafficLightDecision(std::shared_ptr<ReferenceLine> &reference_line,
   size_t nearest_index;
 
   const auto traffic_lights = TrafficLightList::Instance().TrafficLights();
+  ROS_INFO("traffic_lights size: %zu", traffic_lights.size());
   int min_id = -1;
 
   double min_dist = std::numeric_limits<double>::max();
@@ -120,6 +121,15 @@ void State::TrafficLightDecision(std::shared_ptr<ReferenceLine> &reference_line,
       min_id = traffic_light.first;
       nearest_light_sl_point = sl_point;
     }
+  }
+  if (min_id == -1) {
+    maneuver_goal->maneuver_infos.resize(1);
+    maneuver_goal->maneuver_infos.front().maneuver_target.target_speed = PlanningConfig::Instance().target_speed();
+    maneuver_goal->maneuver_infos.front().has_stop_point = false;
+    maneuver_goal->maneuver_infos.front().lane_id = VehicleState::Instance().lane_id();
+    maneuver_goal->maneuver_infos.front().ptr_ref_line = reference_line;
+    maneuver_goal->decision_type = DecisionType::kFollowLane;
+    return;
   }
   const auto traffic_state = traffic_lights.at(min_id)->TrafficLightStatus().state;
   double ego_s = ego_sl_point.s;

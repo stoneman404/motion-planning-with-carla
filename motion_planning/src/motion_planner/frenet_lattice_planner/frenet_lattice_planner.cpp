@@ -14,6 +14,7 @@ bool FrenetLatticePlanner::Process(const planning_msgs::TrajectoryPoint &init_tr
                                    planning_msgs::Trajectory &pub_trajectory,
                                    std::vector<planning_msgs::Trajectory> *valid_trajectories) {
   if (maneuver_goal.maneuver_infos.empty()) {
+    FrenetLatticePlanner::GenerateEmergencyStopTrajectory(init_trajectory_point, pub_trajectory);
     ROS_FATAL("[FrenetLatticePlanner::Process]: No reference line provided");
     return false;
   }
@@ -136,10 +137,7 @@ bool FrenetLatticePlanner::PlanningOnRef(const planning_msgs::TrajectoryPoint &i
       break;
     }
   }
-  if (num_lattice_traj > 0) {
-    return false;
-  }
-  return true;
+  return num_lattice_traj > 0;
 }
 
 planning_msgs::Trajectory FrenetLatticePlanner::CombineTrajectories(const std::shared_ptr<ReferenceLine> &ptr_ref_line,
@@ -218,6 +216,7 @@ void FrenetLatticePlanner::GenerateLatTrajectories(const std::array<double, 3> &
   }
   ptr_lat_traj_vec->clear();
   auto lat_end_conditions = end_condition_sampler->SampleLatEndCondition();
+  ROS_INFO("[FrenetLatticePlanner::GenerateLatTrajectories], the end conditions size : %zu", lat_end_conditions.size());
   FrenetLatticePlanner::GeneratePolynomialTrajectories(init_d, lat_end_conditions, 5, ptr_lat_traj_vec);
 }
 
@@ -254,6 +253,8 @@ void FrenetLatticePlanner::GenerateStoppingLonTrajectories(double stop_s,
                                                            const std::shared_ptr<EndConditionSampler> &end_condition_sampler,
                                                            std::vector<std::shared_ptr<Polynomial>> *ptr_lon_traj_vec) {
   auto end_conditions = end_condition_sampler->SampleLonEndConditionForStopping(stop_s);
+  ROS_INFO("[FrenetLatticePlanner::GenerateStoppingLonTrajectories], the end conditions size : %zu",
+           end_conditions.size());
   FrenetLatticePlanner::GeneratePolynomialTrajectories(init_s, end_conditions, 5, ptr_lon_traj_vec);
 }
 
@@ -261,7 +262,10 @@ void FrenetLatticePlanner::GenerateOvertakeAndFollowingLonTrajectories(const std
                                                                        const std::shared_ptr<EndConditionSampler> &end_condition_sampler,
                                                                        std::vector<std::shared_ptr<Polynomial>> *ptr_lon_traj_vec) {
   auto end_conditions = end_condition_sampler->SampleLonEndConditionWithSTGraph();
+  ROS_INFO("[FrenetLatticePlanner::GenerateOvertakeAndFollowingLonTrajectories], the end conditions size : %zu",
+           end_conditions.size());
   FrenetLatticePlanner::GeneratePolynomialTrajectories(init_s, end_conditions, 5, ptr_lon_traj_vec);
+
 }
 
 void FrenetLatticePlanner::GeneratePolynomialTrajectories(const std::array<double, 3> &init_condition,
@@ -275,7 +279,7 @@ void FrenetLatticePlanner::GeneratePolynomialTrajectories(const std::array<doubl
     return;
   }
   if (end_conditions.empty()) {
-    ROS_FATAL("[FrenetLatticePlanner::GeneratePolynomialTrajectories], the end conditions vector is empty");
+    ROS_WARN("[FrenetLatticePlanner::GeneratePolynomialTrajectories], the end conditions vector is empty");
     return;
   }
   ROS_DEBUG("[FrenetLatticePlanner::GeneratePolynomialTrajectories], "

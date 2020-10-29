@@ -26,6 +26,7 @@ bool ChangeRightLane::Enter(ManeuverPlanner *maneuver_planner) {
   }
   maneuver_planner->multable_routes().push_back(route_response);
   ROS_ASSERT(maneuver_planner->multable_routes().size() == 2);
+  return true;
 }
 
 void ChangeRightLane::Exit(ManeuverPlanner *maneuver_planner) {

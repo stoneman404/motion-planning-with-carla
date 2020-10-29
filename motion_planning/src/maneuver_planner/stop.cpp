@@ -8,6 +8,7 @@ namespace planning {
 bool Stop::Enter(ManeuverPlanner *maneuver_planner) {
   ROS_INFO("We are currently switching to **Stop**");
   ROS_ASSERT(maneuver_planner->multable_routes().size() == 1);
+  return true;
 }
 
 void Stop::Exit(ManeuverPlanner *maneuver_planner) {

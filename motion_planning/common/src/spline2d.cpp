@@ -3,15 +3,15 @@
 namespace planning {
 
 Spline2d::Spline2d(const std::vector<double> &xs,
-                   const std::vector<double> &ys)
-    : xs_(xs),
-      ys_(ys) {
+                   const std::vector<double> &ys) : xs_(xs), ys_(ys) {
   assert(xs.size() == ys.size());
-  assert(xs.size() > order_);
-  Eigen::MatrixXd points(2, static_cast<Eigen::Index>(xs.size()));
-  for (size_t i = 0; i < xs.size(); ++i) {
-    points(0, i) = xs[i];
-    points(1, i) = ys[i];
+
+  assert(xs_.size() > order_);
+
+  Eigen::MatrixXd points(2, static_cast<Eigen::Index>(xs_.size()));
+  for (size_t i = 0; i < xs_.size(); ++i) {
+    points(0, i) = xs_[i];
+    points(1, i) = ys_[i];
   }
   spline2d_ = Eigen::SplineFitting<Eigen::Spline2d>::Interpolate(
       points, static_cast<Eigen::Index >(order_));
@@ -21,15 +21,30 @@ Spline2d::Spline2d(const std::vector<double> &xs,
 
 Spline2d::Spline2d(const std::vector<double> &xs,
                    const std::vector<double> &ys, size_t order)
-    : xs_(xs),
-      ys_(ys),
-      order_(order) {
+    : xs_(xs), ys_(ys), order_(order) {
+  xs_.clear();
+  ys_.clear();
   assert(xs.size() == ys.size());
-  assert(xs.size() > order_);
-  Eigen::MatrixXd points(2, static_cast<Eigen::Index>(xs.size()));
-  for (size_t i = 0; i < xs.size(); ++i) {
-    points(0, i) = xs[i];
-    points(1, i) = ys[i];
+  double last_x = xs.front(), last_y = ys.front();
+  xs_.push_back(last_x);
+  ys_.push_back(last_y);
+  for (size_t i = 1; i < xs.size(); ++i) {
+    if (std::fabs(xs[i] - last_x) < 1e-3 && std::fabs(ys[i] - last_y) < 1e-3) {
+      last_x = xs[i];
+      last_y = ys[i];
+      continue;
+    }
+    xs_.push_back(xs[i]);
+    ys_.push_back(ys[i]);
+    last_x = xs[i];
+    last_y = ys[i];
+  }
+  assert(xs_.size() > order_);
+
+  Eigen::MatrixXd points(2, static_cast<Eigen::Index>(xs_.size()));
+  for (size_t i = 0; i < xs_.size(); ++i) {
+    points(0, i) = xs_[i];
+    points(1, i) = ys_[i];
   }
   spline2d_ = Eigen::SplineFitting<Eigen::Spline2d>::Interpolate(
       points, static_cast<Eigen::Index >(order_));
@@ -120,8 +135,30 @@ bool Spline2d::EvaluateThirdDerivative(double s,
 }
 
 void Spline2d::CalcArcLength() {
-  const double eps = 0.001;
-  arc_length_ = AdaptiveSimpsonIntegral(0, 1, eps);
+  const double step = 0.001;
+  double t = step;
+  double last_x = spline2d_(0.0)(0, 0);
+  double last_y = spline2d_(0.0)(1, 0);
+  double arc_length = 0.0;
+  while (t < 1.0 + step) {
+    if (t > 1.0) {
+      t = 1.0;
+    }
+    if (t < 1e-6) {
+      t = 0.0;
+    }
+    auto xy = spline2d_(t);
+    double x = xy(0, 0);
+    double y = xy(1, 0);
+    double delta_s = std::hypot(x - last_x, y - last_y);
+    arc_length += delta_s;
+    last_x = x;
+    last_y = y;
+    t += step;
+
+  }
+  arc_length_ = arc_length;
+
 }
 
 void Spline2d::CalcChordLengths() {
@@ -151,35 +188,38 @@ double Spline2d::CalcArcLengthAtT(double t) const {
     return arc_length_;
   }
   const double eps = 0.001;
-  return AdaptiveSimpsonIntegral(0.0, t, eps);
+  return t * arc_length_;
+//  return AdaptiveSimpsonIntegral(0.0, t, eps);
 }
 
+
 bool Spline2d::ArcLengthMapToChordLength(double s, double *const t) const {
-  int max_iter = 10;
-  int iter = 0;
-  const double iter_eps = 0.001;
-  double approx_t = s / arc_length_;
-  double pre_approx_t;
-  while (iter < max_iter) {
-    double approx_s = CalcArcLengthAtT(approx_t);
-    double d = approx_s - s;
-    if (std::fabs(d) < iter_eps) {
-      break;
-    }
-    double first_derivative = std::hypot(spline2d_.derivatives(approx_t, 1)(0, 1),
-                                         spline2d_.derivatives(approx_t, 1)(1, 1));
-    double second_derivative = std::hypot(spline2d_.derivatives(approx_t, 2)(0, 2),
-                                          spline2d_.derivatives(approx_t, 2)(1, 2));
-    double numerator = d * first_derivative;
-    double denominator = d * second_derivative + first_derivative * first_derivative;
-    pre_approx_t = approx_t;
-    approx_t -= numerator / denominator;
-    if (std::fabs(pre_approx_t - approx_t) < iter_eps) {
-      break;
-    }
-    iter++;
-  }
-  *t = approx_t;
+//  int max_iter = 10;
+//  int iter = 0;
+//  const double iter_eps = 0.001;
+//  double approx_t = s / arc_length_;
+//  double pre_approx_t;
+//  while (iter < max_iter) {
+//    double approx_s = CalcArcLengthAtT(approx_t);
+//    double d = approx_s - s;
+//    if (std::fabs(d) < iter_eps) {
+//      break;
+//    }
+//    double first_derivative = std::hypot(spline2d_.derivatives(approx_t, 1)(0, 1),
+//                                         spline2d_.derivatives(approx_t, 1)(1, 1));
+//    double second_derivative = std::hypot(spline2d_.derivatives(approx_t, 2)(0, 2),
+//                                          spline2d_.derivatives(approx_t, 2)(1, 2));
+//    double numerator = d * first_derivative;
+//    double denominator = d * second_derivative + first_derivative * first_derivative;
+//    pre_approx_t = approx_t;
+//    approx_t -= numerator / denominator;
+//    if (std::fabs(pre_approx_t - approx_t) < iter_eps) {
+//      break;
+//    }
+//    iter++;
+//  }
+//  *t = approx_t;
+  *t = s / arc_length_;
   return true;
 }
 
@@ -227,10 +267,6 @@ bool Spline2d::GetNearestPointOnSpline(double x, double y,
   int min_index = CalcNearestIndex(x, y);
   double t1 = chord_lengths_[min_index] / chord_lengths_.back();
   Clamp(t1, 0, 1);
-//  int t2_index = min_index - 1 < 0 ? 0 : min_index - 1;
-//  int t3_index = min_index + 1 > chord_lengths_.size() - 1 ? chord_lengths_.size() - 1 : min_index + 1;
-//  double t2 = chord_lengths_[t2_index] / chord_lengths_.back();
-//  double t3 = chord_lengths_[t3_index] / chord_lengths_.back();
   double t2, t3;
   if (t1 < 0.5){
     t2 = std::min(t1 + 0.1, 1.0);
@@ -241,7 +277,6 @@ bool Spline2d::GetNearestPointOnSpline(double x, double y,
   }
 
   std::array<double, 3> ts{t1, t2, t3};
-//  std::array<double, 3> ts{0.1, 0.5,0.9};
   std::array<double, 4> ps{0.0, 0.0, 0.0, 0.0};
   double term_cond = 1e-6;
   const int max_iter = 10; // max iter time

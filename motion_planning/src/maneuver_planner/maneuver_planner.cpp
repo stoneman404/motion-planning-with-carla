@@ -18,7 +18,7 @@
 namespace planning {
 
 ManeuverPlanner::ManeuverPlanner(const ros::NodeHandle &nh, ThreadPool *thread_pool)
-    : nh_(nh), thread_pool_(thread_pool) {
+    : nh_(nh), thread_pool_(nullptr) {
   this->InitPlanner();
 }
 
@@ -38,7 +38,7 @@ void ManeuverPlanner::InitPlanner() {
   ROS_ASSERT(this->GenerateReferenceLine(route_response, ptr_ref_line));
   ref_lines_.push_back(ptr_ref_line);
   current_lane_id_ = VehicleState::Instance().lane_id();
-  current_state_.reset(&FollowLane::Instance());
+  current_state_ = &FollowLane::Instance();
   maneuver_goal_.decision_type = DecisionType::kStopAtDestination;
   maneuver_goal_.maneuver_infos.resize(1);
   maneuver_goal_.maneuver_infos.front().maneuver_target.target_speed = 0.0;
@@ -51,7 +51,6 @@ void ManeuverPlanner::InitPlanner() {
 
 ManeuverStatus ManeuverPlanner::Process(const planning_msgs::TrajectoryPoint &init_trajectory_point) {
   init_trajectory_point_ = init_trajectory_point;
-//  ManeuverStatus maneuver_status = ManeuverStatus::kSuccess;
   if (current_state_ == nullptr) {
     ROS_FATAL("[ManeuverPlanner::Process], the current state is nullptr");
     maneuver_status_ = ManeuverStatus::kError;
@@ -90,10 +89,10 @@ ManeuverStatus ManeuverPlanner::Process(const planning_msgs::TrajectoryPoint &in
     }
   }
 
-  std::unique_ptr<State> state(current_state_->Transition(this));
-  if (state != nullptr && state->Name() != current_state_->Name()) {
+  State *state = current_state_->Transition(this);
+  if (state != nullptr && current_state_->Name() != state->Name()) {
     current_state_->Exit(this);
-    current_state_ = std::move(state);
+    current_state_ = state;
     current_state_->Enter(this);
   }
   valid_trajectories_.clear();
@@ -125,21 +124,27 @@ bool ManeuverPlanner::ReRoute(const geometry_msgs::Pose &start,
   } else {
     response = srv.response;
     ROS_DEBUG("[Planner::Reroute], Reroute SUCCESSFUL, the route size is %zu", response.route.size());
+//    for (const auto &waypoint : response.route) {
+//      std::cout << " x : " << waypoint.pose.position.x << " y: " << waypoint.pose.position.y << " theta: "
+//                << tf::getYaw(waypoint.pose.orientation) << std::endl;
+//    }
     return true;
   }
 }
 
 bool ManeuverPlanner::GenerateReferenceLine(const planning_srvs::RouteResponse &route,
-                                            std::shared_ptr<ReferenceLine> reference_line) {
+                                            std::shared_ptr<ReferenceLine> &reference_line) {
   if (reference_line == nullptr) {
     return false;
   }
   const auto vehicle_pose = VehicleState::Instance().pose();
   const double max_forward_distance = PlanningConfig::Instance().reference_max_forward_distance();
   const double max_backward_distance = PlanningConfig::Instance().reference_max_backward_distance();
-  const int matched_index = GetNearestIndex(vehicle_pose, route.route);
+  const int matched_index = GetNearestIndex(vehicle_pose.position.x, vehicle_pose.position.y, route.route);
   const int start_index = GetStartIndex(matched_index, max_backward_distance, route.route);
   const int end_index = GetEndIndex(matched_index, max_forward_distance, route.route);
+  ROS_INFO("[ManeuverPlanner::GenerateReferenceLine], the matched_index : %d, the start_index %d, the end_index %d",
+           matched_index, start_index, end_index);
   if (end_index - start_index < 1) {
     return false;
   }
@@ -148,19 +153,22 @@ bool ManeuverPlanner::GenerateReferenceLine(const planning_srvs::RouteResponse &
     ROS_FATAL("[GenerateReferenceLine], failed to get sampled way points");
     return false;
   }
-  reference_line.reset(new ReferenceLine(route.route));
+  reference_line.reset(new ReferenceLine(sample_way_points));
+  for (const auto &waypoint : sample_way_points) {
+    std::cout << waypoint.pose.position.x << ", " << waypoint.pose.position.y << ", "
+              << tf::getYaw(waypoint.pose.orientation) << ", " << std::endl;
+  }
   if (!reference_line->Smooth()) {
     ROS_DEBUG("[ManeuverPlanner::GenerateReferenceLine], failed to smooth reference line.");
   }
   return true;
 }
 
-int ManeuverPlanner::GetNearestIndex(const geometry_msgs::Pose &ego_pose,
+int ManeuverPlanner::GetNearestIndex(double ego_x,
+                                     double ego_y,
                                      const std::vector<planning_msgs::WayPoint> &way_points) {
 
   double min_distance = std::numeric_limits<double>::max();
-  const double ego_x = ego_pose.position.x;
-  const double ego_y = ego_pose.position.y;
   int min_index = 0;
   for (size_t i = 0; i < way_points.size(); ++i) {
     double x = way_points[i].pose.position.x;
@@ -177,18 +185,20 @@ int ManeuverPlanner::GetNearestIndex(const geometry_msgs::Pose &ego_pose,
 int ManeuverPlanner::GetStartIndex(const int matched_index, double backward_distance,
                                    const std::vector<planning_msgs::WayPoint> &way_points) {
   int current_index = matched_index;
-  const auto matched_way_point = way_points[current_index];
+//  const auto matched_way_point = way_points[current_index];
   double s = 0;
   int last_index = current_index;
 
   while (current_index > 0 && s < backward_distance) {
     last_index = current_index - 1;
+    const auto matched_way_point = way_points[current_index];
     const auto last_way_point = way_points[last_index];
     double ds = std::hypot(last_way_point.pose.position.x - matched_way_point.pose.position.x,
                            last_way_point.pose.position.y - matched_way_point.pose.position.y);
     s += ds;
     current_index--;
   }
+
   return last_index;
 }
 
@@ -196,11 +206,12 @@ int ManeuverPlanner::GetEndIndex(const int matched_index,
                                  double forward_distance,
                                  const std::vector<planning_msgs::WayPoint> &way_points) {
   int current_index = matched_index;
-  const auto matched_way_point = way_points[current_index];
+//  const auto matched_way_point = way_points[current_index];
   double s = 0;
   int next_index = current_index;
   while (current_index < way_points.size() - 2 && s < forward_distance) {
     next_index = current_index + 1;
+    const auto matched_way_point = way_points[current_index];
     const auto last_way_point = way_points[next_index];
     double ds = std::hypot(last_way_point.pose.position.x - matched_way_point.pose.position.x,
                            last_way_point.pose.position.y - matched_way_point.pose.position.y);
@@ -228,8 +239,10 @@ std::vector<planning_msgs::WayPoint> ManeuverPlanner::GetWayPoints(
 }
 
 ManeuverPlanner::~ManeuverPlanner() {
-  current_state_->Exit(this);
-  current_state_.reset(nullptr);
+  if (current_state_ != nullptr) {
+    current_state_->Exit(this);
+    current_state_ = nullptr;
+  }
 }
 
 void ManeuverPlanner::SetManeuverGoal(const ManeuverGoal &maneuver_goal) {

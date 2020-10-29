@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8.3)
 project(motion_planning)
 
-add_compile_options(-std=c++14)
+add_compile_options(-std=c++14 -g -Werror -Wall -Wno-unused -Wno-sign-compare)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -90,7 +90,7 @@ include_directories(
         common/include/
         /usr/include/
         ${catkin_INCLUDE_DIRS}
-        ${QPOASES_INCLUDE_DIRS}
+        #        ${QPOASES_INCLUDE_DIRS}
         ${IPOPT_INCLUDE_DIRS}
 )
 
@@ -124,6 +124,8 @@ set(planning_SRC
         src/maneuver_planner/change_right_lane.cpp
         src/maneuver_planner/change_left_lane.cpp
         src/maneuver_planner/state.cpp
+        src/motion_planner/frenet_lattice_planner/constraint_checker.cpp
+        src/motion_planner/frenet_lattice_planner/lattice_trajectory1d.cpp
         src/motion_planner/frenet_lattice_planner/frenet_lattice_planner.cpp
         src/motion_planner/frenet_lattice_planner/end_condition_sampler.cpp
         src/motion_planner/frenet_lattice_planner/polynomial_trajectory_evaluator.cpp
@@ -140,7 +142,7 @@ set(planning_SRC
         src/planning_config.cpp
         src/planner.cpp
         src/collision_checker/collision_checker.cpp
-        src/collision_checker/st_graph.cpp src/motion_planner/frenet_lattice_planner/constraint_checker.cpp src/motion_planner/frenet_lattice_planner/lattice_trajectory1d.cpp)
+        src/collision_checker/st_graph.cpp)
 
 add_executable(${PROJECT_NAME}_node
         ${planning_SRC}
@@ -160,7 +162,7 @@ add_executable(${PROJECT_NAME}_node
 target_link_libraries(${PROJECT_NAME}_node
         ${catkin_LIBRARIES}
         ipopt
-        qpOASES
+        #        libqpOASES.a
         Eigen3::Eigen
         )
 
@@ -227,6 +229,34 @@ if (TARGET spline2d_test)
             Eigen3::Eigen
             ${catkin_LIBRARIES}
             )
+endif ()
+
+catkin_add_gtest(reference_line_smoother_test
+        common/src/math_utils.cpp
+        common/src/box2d.cpp
+        common/src/coordinate_transformer.cpp
+        common/src/qunitic_polynomial.cpp
+        common/src/quartic_polynomial.cpp
+        common/src/polynomial.cpp
+        common/src/spline2d.cpp
+        src/vehicle_state/vehicle_state.cpp
+        src/obstacle_filter/obstacle_filter.cpp
+        src/obstacle_filter/obstacle.cpp
+        src/planning_config.cpp
+        src/reference_line/reference_line.cpp
+        src/reference_line/reference_point.cpp
+        src/reference_line/reference_line_smoother.cpp
+        src/planning_context.cpp
+        src/planning_config.cpp
+        src/reference_line/reference_line.cpp
+        src/reference_line/reference_line_smooth_ipopt_interface.cpp
+        src/reference_line/reference_point.cpp
+        src/reference_line/reference_line_smoother_test.cpp)
+if (TARGET reference_line_smoother_test)
+    target_link_libraries(reference_line_smoother_test
+            Eigen3::Eigen
+            ${catkin_LIBRARIES}
+            ipopt)
 endif ()
 
 ## Add folders to be run by python nosetests

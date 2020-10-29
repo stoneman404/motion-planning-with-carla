@@ -5,11 +5,11 @@
 
 namespace planning {
 class Spline2dTest : public testing::Test {
-public:
-    size_t order_;
-    std::unique_ptr<Spline2d> spline2d_;
-protected:
-    void SetUp() override;
+ public:
+  size_t order_;
+  std::unique_ptr<Spline2d> spline2d_;
+ protected:
+  void SetUp() override;
 };
 
 void Spline2dTest::SetUp() {
@@ -194,6 +194,38 @@ TEST_F(Spline2dTest, derivatives) {
 //  std::cout << "dkappa: " << dkappa << std::endl;
 }
 
+TEST_F(Spline2dTest, spline) {
+  Eigen::MatrixXd xy(18, 2);
+  xy << 127.413, -196.713,
+      122.789, -193.225,
+      122.789, -193.225,
+      121.789, -193.227,
+      120.789, -193.23,
+      119.789, -193.232,
+      118.789, -193.235,
+      117.789, -193.237,
+      116.789, -193.24,
+      115.789, -193.242,
+      114.789, -193.245,
+      113.789, -193.247,
+      112.789, -193.25,
+      111.789, -193.252,
+      110.789, -193.255,
+      109.789, -193.257,
+      108.789, -193.26,
+      107.789, -193.262;
+  std::vector<double> xs(xy.rows(), 0.0);
+  std::vector<double> ys(xy.rows(), 0.0);
+  for (size_t i = 0; i < xy.rows(); ++i) {
+    xs[i] = xy(i, 0);
+    ys[i] = xy(i, 1);
+  }
+  auto spline2d = std::make_unique<Spline2d>(xs, ys, order_);
+  double x, y, s;
+  std::cout << "arc length: " << spline2d->ArcLength() << std::endl;
+  spline2d->GetNearestPointOnSpline(109, -193, &x, &y, &s);
+  std::cout << "x: " << x << " y: " << y << " s: " << s << std::endl;
+}
 }
 
 int main(int argc, char **argv) {

@@ -56,7 +56,7 @@ bool PolynomialTrajectoryEvaluator::IsValidLongitudinalTrajectory(const Polynomi
                                         PlanningConfig::Instance().max_lon_jerk())) {
       return false;
     }
-    t + PlanningConfig::Instance().delta_t();
+    t += PlanningConfig::Instance().delta_t();
   }
   return true;
 }

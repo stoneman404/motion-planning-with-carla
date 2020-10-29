@@ -2,7 +2,7 @@
     <!-- carla parameters -->
     <arg name='host' default='localhost'/> <!-- host the carla server is running on -->
     <arg name='port' default='2000'/> <!-- port of the carla server -->
-    <arg name="town" default="Town03"/> <!-- the carla town to load-->
+    <arg name="town" default="Town01"/> <!-- the carla town to load-->
     <arg name='synchronous_mode'
          default='True'/> <!-- should the synchronous mode be used? Enable to get reproducible results independent of the system workload -->
     <arg name='synchronous_mode_wait_for_vehicle_control_command'
@@ -62,9 +62,9 @@
         <arg name='role_name' value='$(arg role_name)'/>
     </include>
 
-    <include file="$(find motion_planning)/launch/motion_planning.launch">
+    <!--    <include file="$(find motion_planning)/launch/motion_planning.launch">-->
 
-    </include>
+    <!--    </include>-->
 
     <!-- To be able to maneuver with rviz, this node converts twist to vehicle control commands -->
     <node pkg="carla_twist_to_control" type="carla_twist_to_control.py" name="carla_twist_to_control">

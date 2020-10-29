@@ -14,7 +14,7 @@ const std::string kVisualizedTrajectoryName = "/planning/visualized_trajectory";
 const std::string kVisualizedValidTrajectoriesName = "/planning/visualized_valid_trajectories";   //NOLINT
 const std::string kInitialPoseName = "/initialpose";                                              //NOLINT
 const std::string kGoalPoseName = "/move_base_simple/goal";                                       //NOLINT
-const std::string kTrafficLightsInfoName = "/carla/traffic_lights_infos";                         //NOLINT
+const std::string kTrafficLightsInfoName = "/carla/traffic_lights_info";                         //NOLINT
 
 }
 

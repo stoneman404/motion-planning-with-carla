@@ -68,8 +68,9 @@ class PolynomialTrajectoryEvaluator {
  private:
   std::priority_queue<TrajectoryCostPair, std::vector<TrajectoryCostPair>, Comparator> cost_queue_;
   std::array<double, 3> init_s_{0.0, 0.0, 0.0};
-  std::shared_ptr<ReferenceLine> ptr_ref_line_;
   std::shared_ptr<STGraph> ptr_st_graph_;
+  std::shared_ptr<ReferenceLine> ptr_ref_line_;
+
   std::vector<std::vector<std::pair<double, double>>> intervals_;
 
 };
