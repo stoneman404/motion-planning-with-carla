@@ -18,7 +18,7 @@
 namespace planning {
 
 ManeuverPlanner::ManeuverPlanner(const ros::NodeHandle &nh, ThreadPool *thread_pool)
-    : nh_(nh), thread_pool_(nullptr) {
+    : nh_(nh), thread_pool_(thread_pool) {
   this->InitPlanner();
 }
 
@@ -30,12 +30,11 @@ void ManeuverPlanner::InitPlanner() {
   auto ego_pose = VehicleState::Instance().pose();
   auto destination = PlanningContext::Instance().global_goal_pose().pose;
   routes_.clear();
-  ref_lines_.clear();
   planning_srvs::RouteResponse route_response;
   ROS_ASSERT(this->ReRoute(ego_pose, destination, route_response));
   routes_.push_back(route_response);
   auto ptr_ref_line = std::make_shared<ReferenceLine>();
-  ROS_ASSERT(this->GenerateReferenceLine(route_response, ptr_ref_line));
+  ROS_ASSERT(GenerateReferenceLine(route_response, ptr_ref_line));
   ref_lines_.push_back(ptr_ref_line);
   current_lane_id_ = VehicleState::Instance().lane_id();
   current_state_ = &FollowLane::Instance();
@@ -58,34 +57,17 @@ ManeuverStatus ManeuverPlanner::Process(const planning_msgs::TrajectoryPoint &in
   } else {
     ROS_DEBUG("[ManeuverPlanner::Process], current state is [%s]", current_state_->Name().c_str());
     ref_lines_.clear();
-    if (thread_pool_ != nullptr) {
-      std::vector<std::future<std::pair<bool, std::shared_ptr<ReferenceLine>>>> futures;
-      for (const auto &route_response : routes_) {
-        auto ptr_ref_line = std::make_shared<ReferenceLine>();
-        auto task = [&route_response, &ptr_ref_line]() -> std::pair<bool, std::shared_ptr<ReferenceLine>> {
-          auto result = ManeuverPlanner::GenerateReferenceLine(route_response, ptr_ref_line);
-          return std::make_pair(result, ptr_ref_line);
-        };
-        futures.emplace_back(thread_pool_->PushTask(task));
+
+    ref_lines_.reserve(routes_.size());
+    for (const auto &route_response : routes_) {
+      ref_lines_.emplace_back(std::make_shared<ReferenceLine>());
+      auto result = ManeuverPlanner::GenerateReferenceLine(route_response, ref_lines_.back());
+      if (!result) {
+        maneuver_status_ = ManeuverStatus::kError;
+      } else {
+        maneuver_status_ = ManeuverStatus::kSuccess;
       }
-      for (auto &future : futures) {
-        auto future_result = future.get();
-        if (!future_result.first) {
-          maneuver_status_ = ManeuverStatus::kError;
-        } else {
-          ref_lines_.push_back(future_result.second);
-        }
-      }
-    } else {
-      for (const auto &route_response : routes_) {
-        auto ptr_ref_line = std::make_shared<ReferenceLine>();
-        if (!ManeuverPlanner::GenerateReferenceLine(route_response, ptr_ref_line)) {
-          maneuver_status_ = ManeuverStatus::kError;
-//          return ManeuverStatus::kError;
-        } else {
-          ref_lines_.push_back(ptr_ref_line);
-        }
-      }
+
     }
   }
 
@@ -133,8 +115,8 @@ bool ManeuverPlanner::ReRoute(const geometry_msgs::Pose &start,
 }
 
 bool ManeuverPlanner::GenerateReferenceLine(const planning_srvs::RouteResponse &route,
-                                            std::shared_ptr<ReferenceLine> &reference_line) {
-  if (reference_line == nullptr) {
+                                            std::shared_ptr<ReferenceLine> &ref_line) {
+  if (ref_line == nullptr) {
     return false;
   }
   auto begin = ros::Time::now();
@@ -154,16 +136,16 @@ bool ManeuverPlanner::GenerateReferenceLine(const planning_srvs::RouteResponse &
     ROS_FATAL("[GenerateReferenceLine], failed to get sampled way points");
     return false;
   }
-  reference_line.reset(new ReferenceLine(sample_way_points));
+  ref_line.reset(new ReferenceLine(sample_way_points));
 //  for (const auto &waypoint : sample_way_points) {
 //    std::cout << waypoint.pose.position.x << ", " << waypoint.pose.position.y << ", "
 //              << tf::getYaw(waypoint.pose.orientation) << ", " << std::endl;
 //  }
-  if (!reference_line->Smooth()) {
+  if (!ref_line->Smooth()) {
     ROS_DEBUG("[ManeuverPlanner::GenerateReferenceLine], failed to smooth reference line.");
   }
   auto end = ros::Time::now();
-  ROS_INFO("[Generate ReferenceLine elapsed time: %lf]", static_cast<double>((end - begin).toNSec()) / 1000000.0);
+  ROS_INFO("[Generate ReferenceLine elapsed time: %lf ms]", static_cast<double>((end - begin).toNSec()) / 1000000.0);
   return true;
 }
 
@@ -260,9 +242,9 @@ ManeuverGoal &ManeuverPlanner::multable_maneuver_goal() { return maneuver_goal_;
 
 int ManeuverPlanner::GetLaneId() const { return current_lane_id_; }
 
-std::list<planning_srvs::RouteResponse> &ManeuverPlanner::multable_routes() { return routes_; }
+std::vector<planning_srvs::RouteResponse> &ManeuverPlanner::multable_routes() { return routes_; }
 
-std::list<std::shared_ptr<ReferenceLine>> &ManeuverPlanner::multable_ref_line() { return ref_lines_; }
+std::vector<std::shared_ptr<ReferenceLine>> &ManeuverPlanner::multable_ref_line() { return ref_lines_; }
 
 const std::vector<planning_msgs::Trajectory> &ManeuverPlanner::valid_trajectories() const {
   return valid_trajectories_;

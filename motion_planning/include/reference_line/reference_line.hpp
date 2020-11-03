@@ -75,7 +75,6 @@ class ReferenceLine {
    * @param other
    */
   ReferenceLine(const ReferenceLine &other) = delete;
-
   /**
    * @brief construct the reference line from waypoint
    * @param waypoints
@@ -87,6 +86,10 @@ class ReferenceLine {
    * @param route_response
    */
   explicit ReferenceLine(const planning_srvs::RouteResponse &route_response);
+
+  bool Empty() const {
+    return reference_points_.empty();
+  }
 
   void SetPriority(int priority) { this->priority_ = priority; }
 
@@ -238,9 +241,9 @@ class ReferenceLine {
   std::vector<Eigen::Vector2d> left_boundary_;
   std::vector<Eigen::Vector2d> right_boundary_;
   double length_{}; // the total length of this reference line
-  std::shared_ptr<Spline2d> ref_line_spline_ = nullptr;
-  std::shared_ptr<Spline2d> left_boundary_spline_ = nullptr;
-  std::shared_ptr<Spline2d> right_boundary_spline_ = nullptr;
+  std::shared_ptr<Spline2d> ref_line_spline_;
+  std::shared_ptr<Spline2d> left_boundary_spline_;
+  std::shared_ptr<Spline2d> right_boundary_spline_;
   std::unique_ptr<ReferenceLineSmoother> reference_smoother_;
   int priority_ = 0;
 };

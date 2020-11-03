@@ -34,7 +34,8 @@ void ChangeLeftLane::Exit(ManeuverPlanner *maneuver_planner) {
     case DecisionType::kStopAtTrafficSign:
     case DecisionType::kStopAtDestination: {
       if (maneuver_planner->multable_maneuver_goal().maneuver_infos.front().lane_id == after_lane_id_) {
-        maneuver_planner->multable_routes().pop_front();
+//        maneuver_planner->multable_routes().pop_front();
+        maneuver_planner->multable_routes().erase(maneuver_planner->multable_routes().begin());
       } else {
         maneuver_planner->multable_routes().pop_back();
       }

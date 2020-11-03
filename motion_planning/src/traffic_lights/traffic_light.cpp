@@ -45,6 +45,7 @@ TrafficLight::TrafficLight(const carla_msgs::CarlaTrafficLightInfo &traffic_ligh
   const auto traffic_light_center = MathUtils::Transform(transform_, center_point);
   Eigen::Vector2d center_xy;
   center_xy << traffic_light_center.x(), traffic_light_center.y();
+//  center_xy << trigger_volume_.center.x, trigger_volume_.center.y;
   traffic_light_box_ = Box2d(center_xy, light_yaw, trigger_volume_.size.x, trigger_volume_.size.y);
 }
 }

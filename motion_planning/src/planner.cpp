@@ -333,7 +333,8 @@ void Planner::VisualizeTrafficLightBox() {
   }
   visualized_traffic_light_box_publisher_.publish(traffic_light_boxes_markers);
 }
-void Planner::VisualizeReferenceLine(std::list<std::shared_ptr<ReferenceLine>> &ref_lines) {
+
+void Planner::VisualizeReferenceLine(std::vector<std::shared_ptr<ReferenceLine>> &ref_lines) {
   visualization_msgs::MarkerArray marker_array;
   int i = 100;
   for (const auto &ref_line : ref_lines) {
@@ -348,12 +349,14 @@ void Planner::VisualizeReferenceLine(std::list<std::shared_ptr<ReferenceLine>> &
     marker.header.stamp = ros::Time::now();
     marker.action = visualization_msgs::Marker::ADD;
     const double ds = 0.5;
-    for (double s = 0; s <= ref_line->Length(); s += ds) {
+    double s = 0.0;
+    while (s <= ref_line->Length()) {
       auto ref_point = ref_line->GetReferencePoint(s);
       geometry_msgs::Point pt;
       pt.x = ref_point.x();
       pt.y = ref_point.y();
       marker.points.push_back(pt);
+      s += ds;
     }
     marker_array.markers.push_back(marker);
     i++;

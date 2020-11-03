@@ -58,7 +58,7 @@ class ManeuverPlanner {
    * @return: true if the reference line generation success, otherwise return false
    */
   static bool GenerateReferenceLine(const planning_srvs::RouteResponse &route,
-                                    std::shared_ptr<ReferenceLine> &reference_line);
+                                    std::shared_ptr<ReferenceLine> &ref_line);
 
   /**
    * @brief: set maneuver goal
@@ -82,12 +82,12 @@ class ManeuverPlanner {
    *
    * @return
    */
-  std::list<planning_srvs::RouteResponse> &multable_routes();
+  std::vector<planning_srvs::RouteResponse> &multable_routes();
 
   /**
    * @return
    */
-  std::list<std::shared_ptr<ReferenceLine>> &multable_ref_line();
+  std::vector<std::shared_ptr<ReferenceLine>> &multable_ref_line();
 
   const std::vector<planning_msgs::Trajectory> &valid_trajectories() const;
   const planning_msgs::Trajectory &optimal_trajectory() const;
@@ -141,8 +141,8 @@ class ManeuverPlanner {
   ros::ServiceClient route_service_client_;
   State *current_state_;
   int current_lane_id_{};
-  std::list<planning_srvs::RouteResponse> routes_;
-  std::list<std::shared_ptr<ReferenceLine>> ref_lines_;
+  std::vector<planning_srvs::RouteResponse> routes_;
+  std::vector<std::shared_ptr<ReferenceLine>> ref_lines_;
   ManeuverStatus maneuver_status_;
   std::vector<planning_msgs::Trajectory> valid_trajectories_{};
   planning_msgs::Trajectory optimal_trajectory_;

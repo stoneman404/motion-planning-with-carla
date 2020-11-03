@@ -5,7 +5,6 @@ namespace planning {
 Spline2d::Spline2d(const std::vector<double> &xs,
                    const std::vector<double> &ys) : xs_(xs), ys_(ys) {
   assert(xs.size() == ys.size());
-
   assert(xs_.size() > order_);
 
   Eigen::MatrixXd points(2, static_cast<Eigen::Index>(xs_.size()));
@@ -22,23 +21,7 @@ Spline2d::Spline2d(const std::vector<double> &xs,
 Spline2d::Spline2d(const std::vector<double> &xs,
                    const std::vector<double> &ys, size_t order)
     : xs_(xs), ys_(ys), order_(order) {
-  xs_.clear();
-  ys_.clear();
   assert(xs.size() == ys.size());
-  double last_x = xs.front(), last_y = ys.front();
-  xs_.push_back(last_x);
-  ys_.push_back(last_y);
-  for (size_t i = 1; i < xs.size(); ++i) {
-    if (std::fabs(xs[i] - last_x) < 1e-3 && std::fabs(ys[i] - last_y) < 1e-3) {
-      last_x = xs[i];
-      last_y = ys[i];
-      continue;
-    }
-    xs_.push_back(xs[i]);
-    ys_.push_back(ys[i]);
-    last_x = xs[i];
-    last_y = ys[i];
-  }
   assert(xs_.size() > order_);
 
   Eigen::MatrixXd points(2, static_cast<Eigen::Index>(xs_.size()));
@@ -255,16 +238,16 @@ double Spline2d::AdaptiveSimpsonIntegral(double l, double r, double eps) const {
 
 
 bool Spline2d::GetNearestPointOnSpline(double x, double y,
-                                       double *const nearest_x,
-                                       double *const nearest_y,
-                                       double *const nearest_s) const {
+  double *const nearest_x,
+  double *const nearest_y,
+  double *const nearest_s) const {
   // 1. prepared, set the init s1, s2, s3
   // note: here we use the chord length rather than arc length for eliminating the calculate time;
 
   // t1, t2, t3, tk_star  refer to: Robust and Efficient Computation of the
   // Closest Point on a Spline Curve
   double t_opt;
-  int min_index = CalcNearestIndex(x, y);
+  int min_index = this->CalcNearestIndex(x, y);
   double t1 = chord_lengths_[min_index] / chord_lengths_.back();
   Clamp(t1, 0, 1);
   double t2, t3;
@@ -354,15 +337,15 @@ bool Spline2d::GetNearestPointOnSpline(double x, double y,
   *nearest_y = spline2d_(t_opt)(1, 0);
   *nearest_s = CalcArcLengthAtT(t_opt);
   return true;
-}
+  }
 
-double Spline2d::PointToPointSquaredDistance(double x1, double y1,
-                                             double x2, double y2) const {
+  double Spline2d::PointToPointSquaredDistance(double x1, double y1,
+  double x2, double y2) {
   return (x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2);
-}
+  }
 
-double Spline2d::CalcQ(double s, double s1, double s2, double s3,
-                       double d1, double d2, double d3) const {
+  double Spline2d::CalcQ(double s, double s1, double s2, double s3,
+  double d1, double d2, double d3) {
   const double p1 = (s - s2) * (s - s3) / ((s1 - s2) * (s1 - s3)) * d1;
   const double p2 = (s - s1) * (s - s3) / ((s2 - s1) * (s2 - s3)) * d2;
   const double p3 = (s - s1) * (s - s2) / ((s3 - s1) * (s3 - s2)) * d3;
@@ -393,13 +376,13 @@ double Spline2d::CalcDerivativeOfObjectFunction(double t, int order, double x, d
   }
   return result;
 
-}
+      }
 
-double Spline2d::Clamp(double t, double lb, double ub) const {
-  if (t < lb) {
-    return lb;
-  } else if (t > ub) {
-    return ub;
+      double Spline2d::Clamp(double t, double lb, double ub) {
+      if (t < lb) {
+      return lb;
+      } else if (t > ub) {
+      return ub;
   } else {
     return t;
   }
@@ -409,9 +392,9 @@ int Spline2d::CalcNearestIndex(double x, double y) const {
   double min_dist = std::numeric_limits<double>::max();
   int min_index = 0;
   for (size_t i = 0; i < xs_.size(); ++i){
-    const double sqrt_dist = PointToPointSquaredDistance(x, y, xs_[i], ys_[i]);
-    if (sqrt_dist < min_dist){
-      min_dist = sqrt_dist;
+const double sqrt_dist = std::hypot(x - xs_[i], y - ys_[i]);
+if (sqrt_dist < min_dist){
+min_dist = sqrt_dist;
       min_index = i;
     }
   }

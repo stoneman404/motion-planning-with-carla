@@ -96,7 +96,7 @@ class Planner {
   void VisualizeValidTrajectories(const std::vector<planning_msgs::Trajectory> &valid_trajectories) const;
   void VisualizeOptimalTrajectory(const planning_msgs::Trajectory &optimal_trajectory) const;
   void VisualizeTrafficLightBox();
-  void VisualizeReferenceLine(std::list<std::shared_ptr<ReferenceLine>> &ref_lines);
+  void VisualizeReferenceLine(std::vector<std::shared_ptr<ReferenceLine>> &ref_lines);
 
  private:
   bool has_maneuver_planner_ = false;

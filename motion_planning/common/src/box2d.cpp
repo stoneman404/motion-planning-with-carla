@@ -80,10 +80,10 @@ double Box2d::DistanceToPoint(const Eigen::Vector2d &point) const {
 // ref: apollo
 bool Box2d::HasOverlapWithBox2d(const planning::Box2d &box) const {
   // AABox check
-  if (box.max_x() < min_x() ||
-      box.min_x() > max_x() ||
-      box.max_y() < min_y() ||
-      box.min_y() > max_y()) {
+  if (box.max_x() < min_x_ ||
+      box.min_x() > max_x_ ||
+      box.max_y() < min_y_ ||
+      box.min_y() > max_y_) {
     return false;
   }
   // Obox check

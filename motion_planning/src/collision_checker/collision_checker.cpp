@@ -42,21 +42,22 @@ bool CollisionChecker::IsCollision(const planning_msgs::Trajectory &trajectory) 
       const auto &traj_point = trajectory.trajectory_points[i];
       double ego_theta = traj_point.path_point.theta;
       Box2d ego_box = Box2d({traj_point.path_point.x, traj_point.path_point.y}, ego_theta, ego_length, ego_width);
-      const auto task = [this, &ego_box, &i]() -> bool {
-//        return std::any_of(predicted_obstacle_box_[i].begin(), predicted_obstacle_box_[i].end(), [ego_box](const Box2d &box) {
-//          return ego_box.HasOverlapWithBox2d(box);
-//        });
-        if (predicted_obstacle_box_[i].empty()) {
-          return false;
-        }
-        for (const auto &obstacle_box : predicted_obstacle_box_[i]) {
+      for (const auto &obstacle_box : predicted_obstacle_box_[i]) {
+        const auto task = [&ego_box, &obstacle_box]() -> bool {
           if (ego_box.HasOverlapWithBox2d(obstacle_box)) {
             return true;
           }
-        }
-        return false;
-      };
-      futures.emplace_back(thread_pool_->PushTask(task));
+          return false;
+        };
+        futures.emplace_back(thread_pool_->PushTask(task));
+      }
+
+    }
+    for (auto &future : futures) {
+      future.wait();
+//      if (future.get()) {
+//        return true;
+//      }
     }
     for (auto &future : futures) {
       if (future.get()) {

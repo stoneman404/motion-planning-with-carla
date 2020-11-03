@@ -28,7 +28,7 @@ class ReferenceLineSmoother {
   void SetUpInitValue();
   bool TraceSmoothReferenceLine(
       const CppAD::ipopt::solve_result<DVector> &result,
-      std::vector<ReferencePoint> *const smoothed_ref_line);
+      std::vector<ReferencePoint> *const smoothed_ref_line) const;
 
  private:
   planning_srvs::RouteResponse route_response_;

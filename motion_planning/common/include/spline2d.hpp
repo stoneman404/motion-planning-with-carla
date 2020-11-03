@@ -124,8 +124,8 @@ class Spline2d {
    * @param d3
    * @return
    */
-  double CalcQ(double s, double s1, double s2, double s3,
-               double d1, double d2, double d3) const;
+  static double CalcQ(double s, double s1, double s2, double s3,
+                      double d1, double d2, double d3);
 
   /**
    * @brief:
@@ -135,8 +135,8 @@ class Spline2d {
    * @param y2
    * @return
    */
-  double PointToPointSquaredDistance(double x1, double y1,
-                                     double x2, double y2) const;
+  static double PointToPointSquaredDistance(double x1, double y1,
+                                            double x2, double y2);
 
   /**
    *
@@ -145,7 +145,7 @@ class Spline2d {
    * @param ub
    * @return
    */
-  double Clamp(double t, double lb, double ub) const;
+  static double Clamp(double t, double lb, double ub);
 
   /**
    * @brief: calc the nearest index

@@ -15,7 +15,8 @@
     <!-- which vehicle type to use for the ego. See blueprint library for others -->
     <arg name="vehicle_filter" default="vehicle.tesla.model3"/>
     <!-- fixed spawn point, set to "" for a random spawn point -->
-    <arg name='spawn_point' default='127.4,195.4,0,0,0,180'/>
+    <!--    <arg name='spawn_point' default='127.4,195.4,0,0,0,180'/>-->
+    <arg name="spawn_point" default=""/>
     <!-- target speed that the agent tries to follow -->
     <arg name="target_speed" default="30"/>
     <!-- should the agent avoid crashs and respect red traffic lights? -->

@@ -50,6 +50,7 @@ ReferenceLine::ReferenceLine(const planning_srvs::RouteResponse &route_response)
   bool result = BuildReferenceLineWithSpline();
   ROS_ASSERT(result);
   length_ = ref_line_spline_->ArcLength();
+  ROS_INFO("ReferenceLine's length : %lf", length_);
 }
 
 ReferenceLine::ReferenceLine(const std::vector<planning_msgs::WayPoint> &waypoints)
@@ -94,6 +95,7 @@ ReferenceLine::ReferenceLine(const std::vector<planning_msgs::WayPoint> &waypoin
   bool result = BuildReferenceLineWithSpline();
   ROS_ASSERT(result);
   length_ = ref_line_spline_->ArcLength();
+  ROS_INFO("ReferenceLine's length : %lf", length_);
 
 }
 

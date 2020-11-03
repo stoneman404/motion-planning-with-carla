@@ -139,7 +139,7 @@ void ReferenceLineSmoother::SetUpOptions() {
   options_ += "Sparse  true        forward\n";
   options_ += "Sparse  true        reverse\n";
 //  options_ += "Numeric max_cpu_time  0.05\n";
-  options_ += "Integer max_iter     20\n";
+  options_ += "Integer max_iter     15\n";
 }
 
 void ReferenceLineSmoother::SetUpInitValue() {
@@ -156,7 +156,7 @@ void ReferenceLineSmoother::SetUpInitValue() {
 
 bool ReferenceLineSmoother::TraceSmoothReferenceLine(
     const CppAD::ipopt::solve_result<DVector> &result,
-    std::vector<planning::ReferencePoint> *const ref_points) {
+    std::vector<planning::ReferencePoint> *const ref_points) const {
 
   if (result.status != CppAD::ipopt::solve_result<DVector>::success) {
     return false;
