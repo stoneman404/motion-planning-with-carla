@@ -286,8 +286,8 @@ ReferencePoint ReferenceLine::Interpolate(const ReferencePoint &p0,
 
 bool ReferenceLine::XYToSL(const Eigen::Vector2d &xy, SLPoint *sl_point) const {
   double nearest_x, nearest_y, nearest_s;
-  std::cout << "ReferenceLine::XYToSL: " << xy.x() << " , " << xy.y() << std::endl;
-  std::cout << "XYToSL: referenceline's arc length: " << ref_line_spline_->ArcLength();
+//  std::cout << "ReferenceLine::XYToSL: " << xy.x() << " , " << xy.y() << std::endl;
+//  std::cout << "XYToSL: referenceline's arc length: " << ref_line_spline_->ArcLength();
   if (!ref_line_spline_->GetNearestPointOnSpline(
       xy(0), xy(1), &nearest_x, &nearest_y, &nearest_s)) {
     return false;

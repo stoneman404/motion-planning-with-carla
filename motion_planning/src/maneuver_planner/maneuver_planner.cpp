@@ -66,13 +66,14 @@ ManeuverStatus ManeuverPlanner::Process(const planning_msgs::TrajectoryPoint &in
           auto result = ManeuverPlanner::GenerateReferenceLine(route_response, ptr_ref_line);
           return std::make_pair(result, ptr_ref_line);
         };
-        futures.emplace_back(thread_pool_->Enqueue(task));
+        futures.emplace_back(thread_pool_->PushTask(task));
       }
       for (auto &future : futures) {
-        if (!future.get().first) {
+        auto future_result = future.get();
+        if (!future_result.first) {
           maneuver_status_ = ManeuverStatus::kError;
         } else {
-          ref_lines_.push_back(future.get().second);
+          ref_lines_.push_back(future_result.second);
         }
       }
     } else {
@@ -98,7 +99,7 @@ ManeuverStatus ManeuverPlanner::Process(const planning_msgs::TrajectoryPoint &in
   auto trajectory_plan_result = trajectory_planner_->Process(init_trajectory_point,
                                                              maneuver_goal_,
                                                              optimal_trajectory_,
-                                                             &valid_trajectories_);
+                                                             nullptr);
   if (!trajectory_plan_result) {
     ROS_FATAL("ManeuverPlanner::Process Failed, [State:%s, init_trajectory_point: {x: %f, y: %f}]",
               current_state_->Name().c_str(), init_trajectory_point.path_point.x,
@@ -107,7 +108,7 @@ ManeuverStatus ManeuverPlanner::Process(const planning_msgs::TrajectoryPoint &in
   } else {
     maneuver_status_ = ManeuverStatus::kSuccess;
   }
-  ROS_DEBUG("[ManeuverPlanner::Process], the size of [valid_trajectories_] is %zu", valid_trajectories_.size());
+  ROS_INFO("[ManeuverPlanner::Process], the size of [valid_trajectories_] is %zu", valid_trajectories_.size());
   return maneuver_status_;
 }
 
@@ -136,14 +137,15 @@ bool ManeuverPlanner::GenerateReferenceLine(const planning_srvs::RouteResponse &
   if (reference_line == nullptr) {
     return false;
   }
+  auto begin = ros::Time::now();
   const auto vehicle_pose = VehicleState::Instance().pose();
   const double max_forward_distance = PlanningConfig::Instance().reference_max_forward_distance();
   const double max_backward_distance = PlanningConfig::Instance().reference_max_backward_distance();
   const int matched_index = GetNearestIndex(vehicle_pose.position.x, vehicle_pose.position.y, route.route);
   const int start_index = GetStartIndex(matched_index, max_backward_distance, route.route);
   const int end_index = GetEndIndex(matched_index, max_forward_distance, route.route);
-  ROS_INFO("[ManeuverPlanner::GenerateReferenceLine], the matched_index : %d, the start_index %d, the end_index %d",
-           matched_index, start_index, end_index);
+  ROS_DEBUG("[ManeuverPlanner::GenerateReferenceLine], the matched_index : %d, the start_index %d, the end_index %d",
+            matched_index, start_index, end_index);
   if (end_index - start_index < 1) {
     return false;
   }
@@ -153,13 +155,15 @@ bool ManeuverPlanner::GenerateReferenceLine(const planning_srvs::RouteResponse &
     return false;
   }
   reference_line.reset(new ReferenceLine(sample_way_points));
-  for (const auto &waypoint : sample_way_points) {
-    std::cout << waypoint.pose.position.x << ", " << waypoint.pose.position.y << ", "
-              << tf::getYaw(waypoint.pose.orientation) << ", " << std::endl;
-  }
+//  for (const auto &waypoint : sample_way_points) {
+//    std::cout << waypoint.pose.position.x << ", " << waypoint.pose.position.y << ", "
+//              << tf::getYaw(waypoint.pose.orientation) << ", " << std::endl;
+//  }
   if (!reference_line->Smooth()) {
     ROS_DEBUG("[ManeuverPlanner::GenerateReferenceLine], failed to smooth reference line.");
   }
+  auto end = ros::Time::now();
+  ROS_INFO("[Generate ReferenceLine elapsed time: %lf]", static_cast<double>((end - begin).toNSec()) / 1000000.0);
   return true;
 }
 

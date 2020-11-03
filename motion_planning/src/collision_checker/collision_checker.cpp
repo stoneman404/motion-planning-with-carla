@@ -40,9 +40,15 @@ bool CollisionChecker::IsCollision(const planning_msgs::Trajectory &trajectory) 
     double shift_distance = PlanningConfig::Instance().vehicle_params().back_axle_to_center_length;
     for (size_t i = 0; i < trajectory.trajectory_points.size(); ++i) {
       const auto &traj_point = trajectory.trajectory_points[i];
-      const auto task = [this, &traj_point, &i, &shift_distance, &ego_length, &ego_width]() -> bool {
-        double ego_theta = traj_point.path_point.theta;
-        Box2d ego_box = Box2d({traj_point.path_point.x, traj_point.path_point.y}, ego_theta, ego_length, ego_width);
+      double ego_theta = traj_point.path_point.theta;
+      Box2d ego_box = Box2d({traj_point.path_point.x, traj_point.path_point.y}, ego_theta, ego_length, ego_width);
+      const auto task = [this, &ego_box, &i]() -> bool {
+//        return std::any_of(predicted_obstacle_box_[i].begin(), predicted_obstacle_box_[i].end(), [ego_box](const Box2d &box) {
+//          return ego_box.HasOverlapWithBox2d(box);
+//        });
+        if (predicted_obstacle_box_[i].empty()) {
+          return false;
+        }
         for (const auto &obstacle_box : predicted_obstacle_box_[i]) {
           if (ego_box.HasOverlapWithBox2d(obstacle_box)) {
             return true;
@@ -50,7 +56,7 @@ bool CollisionChecker::IsCollision(const planning_msgs::Trajectory &trajectory) 
         }
         return false;
       };
-      futures.emplace_back(thread_pool_->Enqueue(task));
+      futures.emplace_back(thread_pool_->PushTask(task));
     }
     for (auto &future : futures) {
       if (future.get()) {

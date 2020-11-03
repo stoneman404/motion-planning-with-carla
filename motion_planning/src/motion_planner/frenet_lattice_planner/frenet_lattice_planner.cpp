@@ -126,7 +126,7 @@ bool FrenetLatticePlanner::PlanningOnRef(const planning_msgs::TrajectoryPoint &i
     num_lattice_traj += 1;
     // set visualized trajectory vectors
     if (valid_trajectories != nullptr) {
-      valid_trajectories->emplace_back(combined_trajectory);
+      valid_trajectories->push_back(combined_trajectory);
       if (num_lattice_traj == 1) {
         optimal_trajectory.second = trajectory_pair_cost;
         optimal_trajectory.first = combined_trajectory;
@@ -137,6 +137,11 @@ bool FrenetLatticePlanner::PlanningOnRef(const planning_msgs::TrajectoryPoint &i
       break;
     }
   }
+  int i = 0;
+//  for (const auto& traj : *valid_trajectories){
+//    std::cout << " traj: " << i << ": " << traj.trajectory_points.back().path_point.x << " " << traj.trajectory_points.back().path_point.y << std::endl;
+//    i++;
+//  }
   return num_lattice_traj > 0;
 }
 
@@ -321,9 +326,10 @@ void FrenetLatticePlanner::GetInitCondition(const std::shared_ptr<ReferenceLine>
     ROS_FATAL("[FrenetLatticePlanner::Plan] failed because the GetMatchedPoint failed");
     return;
   }
-  CoordinateTransformer::CartesianToFrenet(matched_s, matched_ref_point.heading(),
+  CoordinateTransformer::CartesianToFrenet(matched_s,
                                            matched_ref_point.x(),
                                            matched_ref_point.y(),
+                                           matched_ref_point.heading(),
                                            matched_ref_point.kappa(),
                                            matched_ref_point.dkappa(),
                                            init_trajectory_point.path_point.x,

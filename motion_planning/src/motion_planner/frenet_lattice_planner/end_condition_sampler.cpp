@@ -34,8 +34,8 @@ std::vector<EndCondition> EndConditionSampler::SampleLonEndConditionForStopping(
 
 std::vector<EndCondition> EndConditionSampler::SampleLatEndCondition() {
   std::vector<EndCondition> end_d_conditions;
-  std::array<double, 3> end_d_candidates = {0, -0.5, 0.5};
-  std::array<double, 4> end_s_candidates = {10.0, 20.0, 40.0, 60.0};
+  std::array<double, 3> end_d_candidates = {0, -1.0, 1.0};
+  std::array<double, 4> end_s_candidates = {5, 10.0, 20.0, 40.0};
   for (const auto &s : end_s_candidates) {
     for (const auto &d : end_d_candidates) {
       State end_d_state = {d, 0.0, 0.0};

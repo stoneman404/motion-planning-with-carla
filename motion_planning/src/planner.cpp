@@ -52,6 +52,7 @@ void Planner::RunOnce() {
     ROS_DEBUG("UpdateTrafficLights failed");
     return;
   }
+  VisualizeTrafficLightBox();
   if (!has_maneuver_planner_) {
     maneuver_planner_ = std::make_unique<ManeuverPlanner>(nh_, thread_pool_.get());
     has_maneuver_planner_ = true;
@@ -62,23 +63,28 @@ void Planner::RunOnce() {
   init_trajectory_point.path_point.y = VehicleState::Instance().GetKinoDynamicVehicleState().y;
   init_trajectory_point.path_point.theta = VehicleState::Instance().GetKinoDynamicVehicleState().theta;
   auto maneuver_status = maneuver_planner_->Process(init_trajectory_point);
+  VisualizeReferenceLine(maneuver_planner_->multable_ref_line());
   if (maneuver_status != ManeuverStatus::kSuccess) {
     ROS_FATAL("ManeuverPlanner failed, [maneuver_status: %ud]", static_cast<uint32_t>(maneuver_status));
   } else {
     ROS_INFO("ManeuverPlanner success, [maneuver_status: %ud]", static_cast<uint32_t>(maneuver_status));
   }
   auto optimal_trajectory = maneuver_planner_->optimal_trajectory();
-  for (const auto &tp : optimal_trajectory.trajectory_points) {
-    std::cout << "x : " << tp.path_point.x << " y: " << tp.path_point.y << " vel : " << tp.vel << " acc : " << tp.acc
-              << std::endl;
-  }
+//  for (const auto &tp : optimal_trajectory.trajectory_points) {
+//    std::cout << "x : " << tp.path_point.x << " y: " << tp.path_point.y << " vel : " << tp.vel << " acc : " << tp.acc
+//              << std::endl;
+//  }
   optimal_trajectory.header.stamp = current_time_stamp;
+  VisualizeOptimalTrajectory(optimal_trajectory);
   history_trajectory_ = optimal_trajectory;
   trajectory_publisher_.publish(optimal_trajectory);
   auto valid_trajectories = maneuver_planner_->valid_trajectories();
   if (!valid_trajectories.empty()) {
     this->VisualizeValidTrajectories(valid_trajectories);
   }
+  auto end_time = ros::Time::now();
+  ROS_WARN("[Planner], RunOnce Time: %lf ms",
+           static_cast<double>((end_time - current_time_stamp).toNSec()) / 1000000.0);
 }
 
 void Planner::InitPublisher() {
@@ -88,6 +94,10 @@ void Planner::InitPublisher() {
       topic::kVisualizedTrajectoryName, 10);
   this->visualized_valid_trajectories_publisher_ = nh_.advertise<visualization_msgs::MarkerArray>(
       topic::kVisualizedValidTrajectoriesName, 10);
+  this->visualized_reference_lines_publisher_ = nh_.advertise<visualization_msgs::MarkerArray>(
+      topic::kVisualizedReferenceLinesName, 10);
+  this->visualized_traffic_light_box_publisher_ = nh_.advertise<visualization_msgs::MarkerArray>(
+      topic::kVisualizedTrafficLightBoxName, 10);
 }
 
 void Planner::InitSubscriber() {
@@ -245,62 +255,30 @@ bool Planner::UpdateTrafficLights() {
   }
   return true;
 }
-//planning_msgs::TrajectoryPoint Planner::GetStitchingTrajectory() {
-//  planning_msgs::TrajectoryPoint tp;
-//  double planning_cycle_time = 1.0 / static_cast<double>(PlanningConfig::Instance().loop_rate());
-//  constexpr double kEpsilon_a = 0.4;
-//  constexpr double kEpsilon_v = 0.1;
-//  const auto &vehicle_state = VehicleState::Instance();
-//  if (vehicle_state.linear_vel() < kEpsilon_v && vehicle_state.linear_acc() < kEpsilon_a) {
-//    tp.relative_time = planning_cycle_time;
-//    tp.path_point.s = 0.0;
-//    tp.path_point.x = vehicle_state.pose().position.x;
-//    tp.path_point.y = vehicle_state.pose().position.y;
-//    tp.path_point.kappa = 0.0;
-//    tp.path_point.theta = vehicle_state.theta();
-//    tp.path_point.dkappa = 0.0;
-//    tp.vel = vehicle_state.linear_vel();
-//    tp.acc = vehicle_state.linear_acc();
-//    tp.jerk = 0.0;
-//    tp.steer_angle = 0.0;
-//  } else {
-//    tp.relative_time = planning_cycle_time;
-//    auto predict_pose = vehicle_state.PredictNextPose(planning_cycle_time);
-//    tp.path_point.x = predict_pose.position.x;
-//    tp.path_point.y = predict_pose.position.y;
-//    tp.path_point.theta = tf::getYaw(predict_pose.orientation);
-//    tp.path_point.s = 0.0;
-//    tp.path_point.dkappa = 0.0;
-//    tp.path_point.kappa = 0.0;
-//    tp.vel = std::min(PlanningConfig::Instance().max_lon_velocity(),
-//                      vehicle_state.linear_vel() + vehicle_state.linear_acc() * planning_cycle_time);
-//    tp.acc = vehicle_state.linear_acc();
-//    tp.jerk = 0.0;
-//  }
-//  return tp;
-//}
 
 void Planner::VisualizeValidTrajectories(const std::vector<planning_msgs::Trajectory> &valid_trajectories) const {
   visualization_msgs::MarkerArray valid_trajectories_marker_array;
-
-  for (size_t i = 0; i < valid_trajectories.size(); ++i) {
+  ROS_INFO("Planner  valid trajectories size %zu", valid_trajectories.size());
+  int i = 1;
+  for (const auto &valid_trajectory : valid_trajectories) {
     visualization_msgs::Marker trajectory_marker;
     trajectory_marker.type = visualization_msgs::Marker::LINE_STRIP;
     trajectory_marker.id = i;
-    trajectory_marker.scale.x = 0.5;
+    trajectory_marker.scale.x = 0.1;
     trajectory_marker.color.a = 1.0;
     trajectory_marker.color.r = 1.0;
     trajectory_marker.pose.orientation.w = 1.0;
     trajectory_marker.header.stamp = ros::Time::now();
-    trajectory_marker.header.frame_id = "/map";
+    trajectory_marker.header.frame_id = "map";
     trajectory_marker.action = visualization_msgs::Marker::ADD;
-    for (const auto &tp : valid_trajectories[i].trajectory_points) {
+    for (const auto &tp : valid_trajectory.trajectory_points) {
       geometry_msgs::Point p;
       p.x = tp.path_point.x;
       p.y = tp.path_point.y;
       p.z = 0.1;
       trajectory_marker.points.push_back(p);
     }
+    i++;
     valid_trajectories_marker_array.markers.push_back(trajectory_marker);
   }
   visualized_valid_trajectories_publisher_.publish(valid_trajectories_marker_array);
@@ -310,13 +288,14 @@ void Planner::VisualizeOptimalTrajectory(const planning_msgs::Trajectory &optima
   visualization_msgs::Marker optimal_trajectory_marker;
   optimal_trajectory_marker.type = visualization_msgs::Marker::LINE_STRIP;
   optimal_trajectory_marker.header.stamp = ros::Time::now();
-  optimal_trajectory_marker.header.frame_id = "/map";
-  optimal_trajectory_marker.type = visualization_msgs::Marker::ADD;
+  optimal_trajectory_marker.header.frame_id = "map";
+  optimal_trajectory_marker.action = visualization_msgs::Marker::ADD;
   optimal_trajectory_marker.color.a = 1.0;
-  optimal_trajectory_marker.color.g = 1.0;
-  optimal_trajectory_marker.scale.x = PlanningConfig::Instance().vehicle_params().width;
+  optimal_trajectory_marker.color.b = 1.0;
+  optimal_trajectory_marker.scale.x = 1.0;
   optimal_trajectory_marker.pose.orientation.w = 1.0;
-  optimal_trajectory_marker.id = 1;
+  optimal_trajectory_marker.id = 0;
+
   for (const auto &tp : optimal_trajectory.trajectory_points) {
     geometry_msgs::Point p;
     p.x = tp.path_point.x;
@@ -326,11 +305,60 @@ void Planner::VisualizeOptimalTrajectory(const planning_msgs::Trajectory &optima
   }
   visualized_trajectory_publisher_.publish(optimal_trajectory_marker);
 }
+
 std::vector<planning_msgs::TrajectoryPoint> Planner::GetStitchingTrajectory(const ros::Time &current_time_stamp,
                                                                             double planning_cycle_time,
                                                                             size_t preserve_points_num) {
   return std::vector<planning_msgs::TrajectoryPoint>();
 
+}
+
+void Planner::VisualizeTrafficLightBox() {
+  visualization_msgs::MarkerArray traffic_light_boxes_markers;
+  for (const auto &traffic_light : traffic_lights_info_list_) {
+    visualization_msgs::Marker traffic_light_marker;
+    traffic_light_marker.type = visualization_msgs::Marker::CUBE;
+    traffic_light_marker.header.stamp = ros::Time::now();
+    traffic_light_marker.action = visualization_msgs::Marker::ADD;
+    traffic_light_marker.header.frame_id = "map";
+    traffic_light_marker.color.a = 1.0;
+    traffic_light_marker.color.r = 0.5;
+    traffic_light_marker.color.g = 0.2;
+    traffic_light_marker.color.b = 0.6;
+    traffic_light_marker.scale = traffic_light.second.trigger_volume.size;
+    traffic_light_marker.pose.position = traffic_light.second.transform.position;
+    traffic_light_marker.pose.orientation = traffic_light.second.transform.orientation;
+    traffic_light_marker.id = traffic_light.first;
+    traffic_light_boxes_markers.markers.push_back(traffic_light_marker);
+  }
+  visualized_traffic_light_box_publisher_.publish(traffic_light_boxes_markers);
+}
+void Planner::VisualizeReferenceLine(std::list<std::shared_ptr<ReferenceLine>> &ref_lines) {
+  visualization_msgs::MarkerArray marker_array;
+  int i = 100;
+  for (const auto &ref_line : ref_lines) {
+    visualization_msgs::Marker marker;
+    marker.type = visualization_msgs::Marker::LINE_STRIP;
+    marker.id = i;
+    marker.scale.x = 0.1;
+    marker.pose.orientation.w = 1.0;
+    marker.color.a = 1.0;
+    marker.color.r = 1.0;
+    marker.header.frame_id = "map";
+    marker.header.stamp = ros::Time::now();
+    marker.action = visualization_msgs::Marker::ADD;
+    const double ds = 0.5;
+    for (double s = 0; s <= ref_line->Length(); s += ds) {
+      auto ref_point = ref_line->GetReferencePoint(s);
+      geometry_msgs::Point pt;
+      pt.x = ref_point.x();
+      pt.y = ref_point.y();
+      marker.points.push_back(pt);
+    }
+    marker_array.markers.push_back(marker);
+    i++;
+  }
+  visualized_reference_lines_publisher_.publish(marker_array);
 }
 
 }

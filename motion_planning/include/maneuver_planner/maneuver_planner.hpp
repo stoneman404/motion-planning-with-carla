@@ -50,6 +50,7 @@ class ManeuverPlanner {
   bool ReRoute(const geometry_msgs::Pose &start,
                const geometry_msgs::Pose &destination,
                planning_srvs::RouteResponse &response);
+
   /**
    * @brief: generate reference line
    * @param[in] route
@@ -66,19 +67,15 @@ class ManeuverPlanner {
   void SetManeuverGoal(const ManeuverGoal &maneuver_goal);
 
   /**
-   *
    * @return
    */
   const ManeuverGoal &maneuver_goal() const;
 
   /**
-   *
    * @return
    */
   ManeuverGoal &multable_maneuver_goal();
-
   const ManeuverStatus &prev_maneuver_status() const { return maneuver_status_; }
-
   void SetPrevManeuverStatus(const ManeuverStatus &prev_status) { this->maneuver_status_ = prev_status; }
 
   /**
@@ -94,7 +91,6 @@ class ManeuverPlanner {
 
   const std::vector<planning_msgs::Trajectory> &valid_trajectories() const;
   const planning_msgs::Trajectory &optimal_trajectory() const;
-
   const planning_msgs::TrajectoryPoint &init_trajectory_point() const;
  private:
 
@@ -148,7 +144,7 @@ class ManeuverPlanner {
   std::list<planning_srvs::RouteResponse> routes_;
   std::list<std::shared_ptr<ReferenceLine>> ref_lines_;
   ManeuverStatus maneuver_status_;
-  std::vector<planning_msgs::Trajectory> valid_trajectories_;
+  std::vector<planning_msgs::Trajectory> valid_trajectories_{};
   planning_msgs::Trajectory optimal_trajectory_;
   std::unique_ptr<TrajectoryPlanner> trajectory_planner_;
   ThreadPool *thread_pool_ = nullptr;
