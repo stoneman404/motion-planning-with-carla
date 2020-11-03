@@ -175,7 +175,6 @@ double Spline2d::CalcArcLengthAtT(double t) const {
 //  return AdaptiveSimpsonIntegral(0.0, t, eps);
 }
 
-
 bool Spline2d::ArcLengthMapToChordLength(double s, double *const t) const {
 //  int max_iter = 10;
 //  int iter = 0;
@@ -236,11 +235,10 @@ double Spline2d::AdaptiveSimpsonIntegral(double l, double r, double eps) const {
   }
 }
 
-
 bool Spline2d::GetNearestPointOnSpline(double x, double y,
-  double *const nearest_x,
-  double *const nearest_y,
-  double *const nearest_s) const {
+                                       double *const nearest_x,
+                                       double *const nearest_y,
+                                       double *const nearest_s) const {
   // 1. prepared, set the init s1, s2, s3
   // note: here we use the chord length rather than arc length for eliminating the calculate time;
 
@@ -251,10 +249,10 @@ bool Spline2d::GetNearestPointOnSpline(double x, double y,
   double t1 = chord_lengths_[min_index] / chord_lengths_.back();
   Clamp(t1, 0, 1);
   double t2, t3;
-  if (t1 < 0.5){
+  if (t1 < 0.5) {
     t2 = std::min(t1 + 0.1, 1.0);
     t3 = std::min(t1 + 0.2, 1.0);
-  }else{
+  } else {
     t2 = std::max(t1 - 0.1, 0.0);
     t3 = std::max(t1 - 0.2, 0.0);
   }
@@ -298,7 +296,7 @@ bool Spline2d::GetNearestPointOnSpline(double x, double y,
     const double D_prime_t = CalcDerivativeOfObjectFunction(t_opt, 1, x, y);
     const double D_prime_prime_t = CalcDerivativeOfObjectFunction(t_opt, 2, x, y);
 
-    t_opt -=  D_prime_t / D_prime_prime_t;
+    t_opt -= D_prime_t / D_prime_prime_t;
     if (isnan(t_opt)) {
 //     std::cout << "in newton step the opt is nan, D'(t) = " << D_prime_t
 //     <<  "D''(t)" << D_prime_prime_t << std::endl;
@@ -337,15 +335,15 @@ bool Spline2d::GetNearestPointOnSpline(double x, double y,
   *nearest_y = spline2d_(t_opt)(1, 0);
   *nearest_s = CalcArcLengthAtT(t_opt);
   return true;
-  }
+}
 
-  double Spline2d::PointToPointSquaredDistance(double x1, double y1,
-  double x2, double y2) {
+double Spline2d::PointToPointSquaredDistance(double x1, double y1,
+                                             double x2, double y2) {
   return (x1 - x2) * (x1 - x2) + (y1 - y2) * (y1 - y2);
-  }
+}
 
-  double Spline2d::CalcQ(double s, double s1, double s2, double s3,
-  double d1, double d2, double d3) {
+double Spline2d::CalcQ(double s, double s1, double s2, double s3,
+                       double d1, double d2, double d3) {
   const double p1 = (s - s2) * (s - s3) / ((s1 - s2) * (s1 - s3)) * d1;
   const double p2 = (s - s1) * (s - s3) / ((s2 - s1) * (s2 - s3)) * d2;
   const double p3 = (s - s1) * (s - s2) / ((s3 - s1) * (s3 - s2)) * d3;
@@ -376,13 +374,13 @@ double Spline2d::CalcDerivativeOfObjectFunction(double t, int order, double x, d
   }
   return result;
 
-      }
+}
 
-      double Spline2d::Clamp(double t, double lb, double ub) {
-      if (t < lb) {
-      return lb;
-      } else if (t > ub) {
-      return ub;
+double Spline2d::Clamp(double t, double lb, double ub) {
+  if (t < lb) {
+    return lb;
+  } else if (t > ub) {
+    return ub;
   } else {
     return t;
   }
@@ -391,10 +389,10 @@ double Spline2d::CalcDerivativeOfObjectFunction(double t, int order, double x, d
 int Spline2d::CalcNearestIndex(double x, double y) const {
   double min_dist = std::numeric_limits<double>::max();
   int min_index = 0;
-  for (size_t i = 0; i < xs_.size(); ++i){
-const double sqrt_dist = std::hypot(x - xs_[i], y - ys_[i]);
-if (sqrt_dist < min_dist){
-min_dist = sqrt_dist;
+  for (size_t i = 0; i < xs_.size(); ++i) {
+    const double sqrt_dist = std::hypot(x - xs_[i], y - ys_[i]);
+    if (sqrt_dist < min_dist) {
+      min_dist = sqrt_dist;
       min_index = i;
     }
   }
