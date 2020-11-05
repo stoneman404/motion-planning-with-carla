@@ -14,15 +14,15 @@ void PlanningConfig::UpdateParams(const ros::NodeHandle &nh) {
   ROS_INFO("obstacle_trajectory_time: %f", obstacle_trajectory_time_);
   nh.param<double>("/planning/motion_planning/delta_t", delta_t_, 0.1);
   nh.param<double>("/planning/motion_planning/reference_smoother_deviation_weight",
-                   reference_smoother_deviation_weight_, 10.0);
+                   reference_smoother_deviation_weight_, 5.0);
   nh.param<double>("/planning/motion_planning/reference_smoother_curvature_weight",
-                   reference_smoother_curvature_weight_, 4.0);
+                   reference_smoother_curvature_weight_, 20.0);
   nh.param<double>("/planning/motion_planning/reference_smoother_heading_weight",
-                   reference_smoother_heading_weight_, 10.0);
+                   reference_smoother_heading_weight_, 6.0);
   nh.param<double>("/planning/motion_planning/reference_smoother_distance_weight",
-                   reference_smoother_distance_weight_, 5.0);
+                   reference_smoother_distance_weight_, 4);
   nh.param<double>("/planning/motion_planning/reference_smoother_max_curvature",
-                   reference_smoother_max_curvature_, 100);
+                   reference_smoother_max_curvature_, 5);
   nh.param<int>("/planning/motion_planning/spline_order", spline_order_, 3);
   ROS_INFO("spline_order_: %i", spline_order_);
   nh.param<double>("/planning/motion_planning/max_lookahead_time",

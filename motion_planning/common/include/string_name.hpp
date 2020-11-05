@@ -17,6 +17,7 @@ const std::string kGoalPoseName = "/move_base_simple/goal";                     
 const std::string kTrafficLightsInfoName = "/carla/traffic_lights_info";                          //NOLINT
 const std::string kVisualizedTrafficLightBoxName = "/planning/visualized_traffic_light_boxes";    //NOLINT
 const std::string kVisualizedReferenceLinesName = "/planning/visualized_reference_lines";         //NOLINT
+const std::string kVisualizedRouteName = "/planning/visualized_route";                             //NOLINT
 }
 
 namespace service {

@@ -18,7 +18,7 @@ from tf.transformations import euler_from_quaternion
 
 
 class ClinetInterface(object):
-    WAYPOINT_DISTANCE = 1.0
+    WAYPOINT_DISTANCE = 2.0
 
     def __init__(self, carla_world):
         """
@@ -137,7 +137,6 @@ class ClinetInterface(object):
         dao = GlobalRoutePlannerDAO(self.world.get_map(), sampling_resolution=1)
         grp = GlobalRoutePlanner(dao)
         grp.setup()
-
         route = grp.trace_route(carla.Location(carla_start.location.x,
                                                carla_start.location.y,
                                                carla_start.location.y),
@@ -149,8 +148,8 @@ class ClinetInterface(object):
         last_x = float("inf")
         last_y = float("inf")
         for wp in route:
-            if math.fabs(wp[0].transform.location.x - last_x) < 0.1 and math.fabs(
-                    wp[0].transform.location.y - last_y) < 0.1:
+            if math.fabs(wp[0].transform.location.x - last_x) < 0.2 and math.fabs(
+                    wp[0].transform.location.y - last_y) < 0.2:
                 last_x = wp[0].transform.location.x
                 last_y = wp[0].transform.location.y
                 continue

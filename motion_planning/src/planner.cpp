@@ -1,6 +1,7 @@
 #include <geometry_msgs/PoseStamped.h>
 #include <tf/transform_datatypes.h>
 #include <visualization_msgs/MarkerArray.h>
+#include <nav_msgs/Path.h>
 #include "planner.hpp"
 #include "string_name.hpp"
 #include "planning_config.hpp"
@@ -52,6 +53,10 @@ void Planner::RunOnce() {
     ROS_DEBUG("UpdateTrafficLights failed");
     return;
   }
+  ros::Time end = ros::Time::now();
+  auto maneuver_planner_start_time_stamp = ros::Time::now();
+  ROS_WARN("RunOnce: update vehicle, traffic light, obstacle elapsed %lf ms",
+           static_cast<double>((end - current_time_stamp).toNSec()) / 1000000.0);
   VisualizeTrafficLightBox();
   if (!has_maneuver_planner_) {
     maneuver_planner_ = std::make_unique<ManeuverPlanner>(nh_, thread_pool_.get());
@@ -63,7 +68,11 @@ void Planner::RunOnce() {
   init_trajectory_point.path_point.y = VehicleState::Instance().GetKinoDynamicVehicleState().y;
   init_trajectory_point.path_point.theta = VehicleState::Instance().GetKinoDynamicVehicleState().theta;
   auto maneuver_status = maneuver_planner_->Process(init_trajectory_point);
-  VisualizeReferenceLine(maneuver_planner_->multable_ref_line());
+  end = ros::Time::now();
+  ROS_WARN("RunOnce: maneuver_planner_ Process Elapsed %lf ms",
+           static_cast<double>((end - maneuver_planner_start_time_stamp).toNSec()) / 1000000.0);
+  this->VisualizeReferenceLine(maneuver_planner_->multable_ref_line());
+  this->VisualizeRoute(maneuver_planner_->multable_routes());
   if (maneuver_status != ManeuverStatus::kSuccess) {
     ROS_FATAL("ManeuverPlanner failed, [maneuver_status: %ud]", static_cast<uint32_t>(maneuver_status));
   } else {
@@ -75,16 +84,16 @@ void Planner::RunOnce() {
 //              << std::endl;
 //  }
   optimal_trajectory.header.stamp = current_time_stamp;
-  VisualizeOptimalTrajectory(optimal_trajectory);
+  this->VisualizeOptimalTrajectory(optimal_trajectory);
   history_trajectory_ = optimal_trajectory;
   trajectory_publisher_.publish(optimal_trajectory);
   auto valid_trajectories = maneuver_planner_->valid_trajectories();
   if (!valid_trajectories.empty()) {
     this->VisualizeValidTrajectories(valid_trajectories);
   }
-  auto end_time = ros::Time::now();
+  end = ros::Time::now();
   ROS_WARN("[Planner], RunOnce Time: %lf ms",
-           static_cast<double>((end_time - current_time_stamp).toNSec()) / 1000000.0);
+           static_cast<double>((end - current_time_stamp).toNSec()) / 1000000.0);
 }
 
 void Planner::InitPublisher() {
@@ -92,12 +101,15 @@ void Planner::InitPublisher() {
       topic::kPublishedTrajectoryName, 10);
   this->visualized_trajectory_publisher_ = nh_.advertise<visualization_msgs::Marker>(
       topic::kVisualizedTrajectoryName, 10);
+//  this->visualized_trajectory_publisher_ = nh_.advertise<nav_msgs::Path>(topic::kVisualizedTrajectoryName, 10);
   this->visualized_valid_trajectories_publisher_ = nh_.advertise<visualization_msgs::MarkerArray>(
       topic::kVisualizedValidTrajectoriesName, 10);
   this->visualized_reference_lines_publisher_ = nh_.advertise<visualization_msgs::MarkerArray>(
       topic::kVisualizedReferenceLinesName, 10);
   this->visualized_traffic_light_box_publisher_ = nh_.advertise<visualization_msgs::MarkerArray>(
       topic::kVisualizedTrafficLightBoxName, 10);
+  this->visualized_route_publisher_ = nh_.advertise<visualization_msgs::MarkerArray>(
+      topic::kVisualizedRouteName, 10);
 }
 
 void Planner::InitSubscriber() {
@@ -275,7 +287,7 @@ void Planner::VisualizeValidTrajectories(const std::vector<planning_msgs::Trajec
       geometry_msgs::Point p;
       p.x = tp.path_point.x;
       p.y = tp.path_point.y;
-      p.z = 0.1;
+      p.z = VehicleState::Instance().pose().position.z;
       trajectory_marker.points.push_back(p);
     }
     i++;
@@ -291,8 +303,10 @@ void Planner::VisualizeOptimalTrajectory(const planning_msgs::Trajectory &optima
   optimal_trajectory_marker.header.frame_id = "map";
   optimal_trajectory_marker.action = visualization_msgs::Marker::ADD;
   optimal_trajectory_marker.color.a = 1.0;
-  optimal_trajectory_marker.color.b = 1.0;
-  optimal_trajectory_marker.scale.x = 1.0;
+  optimal_trajectory_marker.color.b = 0.8;
+  optimal_trajectory_marker.color.r = 1.0;
+//  optimal_trajectory_marker.color.g =0.7;
+  optimal_trajectory_marker.scale.x = 0.2;
   optimal_trajectory_marker.pose.orientation.w = 1.0;
   optimal_trajectory_marker.id = 0;
 
@@ -300,10 +314,11 @@ void Planner::VisualizeOptimalTrajectory(const planning_msgs::Trajectory &optima
     geometry_msgs::Point p;
     p.x = tp.path_point.x;
     p.y = tp.path_point.y;
-    p.z = 0.1;
+    p.z = VehicleState::Instance().pose().position.z;
     optimal_trajectory_marker.points.push_back(p);
   }
   visualized_trajectory_publisher_.publish(optimal_trajectory_marker);
+
 }
 
 std::vector<planning_msgs::TrajectoryPoint> Planner::GetStitchingTrajectory(const ros::Time &current_time_stamp,
@@ -355,6 +370,7 @@ void Planner::VisualizeReferenceLine(std::vector<std::shared_ptr<ReferenceLine>>
       geometry_msgs::Point pt;
       pt.x = ref_point.x();
       pt.y = ref_point.y();
+      pt.z = VehicleState::Instance().pose().position.z;
       marker.points.push_back(pt);
       s += ds;
     }
@@ -362,6 +378,31 @@ void Planner::VisualizeReferenceLine(std::vector<std::shared_ptr<ReferenceLine>>
     i++;
   }
   visualized_reference_lines_publisher_.publish(marker_array);
+}
+void Planner::VisualizeRoute(std::vector<planning_srvs::RouteResponse> &routes) {
+  visualization_msgs::MarkerArray marker_array;
+  int i = 0;
+  for (const auto &route : routes) {
+    visualization_msgs::Marker marker;
+    marker.type = visualization_msgs::Marker::LINE_STRIP;
+    marker.id = i;
+    marker.header.frame_id = "map";
+    marker.color.g = 1.0;
+    marker.color.a = 1.0;
+    marker.scale.x = 0.2;
+    marker.pose.orientation.w = 1.0;
+    marker.action = visualization_msgs::Marker::ADD;
+    for (const auto &waypoint : route.route) {
+      geometry_msgs::Point p;
+      p.x = waypoint.pose.position.x;
+      p.y = waypoint.pose.position.y;
+      p.z = waypoint.pose.position.z - 0.1;
+      marker.points.push_back(p);
+    }
+    ++i;
+    marker_array.markers.push_back(marker);
+  }
+  visualized_route_publisher_.publish(marker_array);
 }
 
 }

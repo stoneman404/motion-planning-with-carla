@@ -292,6 +292,7 @@ bool ReferenceLine::XYToSL(const Eigen::Vector2d &xy, SLPoint *sl_point) const {
 //  std::cout << "XYToSL: referenceline's arc length: " << ref_line_spline_->ArcLength();
   if (!ref_line_spline_->GetNearestPointOnSpline(
       xy(0), xy(1), &nearest_x, &nearest_y, &nearest_s)) {
+    ROS_FATAL("[ReferenceLine::XYToSL], Failed to Get NearestPointOnSpline {x: %lf, y:%lf}", xy(0), xy(1));
     return false;
   }
   double x_der, y_der;
@@ -414,8 +415,9 @@ bool ReferenceLine::BuildReferenceLineWithSpline() {
 
 bool ReferenceLine::Smooth() {
   const auto way_points = way_points_;
-  bool result = reference_smoother_->SmoothReferenceLine(way_points, &reference_points_);
-  if (way_points.size() != reference_points_.size()) {
+  std::vector<ReferencePoint> ref_point;
+  bool result = reference_smoother_->SmoothReferenceLine(way_points, &ref_point);
+  if (way_points.size() != ref_point.size()) {
     return false;
   }
   if (!result) {
@@ -424,9 +426,9 @@ bool ReferenceLine::Smooth() {
   }
   smoothed_ = true;
   std::vector<double> xs, ys;
-  xs.reserve(reference_points_.size());
-  ys.reserve(reference_points_.size());
-  for (auto &reference_point : reference_points_) {
+  xs.reserve(ref_point.size());
+  ys.reserve(ref_point.size());
+  for (auto &reference_point : ref_point) {
     xs.push_back(reference_point.x());
     ys.push_back(reference_point.y());
   }

@@ -56,6 +56,8 @@ bool FrenetLatticePlanner::PlanningOnRef(const planning_msgs::TrajectoryPoint &i
                                          const ManeuverInfo &maneuver_info,
                                          std::pair<planning_msgs::Trajectory, double> &optimal_trajectory,
                                          std::vector<planning_msgs::Trajectory> *valid_trajectories) const {
+  ros::Time begin = ros::Time::now();
+
   const auto &ref_line = maneuver_info.ptr_ref_line;
   std::array<double, 3> init_s{};
   std::array<double, 3> init_d{};
@@ -137,11 +139,14 @@ bool FrenetLatticePlanner::PlanningOnRef(const planning_msgs::TrajectoryPoint &i
       break;
     }
   }
-  int i = 0;
+//  int i = 0;
 //  for (const auto& traj : *valid_trajectories){
 //    std::cout << " traj: " << i << ": " << traj.trajectory_points.back().path_point.x << " " << traj.trajectory_points.back().path_point.y << std::endl;
 //    i++;
 //  }
+  ros::Time end = ros::Time::now();
+  ROS_WARN("[FrenetLatticePlanner::PlanningOnRef], the total time elapsed is %lf",
+           static_cast<double>((end - begin).toNSec()) / 1000000.0);
   return num_lattice_traj > 0;
 }
 
@@ -250,7 +255,12 @@ void FrenetLatticePlanner::GenerateCruisingLonTrajectories(double cruise_speed,
                                                            const std::shared_ptr<EndConditionSampler> &end_condition_sampler,
                                                            std::vector<std::shared_ptr<Polynomial>> *ptr_lon_traj_vec) {
   auto end_conditions = end_condition_sampler->SampleLonEndConditionForCruising(cruise_speed);
+  ros::Time begin = ros::Time::now();
+
   FrenetLatticePlanner::GeneratePolynomialTrajectories(init_s, end_conditions, 4, ptr_lon_traj_vec);
+  ros::Time end = ros::Time::now();
+  ROS_WARN("[GenerateCruisingLonTrajectories], GeneratePolynomialTrajectories elapsed %lf ms",
+           static_cast<double>((end - begin).toNSec()) / 1000000.0);
 }
 
 void FrenetLatticePlanner::GenerateStoppingLonTrajectories(double stop_s,
@@ -260,7 +270,11 @@ void FrenetLatticePlanner::GenerateStoppingLonTrajectories(double stop_s,
   auto end_conditions = end_condition_sampler->SampleLonEndConditionForStopping(stop_s);
   ROS_INFO("[FrenetLatticePlanner::GenerateStoppingLonTrajectories], the end conditions size : %zu",
            end_conditions.size());
+  ros::Time begin = ros::Time::now();
   FrenetLatticePlanner::GeneratePolynomialTrajectories(init_s, end_conditions, 5, ptr_lon_traj_vec);
+  ros::Time end = ros::Time::now();
+  ROS_WARN("[GenerateStoppingLonTrajectories], GeneratePolynomialTrajectories elapsed %lf ms",
+           static_cast<double>((end - begin).toNSec()) / 1000000.0);
 }
 
 void FrenetLatticePlanner::GenerateOvertakeAndFollowingLonTrajectories(const std::array<double, 3> &init_s,
@@ -269,7 +283,11 @@ void FrenetLatticePlanner::GenerateOvertakeAndFollowingLonTrajectories(const std
   auto end_conditions = end_condition_sampler->SampleLonEndConditionWithSTGraph();
   ROS_INFO("[FrenetLatticePlanner::GenerateOvertakeAndFollowingLonTrajectories], the end conditions size : %zu",
            end_conditions.size());
+  ros::Time begin = ros::Time::now();
   FrenetLatticePlanner::GeneratePolynomialTrajectories(init_s, end_conditions, 5, ptr_lon_traj_vec);
+  ros::Time end = ros::Time::now();
+  ROS_WARN("[GenerateOvertakeAndFollowingLonTrajectories], GeneratePolynomialTrajectories elapsed %lf ms",
+           static_cast<double>((end - begin).toNSec()) / 1000000.0);
 
 }
 

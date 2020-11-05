@@ -97,6 +97,7 @@ class Planner {
   void VisualizeOptimalTrajectory(const planning_msgs::Trajectory &optimal_trajectory) const;
   void VisualizeTrafficLightBox();
   void VisualizeReferenceLine(std::vector<std::shared_ptr<ReferenceLine>> &ref_lines);
+  void VisualizeRoute(std::vector<planning_srvs::RouteResponse> &route);
 
  private:
   bool has_maneuver_planner_ = false;
@@ -135,6 +136,7 @@ class Planner {
   ros::Publisher visualized_valid_trajectories_publisher_;
   ros::Publisher visualized_reference_lines_publisher_;
   ros::Publisher visualized_traffic_light_box_publisher_;
+  ros::Publisher visualized_route_publisher_;
 
   //////////////////////maneuver planner///////////////
   std::unique_ptr<ManeuverPlanner> maneuver_planner_;
