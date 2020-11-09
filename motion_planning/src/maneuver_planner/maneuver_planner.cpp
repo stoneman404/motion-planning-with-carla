@@ -57,8 +57,6 @@ ManeuverStatus ManeuverPlanner::Process(const planning_msgs::TrajectoryPoint &in
   } else {
     ROS_DEBUG("[ManeuverPlanner::Process], current state is [%s]", current_state_->Name().c_str());
     ref_lines_.clear();
-
-    ref_lines_.reserve(routes_.size());
     for (const auto &route_response : routes_) {
       ref_lines_.emplace_back(std::make_shared<ReferenceLine>());
       auto result = ManeuverPlanner::GenerateReferenceLine(route_response, ref_lines_.back());

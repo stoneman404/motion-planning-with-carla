@@ -4,6 +4,7 @@ import sys
 import threading
 
 import carla
+import numpy as np
 import rospy
 import tf
 from agents.navigation.global_route_planner import GlobalRoutePlanner
@@ -137,22 +138,43 @@ class ClinetInterface(object):
         dao = GlobalRoutePlannerDAO(self.world.get_map(), sampling_resolution=1)
         grp = GlobalRoutePlanner(dao)
         grp.setup()
-        route = grp.trace_route(carla.Location(carla_start.location.x,
-                                               carla_start.location.y,
-                                               carla_start.location.y),
-                                carla.Location(carla_goal.location.x,
-                                               carla_goal.location.y,
-                                               carla_goal.location.z))
+        # route = grp.trace_route(carla.Location(carla_start.location.x,
+        #                                        carla_start.location.y,
+        #                                        carla_start.location.y),
+        #                         carla.Location(carla_goal.location.x,
+        #                                        carla_goal.location.y,
+        #                                        carla_goal.location.z))
+        route = list(list())
+        carl_start_waypoint = self.map.get_waypoint(carla_start.location)
+        # waypoints = carl_start_waypoint.next_until_lane_end(2)
+        waypoints = []
+        last_way_point = carl_start_waypoint
+        s = 0.0
+        while s < 800:
+            index = np.random.randint(0, len(last_way_point.next(2.0)))
+
+            waypoint = last_way_point.next(2.0)[index]
+            waypoints.append(waypoint)
+            last_way_point = waypoint
+            s += 2.0
+        rospy.loginfo("the waypoints.size is {}".format(len(waypoints)))
+        option = RoadOption.LANEFOLLOW
+        for wp in waypoints:
+            route.append([wp, option])
+        # get prev waypoint as start
+
+        waypoint = route[0][0].previous(distance=2.0)[-1]
+        route.insert(0, [waypoint, option])
         response = RouteResponse()
         # waypoint
         last_x = float("inf")
         last_y = float("inf")
         for wp in route:
-            if math.fabs(wp[0].transform.location.x - last_x) < 0.2 and math.fabs(
-                    wp[0].transform.location.y - last_y) < 0.2:
-                last_x = wp[0].transform.location.x
-                last_y = wp[0].transform.location.y
-                continue
+            # if math.fabs(wp[0].transform.location.x - last_x) < 0.2 and math.fabs(
+            #         wp[0].transform.location.y - last_y) < 0.2:
+            #     last_x = wp[0].transform.location.x
+            #     last_y = wp[0].transform.location.y
+            #     continue
             last_x = wp[0].transform.location.x
             last_y = wp[0].transform.location.y
             waypoint = WayPoint()
