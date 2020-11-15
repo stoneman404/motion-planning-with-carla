@@ -16,15 +16,15 @@ hybrid a star is the main planner for open space planner. Note that this planner
 
 ### 1.2 Ros Graph
 
-![](./graph_search_planner/figs/rosgraph.png)
+![](../graph_search_planner/figs/rosgraph.png)
 
 ### 1.3 Results
 
-![](./graph_search_planner/figs/hybrid_astar_result1.png)
+![](../graph_search_planner/figs/hybrid_astar_result1.png)
 
-![](./graph_search_planner/figs/hybrid_astar_result2.png)
+![](../graph_search_planner/figs/hybrid_astar_result2.png)
 
-![](./graph_search_planner/figs/hybrid_astar_result3.png)
+![](../graph_search_planner/figs/hybrid_astar_result3.png)
 
 
 ### 1.4 Future Works

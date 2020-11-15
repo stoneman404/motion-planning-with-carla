@@ -1,5 +1,0 @@
-<launch>
- <node name="graph_search_planner_node" pkg="graph_search_planner" type="graph_search_planner_node" />
- <node name="map_server" pkg="map_server" type="map_server" args="$(find graph_search_planner)/maps/map.yaml" />
- <node name="rviz" pkg="rviz" type="rviz" args="-d $(find graph_search_planner)/launch/config.rviz" />
-</launch>
