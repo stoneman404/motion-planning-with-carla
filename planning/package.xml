@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>behaviour_planner</name>
+  <name>planning</name>
   <version>0.0.0</version>
-  <description>The behaviour_planner package</description>
+  <description>The planning package</description>
 
   <!-- One maintainer tag required, multiple allowed, one person per tag -->
   <!-- Example:  -->

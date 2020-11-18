@@ -6,7 +6,7 @@ namespace planning {
 using namespace common;
 Obstacle::Obstacle(const derived_object_msgs::Object &object) {
   this->is_valid_obstacle_ = (!std::isnan(object_.shape.dimensions[0])
-      && !std::isnan(object_.shape.dimensions[0])
+      && !std::isnan(object_.shape.dimensions[1])
       && !std::isnan(object_.shape.dimensions[2]));
   this->time_stamp_ = object.header.stamp;
   object_ = object;

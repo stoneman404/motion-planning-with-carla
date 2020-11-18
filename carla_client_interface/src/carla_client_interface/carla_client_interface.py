@@ -13,7 +13,7 @@ from agents.navigation.local_planner import RoadOption
 from carla_msgs.msg import CarlaWorldInfo
 from carla_waypoint_types.srv import GetActorWaypointResponse, GetActorWaypoint
 from carla_waypoint_types.srv import GetWaypointResponse, GetWaypoint
-from planning_msgs.msg import WayPoint, LaneType, CarlaRoadOption, LaneChangeType
+from planning_msgs.msg import WayPoint, LaneType, CarlaRoadOption, LaneChangeType, RouteList
 from planning_srvs.srv import Route, RouteResponse
 from tf.transformations import euler_from_quaternion
 
@@ -29,6 +29,7 @@ class ClinetInterface(object):
         self.map = carla_world.get_map()
         self.ego_vehicle = None
         self.ego_vehicle_location = None
+        # self.current_route_list = RouteList()
         self.on_tick = None
         self.goal = None
         self.role_name = rospy.get_param("~role_name", 'ego_vehicle')
@@ -44,6 +45,8 @@ class ClinetInterface(object):
             GetActorWaypoint, self.get_actor_waypoint)
         self.getRouteService = rospy.Service('/carla_client_interface/{}/get_route'.format(self.role_name),
                                              Route, self.get_route)
+        # self.route_publisher = rospy.Publisher(
+        #     '/carla/{}/route_list'.format(self.role_name),RouteList, queue_size=1, latch=True)
         self._update_lock = threading.Lock()
 
 
@@ -99,6 +102,7 @@ class ClinetInterface(object):
             rospy.logwarn("get_actor_waypoint(): Actor {} not valid.".format(req.id))
         return response
 
+
     def get_route(self, req):
         """
         :return:
@@ -146,7 +150,7 @@ class ClinetInterface(object):
         #                                        carla_goal.location.z))
         route = list(list())
         carl_start_waypoint = self.map.get_waypoint(carla_start.location)
-        # waypoints = carl_start_waypoint.next_until_lane_end(2)
+        #waypoints = carl_start_waypoint.next_until_lane_end(2)
         waypoints = []
         last_way_point = carl_start_waypoint
         s = 0.0
@@ -350,11 +354,11 @@ def main():
 
         rospy.loginfo("Connected to Carla.")
 
-        waypointConverter = ClinetInterface(carla_world)
+        carlaInterface = ClinetInterface(carla_world)
 
         rospy.spin()
-        waypointConverter.destroy()
-        del waypointConverter
+        carlaInterface.destroy()
+        del carlaInterface
         del carla_world
         del carla_client
 

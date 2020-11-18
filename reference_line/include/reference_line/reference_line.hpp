@@ -1,6 +1,6 @@
 #ifndef CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_REFERENCE_LINE_REFERENCE_LINE_HPP_
 #define CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_REFERENCE_LINE_REFERENCE_LINE_HPP_
-#include <planning_srvs/Route.h>
+#include <planning_srvs/RoutePlanService.h>
 #include "polygon/box2d.hpp"
 #include <planning_msgs/PathPoint.h>
 #include "curves/spline2d.hpp"
@@ -31,7 +31,7 @@ class ReferenceLine {
    * copy constructor
    * @param other
    */
-  ReferenceLine(const ReferenceLine &other) = delete;
+  ReferenceLine(const ReferenceLine &other);
   /**
    * @brief construct the reference line from waypoint
    * @param waypoints
@@ -42,7 +42,7 @@ class ReferenceLine {
    * constructor
    * @param route_response
    */
-  explicit ReferenceLine(const planning_srvs::RouteResponse &route_response);
+//  explicit ReferenceLine(const planning_srvs::RoutePlanServiceResponse &route_response);
 
   bool Empty() const {
     return reference_points_.empty();
@@ -204,7 +204,7 @@ class ReferenceLine {
   std::shared_ptr<common::Spline2d> ref_line_spline_;
   std::shared_ptr<common::Spline2d> left_boundary_spline_;
   std::shared_ptr<common::Spline2d> right_boundary_spline_;
-  std::unique_ptr<ReferenceLineSmoother> reference_smoother_;
+  std::shared_ptr<ReferenceLineSmoother> reference_smoother_;
   int priority_ = 0;
 };
 

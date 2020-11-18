@@ -3,8 +3,9 @@
 #include "math/math_utils.hpp"
 #include <cppad/ipopt/solve.hpp>
 #include <glog/logging.h>
-#include <planning_srvs/RouteResponse.h>
+//#include <planning_srvs/RouteResponse.h>
 #include "reference_point.hpp"
+#include <planning_msgs/WayPoint.h>
 
 namespace planning {
 class ReferenceLineSmoother {
@@ -18,8 +19,8 @@ class ReferenceLineSmoother {
                         const double distance_weight,
                         const double max_curvature);
 
-  bool SmoothReferenceLine(const planning_srvs::RouteResponse &route_response,
-                           std::vector<ReferencePoint> *const smoothed_ref_points);
+//  bool SmoothReferenceLine(const planning_srvs::RouteResponse &route_response,
+//                           std::vector<ReferencePoint> *const smoothed_ref_points);
   bool SmoothReferenceLine(const std::vector<planning_msgs::WayPoint> &waypoints,
                            std::vector<ReferencePoint> *const smoothed_ref_points);
 
@@ -38,7 +39,7 @@ class ReferenceLineSmoother {
       std::vector<ReferencePoint> *const smoothed_ref_line) const;
 
  private:
-  planning_srvs::RouteResponse route_response_;
+  std::vector<planning_msgs::WayPoint> way_points_;
   std::string options_;
   DVector x_l_;
   DVector x_u_;
@@ -49,7 +50,6 @@ class ReferenceLineSmoother {
   double heading_weight_ = 9.5;
   double distance_weight_ = 6.0;
   double max_curvature_ = 6.0;
-
 };
 
 }

@@ -3,53 +3,53 @@
 
 namespace planning {
 
-bool ReferenceLineSmoother::SmoothReferenceLine(
-    const planning_srvs::RouteResponse &route_response,
-    std::vector<ReferencePoint> *const smoothed_ref_points) {
-
-  if (smoothed_ref_points == nullptr) {
-    ROS_FATAL("[ReferenceLineSmoother::GetSmoothReferenceLine],"
-              " the smoothed_ref_line is nullptr");
-    return false;
-  }
-
-  route_response_ = route_response;
-  const size_t point_num = route_response_.route.size();
-  if (point_num < 3) {
-    ROS_FATAL("[ReferenceLineSmoother::GetSmoothReferenceLine], "
-              "the ref points num is less 3");
-    return false;
-  }
-
-  std::vector<ReferencePoint> ref_points;
-  ref_points.reserve(point_num);
-  for (const auto &way_point : route_response_.route) {
-    ReferencePoint ref_point;
-    ref_point.set_xy(way_point.pose.position.x, way_point.pose.position.y);
-    ref_points.push_back(ref_point);
-  }
-
-  ReferenceLineSmoothIpoptInterface smoother_interface(ref_points);
-  SetUpOptions();
-  SetUpInitValue();
-  if (!this->SetUpConstraint()) {
-    return false;
-  }
-
-  CppAD::ipopt::solve_result<DVector> solution;
-  CppAD::ipopt::solve(options_, xi_, x_l_, x_u_, g_l_, g_u_,
-                      smoother_interface, solution);
-  if (solution.status != CppAD::ipopt::solve_result<DVector>::success) {
-    ROS_FATAL("[GetSmoothReferenceLine] failed reason: %i",
-              solution.status);
-    return false;
-  }
-
-  smoothed_ref_points->clear();
-  smoothed_ref_points->reserve(point_num);
-  bool result = this->TraceSmoothReferenceLine(solution, smoothed_ref_points);
-  return result;
-}
+//bool ReferenceLineSmoother::SmoothReferenceLine(
+//    const planning_srvs::RouteResponse &route_response,
+//    std::vector<ReferencePoint> *const smoothed_ref_points) {
+//
+//  if (smoothed_ref_points == nullptr) {
+//    ROS_FATAL("[ReferenceLineSmoother::GetSmoothReferenceLine],"
+//              " the smoothed_ref_line is nullptr");
+//    return false;
+//  }
+//
+//  way_points = route_response;
+//  const size_t point_num = way_points.route.size();
+//  if (point_num < 3) {
+//    ROS_FATAL("[ReferenceLineSmoother::GetSmoothReferenceLine], "
+//              "the ref points num is less 3");
+//    return false;
+//  }
+//
+//  std::vector<ReferencePoint> ref_points;
+//  ref_points.reserve(point_num);
+//  for (const auto &way_point : way_points.route) {
+//    ReferencePoint ref_point;
+//    ref_point.set_xy(way_point.pose.position.x, way_point.pose.position.y);
+//    ref_points.push_back(ref_point);
+//  }
+//
+//  ReferenceLineSmoothIpoptInterface smoother_interface(ref_points);
+//  SetUpOptions();
+//  SetUpInitValue();
+//  if (!this->SetUpConstraint()) {
+//    return false;
+//  }
+//
+//  CppAD::ipopt::solve_result<DVector> solution;
+//  CppAD::ipopt::solve(options_, xi_, x_l_, x_u_, g_l_, g_u_,
+//                      smoother_interface, solution);
+//  if (solution.status != CppAD::ipopt::solve_result<DVector>::success) {
+//    ROS_FATAL("[GetSmoothReferenceLine] failed reason: %i",
+//              solution.status);
+//    return false;
+//  }
+//
+//  smoothed_ref_points->clear();
+//  smoothed_ref_points->reserve(point_num);
+//  bool result = this->TraceSmoothReferenceLine(solution, smoothed_ref_points);
+//  return result;
+//}
 
 bool ReferenceLineSmoother::SmoothReferenceLine(const std::vector<planning_msgs::WayPoint> &waypoints,
                                                 std::vector<ReferencePoint> *const smoothed_ref_points) {
@@ -59,12 +59,10 @@ bool ReferenceLineSmoother::SmoothReferenceLine(const std::vector<planning_msgs:
     return false;
   }
 
-  route_response_.route.reserve(waypoints.size());
-  for (const auto &waypoint : waypoints) {
-    route_response_.route.push_back(waypoint);
-  }
+//  way_points.route.reserve(waypoints.size());
+  way_points_ = waypoints;
 
-  const size_t point_num = route_response_.route.size();
+  const size_t point_num = way_points_.size();
   if (point_num < 3) {
     ROS_FATAL("[ReferenceLineSmoother::GetSmoothReferenceLine], "
               "the ref points num is less 3");
@@ -73,7 +71,7 @@ bool ReferenceLineSmoother::SmoothReferenceLine(const std::vector<planning_msgs:
 
   std::vector<ReferencePoint> ref_points;
   ref_points.reserve(point_num);
-  for (const auto &way_point : route_response_.route) {
+  for (const auto &way_point : way_points_) {
     ReferencePoint ref_point;
     ref_point.set_xy(way_point.pose.position.x, way_point.pose.position.y);
     ref_points.push_back(ref_point);
@@ -103,7 +101,7 @@ bool ReferenceLineSmoother::SmoothReferenceLine(const std::vector<planning_msgs:
 }
 
 bool ReferenceLineSmoother::SetUpConstraint() {
-  const auto way_points = route_response_.route;
+  const auto way_points = way_points_;
   size_t number_of_points = way_points.size();
   size_t number_of_curvature_constraints = number_of_points - 2;
   x_l_.resize(number_of_points * 2);
@@ -146,7 +144,7 @@ void ReferenceLineSmoother::SetUpOptions() {
 }
 
 void ReferenceLineSmoother::SetUpInitValue() {
-  const auto way_points = route_response_.route;
+  const auto way_points = way_points_;
   size_t number_of_points = way_points.size();
 
   xi_.resize(number_of_points * 2);
@@ -165,7 +163,7 @@ bool ReferenceLineSmoother::TraceSmoothReferenceLine(
     return false;
   }
 
-  size_t number_of_points = route_response_.route.size();
+  size_t number_of_points = way_points_.size();
 
   if (result.x.size() != number_of_points * 2) {
     return false;
@@ -189,7 +187,10 @@ ReferenceLineSmoother::ReferenceLineSmoother(const double deviation_weight,
     : deviation_weight_(deviation_weight),
       heading_weight_(heading_weight),
       distance_weight_(distance_weight),
-      max_curvature_(max_curvature) {}
+      max_curvature_(max_curvature) {
+
+}
+
 void ReferenceLineSmoother::SetSmoothParams(const double deviation_weight,
                                             const double heading_weight,
                                             const double distance_weight,

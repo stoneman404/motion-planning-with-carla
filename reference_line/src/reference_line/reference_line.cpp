@@ -7,56 +7,56 @@
 
 namespace planning {
 using namespace common;
-ReferenceLine::ReferenceLine(const planning_srvs::RouteResponse &route_response)
-    : way_points_(route_response.route) {
-  ROS_ASSERT(route_response.route.size() >= 3);
-  reference_smoother_ = std::make_unique<ReferenceLineSmoother>();
-
-  size_t waypoints_size = route_response.route.size();
-  reference_points_.reserve(waypoints_size);
-  left_boundary_.reserve(waypoints_size);
-  right_boundary_.reserve(waypoints_size);
-  for (size_t i = 0; i < route_response.route.size(); ++i) {
-    const auto way_point = route_response.route[i];
-    const double left_width = way_point.lane_width / 2.0;
-    const double right_width = way_point.lane_width / 2.0;
-    Eigen::Vector2d heading;
-    if (i + 1 >= route_response.route.size()) {
-      heading = Eigen::Vector2d(route_response.route[i].pose.position.x -
-                                    route_response.route[i - 1].pose.position.x,
-                                route_response.route[i].pose.position.y -
-                                    route_response.route[i - 1].pose.position.y);
-    } else {
-      heading = Eigen::Vector2d(route_response.route[i + 1].pose.position.x -
-                                    route_response.route[i].pose.position.x,
-                                route_response.route[i + 1].pose.position.y -
-                                    route_response.route[i].pose.position.y);
-    }
-    auto ref_point = ReferencePoint(way_point.pose.position.x, way_point.pose.position.y);
-    ref_point.set_xy(way_point.pose.position.x, way_point.pose.position.y);
-    ref_point.set_heading(
-        common::MathUtils::NormalizeAngle(std::atan2(heading(1), heading(0))));
-    reference_points_.push_back(ref_point);
-    left_boundary_.emplace_back(
-        ref_point.x() - left_width * std::sin(ref_point.heading()),
-        ref_point.y() + left_width * std::cos(ref_point.heading()));
-    right_boundary_.emplace_back(
-        ref_point.x() + right_width * std::sin(ref_point.heading()),
-        ref_point.y() + right_width * std::cos(ref_point.heading()));
-  }
-  ROS_ASSERT(reference_points_.size() == waypoints_size);
-  ROS_ASSERT(left_boundary_.size() == waypoints_size);
-  ROS_ASSERT(right_boundary_.size() == waypoints_size);
-  bool result = BuildReferenceLineWithSpline();
-  ROS_ASSERT(result);
-  length_ = ref_line_spline_->ArcLength();
-  ROS_INFO("ReferenceLine's length : %lf", length_);
-}
+//ReferenceLine::ReferenceLine(const planning_srvs::RoutePlanServiceResponse &route_response)
+//    : way_points_(route_response.route) {
+//  ROS_ASSERT(route_response.route.size() >= 3);
+//  reference_smoother_ = std::make_shared<ReferenceLineSmoother>();
+//
+//  size_t waypoints_size = route_response.route.size();
+//  reference_points_.reserve(waypoints_size);
+//  left_boundary_.reserve(waypoints_size);
+//  right_boundary_.reserve(waypoints_size);
+//  for (size_t i = 0; i < route_response.route.size(); ++i) {
+//    const auto way_point = route_response.route[i];
+//    const double left_width = way_point.lane_width / 2.0;
+//    const double right_width = way_point.lane_width / 2.0;
+//    Eigen::Vector2d heading;
+//    if (i + 1 >= route_response.route.size()) {
+//      heading = Eigen::Vector2d(route_response.route[i].pose.position.x -
+//                                    route_response.route[i - 1].pose.position.x,
+//                                route_response.route[i].pose.position.y -
+//                                    route_response.route[i - 1].pose.position.y);
+//    } else {
+//      heading = Eigen::Vector2d(route_response.route[i + 1].pose.position.x -
+//                                    route_response.route[i].pose.position.x,
+//                                route_response.route[i + 1].pose.position.y -
+//                                    route_response.route[i].pose.position.y);
+//    }
+//    auto ref_point = ReferencePoint(way_point.pose.position.x, way_point.pose.position.y);
+//    ref_point.set_xy(way_point.pose.position.x, way_point.pose.position.y);
+//    ref_point.set_heading(
+//        common::MathUtils::NormalizeAngle(std::atan2(heading(1), heading(0))));
+//    reference_points_.push_back(ref_point);
+//    left_boundary_.emplace_back(
+//        ref_point.x() - left_width * std::sin(ref_point.heading()),
+//        ref_point.y() + left_width * std::cos(ref_point.heading()));
+//    right_boundary_.emplace_back(
+//        ref_point.x() + right_width * std::sin(ref_point.heading()),
+//        ref_point.y() + right_width * std::cos(ref_point.heading()));
+//  }
+//  ROS_ASSERT(reference_points_.size() == waypoints_size);
+//  ROS_ASSERT(left_boundary_.size() == waypoints_size);
+//  ROS_ASSERT(right_boundary_.size() == waypoints_size);
+//  bool result = BuildReferenceLineWithSpline();
+//  ROS_ASSERT(result);
+//  length_ = ref_line_spline_->ArcLength();
+//  ROS_INFO("ReferenceLine's length : %lf", length_);
+//}
 
 ReferenceLine::ReferenceLine(const std::vector<planning_msgs::WayPoint> &waypoints)
     : way_points_(waypoints) {
   ROS_ASSERT(waypoints.size() >= 3);
-  reference_smoother_ = std::make_unique<ReferenceLineSmoother>();
+  reference_smoother_ = std::make_shared<ReferenceLineSmoother>();
 //  reference_smoother_ = std::make_unique<ReferenceLineSmoother>()
 
   size_t waypoints_size = waypoints.size();
@@ -495,6 +495,19 @@ bool ReferenceLine::GetMatchedPoint(double x, double y, ReferencePoint *matched_
   matched_ref_point->set_dkappa(dkappa);
   *matched_s = nearest_s;
   return true;
+}
+ReferenceLine::ReferenceLine(const ReferenceLine &other) {
+  smoothed_ = other.smoothed_;
+  way_points_ = other.way_points_;
+  reference_points_ = other.reference_points_;
+  left_boundary_ = other.left_boundary_;
+  right_boundary_ = other.right_boundary_;
+  length_ = other.length_; // the total length of this reference line
+  ref_line_spline_ = other.ref_line_spline_;
+  left_boundary_spline_ = other.left_boundary_spline_;
+  right_boundary_spline_ = other.right_boundary_spline_;
+  reference_smoother_ = other.reference_smoother_;
+  priority_ = other.priority_;
 }
 
 }
