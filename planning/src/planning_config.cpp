@@ -119,7 +119,7 @@ double PlanningConfig::obstacle_trajectory_time() const { return obstacle_trajec
 
 double PlanningConfig::max_lookahead_distance() const { return max_lookahead_distance_; }
 
-const VehicleParams &PlanningConfig::vehicle_params() const { return vehicle_params_; }
+//const VehicleParams &PlanningConfig::vehicle_params() const { return vehicle_params_; }
 
 double PlanningConfig::reference_smoother_distance_weight() const { return reference_smoother_distance_weight_; }
 

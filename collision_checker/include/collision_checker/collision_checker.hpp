@@ -14,8 +14,8 @@ class CollisionChecker {
  public:
   CollisionChecker() = default;
   ~CollisionChecker() = default;
+
   /**
-   *
    * @param obstacles: the nearby obstacles, which refers to vehicles, walkers and etc.
    * @param ptr_ref_line: the reference line
    * @param ptr_st_graph: the st graph to check

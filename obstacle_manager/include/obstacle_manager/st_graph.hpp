@@ -6,7 +6,6 @@
 #include <ros/ros.h>
 #include <unordered_map>
 #include "obstacle_manager/obstacle.hpp"
-//#include "obstacle_filter/obstacle.hpp"
 #include "reference_line/reference_line.hpp"
 #include "math/frenet_frame.hpp"
 namespace planning {
@@ -66,8 +65,8 @@ class STGraph {
    * @return
    */
   std::vector<common::STPoint> GetObstacleSurroundingPoints(int obstacle_id,
-                                                    double s_dist,
-                                                    double t_density) const;
+                                                            double s_dist,
+                                                            double t_density) const;
 
   bool IsObstacleInGraph(int obstacle_id);
 
@@ -75,11 +74,11 @@ class STGraph {
   void SetUp(const std::vector<std::shared_ptr<Obstacle>> &obstacles,
              std::shared_ptr<ReferenceLine> ref_line);
 
-  void SetUpStaticObstacle(std::shared_ptr<Obstacle> obstacle,
-                           std::shared_ptr<ReferenceLine> ref_line);
+  void SetUpStaticObstacle(const std::shared_ptr<Obstacle> &obstacle,
+                           const std::shared_ptr<ReferenceLine> &ref_line);
 
-  void SetUpDynamicObstacle(std::shared_ptr<Obstacle> obstacle,
-                            std::shared_ptr<ReferenceLine> ref_line);
+  void SetUpDynamicObstacle(const std::shared_ptr<Obstacle> &obstacle,
+                            const std::shared_ptr<ReferenceLine> &ref_line);
   static common::STPoint SetSTPoint(double s, double t);
 
  private:
@@ -89,7 +88,7 @@ class STGraph {
   std::pair<double, double> s_range_;
   std::shared_ptr<ReferenceLine> reference_line_;
   std::array<double, 3> init_d_{};
-  std::unordered_map<int, common::STBoundary> obstacle_st_map_;
+  std::unordered_map<int, common::STBoundary> st_map_;
   std::vector<common::STBoundary> obstacles_st_boundary_;
   std::vector<common::SLBoundary> obstacles_sl_boundary_;
 };

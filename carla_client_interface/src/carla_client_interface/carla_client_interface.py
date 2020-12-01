@@ -7,13 +7,11 @@ import carla
 import numpy as np
 import rospy
 import tf
-from agents.navigation.global_route_planner import GlobalRoutePlanner
-from agents.navigation.global_route_planner_dao import GlobalRoutePlannerDAO
 from agents.navigation.local_planner import RoadOption
 from carla_msgs.msg import CarlaWorldInfo
 from carla_waypoint_types.srv import GetActorWaypointResponse, GetActorWaypoint
 from carla_waypoint_types.srv import GetWaypointResponse, GetWaypoint
-from planning_msgs.msg import WayPoint, LaneType, CarlaRoadOption, LaneChangeType, RouteList
+from planning_msgs.msg import WayPoint, LaneType, CarlaRoadOption, LaneChangeType
 from planning_srvs.srv import Route, RouteResponse
 from tf.transformations import euler_from_quaternion
 
@@ -139,9 +137,9 @@ class ClinetInterface(object):
             carla_goal.location.x,
             carla_goal.location.y,
             carla_goal.location.z))
-        dao = GlobalRoutePlannerDAO(self.world.get_map(), sampling_resolution=1)
-        grp = GlobalRoutePlanner(dao)
-        grp.setup()
+        # dao = GlobalRoutePlannerDAO(self.world.get_map(), sampling_resolution=1)
+        # grp = GlobalRoutePlanner(dao)
+        # grp.setup()
         # route = grp.trace_route(carla.Location(carla_start.location.x,
         #                                        carla_start.location.y,
         #                                        carla_start.location.y),
@@ -150,11 +148,33 @@ class ClinetInterface(object):
         #                                        carla_goal.location.z))
         route = list(list())
         carl_start_waypoint = self.map.get_waypoint(carla_start.location)
-        #waypoints = carl_start_waypoint.next_until_lane_end(2)
+        if req.offset == -1:
+            if carl_start_waypoint.right_lane() is not None:
+                carl_start_waypoint = carl_start_waypoint.left_lane()
+            else:
+                carl_start_waypoint = carl_start_waypoint
+            carl_start_waypoint = carl_start_waypoint.right_lane()
+        elif req.offset == 1:
+            if carl_start_waypoint.left_lane() is not None:
+                carl_start_waypoint = carl_start_waypoint.left_lane()
+            else:
+                carl_start_waypoint = carl_start_waypoint
+        else:
+            carl_start_waypoint = carl_start_waypoint
+        # waypoints = carl_start_waypoint.next_until_lane_end(2)
         waypoints = []
         last_way_point = carl_start_waypoint
         s = 0.0
-        while s < 800:
+        while s < 50:
+            index = np.random.randint(0, len(last_way_point.previous(2.0)))
+            waypoint = last_way_point.previous(2.0)[index]
+            last_way_point = waypoint
+            waypoints.append(waypoint)
+            s += 2.0
+
+        s = 0.0
+        last_way_point = carl_start_waypoint
+        while s < 400:
             index = np.random.randint(0, len(last_way_point.next(2.0)))
 
             waypoint = last_way_point.next(2.0)[index]
@@ -167,8 +187,8 @@ class ClinetInterface(object):
             route.append([wp, option])
         # get prev waypoint as start
 
-        waypoint = route[0][0].previous(distance=2.0)[-1]
-        route.insert(0, [waypoint, option])
+        # waypoint = route[0][0].previous(distance=2.0)[-1]
+        # route.insert(0, [waypoint, option])
         response = RouteResponse()
         # waypoint
         last_x = float("inf")

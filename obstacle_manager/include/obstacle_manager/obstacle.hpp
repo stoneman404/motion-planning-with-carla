@@ -23,10 +23,13 @@ class Obstacle {
   void set_road_id(const int &road_id);
 
   planning_msgs::TrajectoryPoint GetPointAtTime(double relative_time) const;
-  const common::Box2d & GetBoundingBox() const;
+  const common::Box2d &GetBoundingBox() const;
   bool HasTrajectory() const;
 
   // getter
+  const double &acc() const { return acc_; }
+  const double &kappa() const { return kappa_; }
+  const double &centripental_acc() const { return centripental_acc_; }
   const ros::Time &TimeStamp() const;
   const derived_object_msgs::Object &Object() const;
   const Eigen::Vector2d &Center() const;
@@ -44,7 +47,6 @@ class Obstacle {
   const double &Width() const;
   const common::Box2d &BoundingBox() const;
   common::Box2d GetBoundingBoxAtPoint(const planning_msgs::TrajectoryPoint &point) const;
- private:
 
  private:
   int id_{};
@@ -53,7 +55,9 @@ class Obstacle {
   int section_id_{};
   ros::Time time_stamp_{};
   derived_object_msgs::Object object_{};
-
+  double acc_{};
+  double centripental_acc_{};
+  double kappa_{};
   double heading_{};
   Eigen::Vector2d center_{};
   bool is_static_ = false;

@@ -4,9 +4,9 @@ namespace vehicle_state{
 
 // bicycle vehicle model, center in rear axle center
 // x-->front , y-->left, z-->up
-class KinoDynamicState {
+struct KinoDynamicState {
  public:
-  KinoDynamicState()= default;
+  KinoDynamicState() = default;
   ~KinoDynamicState() = default;
   KinoDynamicState(double x,
                    double y,
@@ -19,7 +19,6 @@ class KinoDynamicState {
   KinoDynamicState GetNextStateAfterTime(double t) const;
 
 
- private:
   double x_;
   double y_;
   double z_;

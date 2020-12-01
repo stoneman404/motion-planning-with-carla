@@ -62,12 +62,6 @@ bool CollisionChecker::IsCollision(const planning_msgs::Trajectory &trajectory) 
 
     }
     for (auto &future : futures) {
-      future.wait();
-//      if (future.get()) {
-//        return true;
-//      }
-    }
-    for (auto &future : futures) {
       if (future.get()) {
         return true;
       }

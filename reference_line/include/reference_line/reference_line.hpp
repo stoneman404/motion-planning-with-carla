@@ -176,11 +176,33 @@ class ReferenceLine {
                                     double s1,
                                     double s);
 
-  planning_msgs::WayPoint NearestWayPoint(double x, double y, size_t *min_index) const;
-  planning_msgs::WayPoint NearestWayPoint(double s) const;
   std::vector<planning_msgs::WayPoint> way_points() const { return way_points_; }
 
+  bool CanChangeLeft(double s) const {
+    auto waypoint = NearestWayPoint(s);
+    if (waypoint.lane_change.type == planning_msgs::LaneChangeType::LEFT) {
+      return true;
+    }
+    if (waypoint.lane_change.type == planning_msgs::LaneChangeType::BOTH) {
+      return true;
+    }
+    return false;
+  }
+
+  bool CanChangeRight(double s) const {
+    auto waypoint = NearestWayPoint(s);
+    if (waypoint.lane_change.type == planning_msgs::LaneChangeType::RIGHT) {
+      return true;
+    }
+    if (waypoint.lane_change.type == planning_msgs::LaneChangeType::BOTH) {
+      return true;
+    }
+    return false;
+  }
+
  private:
+  planning_msgs::WayPoint NearestWayPoint(double x, double y, size_t *min_index) const;
+  planning_msgs::WayPoint NearestWayPoint(double s) const;
 
   bool BuildReferenceLineWithSpline();
   /**

@@ -254,6 +254,7 @@ bool Planner::GetWayPoint(const int &object_id,
   carla_waypoint = srv.response.waypoint;
   return true;
 }
+
 bool Planner::UpdateTrafficLights() {
   auto &instance = TrafficLightList::Instance();
   ROS_INFO("Planner::UpdateTrafficLights, traffic_lights size %zu", traffic_lights_info_list_.size());

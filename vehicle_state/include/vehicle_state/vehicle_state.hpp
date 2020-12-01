@@ -30,6 +30,7 @@ class VehicleState {
   common::Box2d GetEgoBox() const;
   const ros::Time &time_stamp() const;
   double steer_percentage() const;
+  const int &id() const;
   const int &lane_id() const;
   const int &road_id() const;
   const int &section_id() const;
@@ -47,6 +48,7 @@ class VehicleState {
   void set_is_junction(bool is_junction);
 
  private:
+  int id_{};
   planning_msgs::WayPoint ego_waypoint_;
   int lane_id_{};
   int section_id_{};

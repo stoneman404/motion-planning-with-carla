@@ -124,7 +124,8 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
-        include
+        #        include
+        src/
         ${catkin_INCLUDE_DIRS}
         ${Eigen3_INCLUDE_DIRS}
 )
@@ -150,7 +151,11 @@ add_executable(planning_node
         src/planning_config.cpp
         src/behaviour_planner/behaviour_planner.cpp
 
-        src/behaviour_planner/mpdm_planner/mpdm_planner.cpp)
+        src/behaviour_planner/mpdm_planner/mpdm_planner.cpp
+        src/agent/agent.cpp
+        src/agent/agent.hpp
+        src/agent/behaviour.cpp
+        src/agent/behaviour.hpp src/forward_simulator/on_lane_forward_simulator.cpp src/forward_simulator/on_lane_forward_simulator.hpp src/behaviour_planner/mpdm_planner/policy_decider.cpp src/behaviour_planner/mpdm_planner/policy_decider.hpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the

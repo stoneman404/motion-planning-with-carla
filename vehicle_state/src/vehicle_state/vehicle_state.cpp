@@ -45,6 +45,7 @@ VehicleState::VehicleState(const carla_msgs::CarlaEgoVehicleStatus &ego_vehicle_
   this->time_stamp_ = ego_vehicle_status.header.stamp;
   this->steer_percentage_ = ego_vehicle_status.control.steer;
   this->reverse_ = ego_vehicle_status.control.reverse;
+  this->id_ = object.id;
 }
 
 const ros::Time &VehicleState::time_stamp() const { return this->time_stamp_; }
@@ -115,5 +116,6 @@ const KinoDynamicState & VehicleState::GetKinoDynamicVehicleState() const {
 void VehicleState::PredictNextKinoDynamicState(double predict_time, KinoDynamicState *predicted_state) const {
   *predicted_state = kino_dynamic_state_.GetNextStateAfterTime(predict_time);
 }
+const int &VehicleState::id() const { return id_; }
 
 }

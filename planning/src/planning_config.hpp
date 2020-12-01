@@ -1,5 +1,5 @@
-#ifndef CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_PLANNING_CONFIG_HPP_
-#define CATKIN_WS_SRC_LOCAL_PLANNER_INCLUDE_PLANNING_CONFIG_HPP_
+#ifndef CATKIN_WS_SRC_MOTION_PLANNING_WITH_CARLA_BEHAVIOUR_PLANNING_SRC_PLANNING_CONFIG_HPP_
+#define CATKIN_WS_SRC_MOTION_PLANNING_WITH_CARLA_BEHAVIOUR_PLANNING_SRC_PLANNING_CONFIG_HPP_
 #include <ros/ros.h>
 //#include "vehicle_params.hpp"
 #include <carla_msgs/CarlaEgoVehicleInfo.h>
@@ -41,7 +41,7 @@ class PlanningConfig {
    *
    * @return
    */
-  const VehicleParams &vehicle_params() const;
+//  const VehicleParams &vehicle_params() const;
   ////////// reference smoother params /////////////////
   /**
    *

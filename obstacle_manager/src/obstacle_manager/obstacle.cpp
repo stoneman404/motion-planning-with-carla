@@ -31,6 +31,9 @@ Obstacle::Obstacle(const derived_object_msgs::Object &object) {
   global_acc.setY(object_.accel.linear.y);
   global_acc.setZ(object_.accel.linear.z);
   tf::Vector3 body_acc = R * global_acc;
+  acc_ = body_acc.x();
+  kappa_ = std::fabs(speed_) < 1e-2 ? 0.0 : angular_speed_ / speed_;
+  centripental_acc_ = speed_ * speed_ * kappa_;
 
   if (is_static_) {
     trajectory_.trajectory_points.emplace_back();

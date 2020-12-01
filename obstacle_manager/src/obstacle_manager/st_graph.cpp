@@ -31,18 +31,20 @@ void STGraph::SetUp(const std::vector<std::shared_ptr<Obstacle>> &obstacles,
     }
   }
 
+  // for static obstacles
   std::sort(obstacles_sl_boundary_.begin(), obstacles_sl_boundary_.end(),
             [](const SLBoundary &sl0, const SLBoundary &sl1) {
               return sl0.start_s < sl1.start_s;
             });
 
-  for (auto &obstacle_st : obstacle_st_map_) {
+  // for static and dynamic obstacles
+  for (auto &obstacle_st : st_map_) {
     obstacles_st_boundary_.push_back(obstacle_st.second);
   }
 }
 
-void STGraph::SetUpStaticObstacle(std::shared_ptr<Obstacle> obstacle,
-                                  std::shared_ptr<ReferenceLine> ref_line) {
+void STGraph::SetUpStaticObstacle(const std::shared_ptr<Obstacle> &obstacle,
+                                  const std::shared_ptr<ReferenceLine> &ref_line) {
   auto box = obstacle->BoundingBox();
   SLBoundary sl_boundary;
   if (!ref_line->GetSLBoundary(box, &sl_boundary)) {
@@ -61,17 +63,16 @@ void STGraph::SetUpStaticObstacle(std::shared_ptr<Obstacle> obstacle,
     return;
   }
 
-  obstacle_st_map_[obstacle_id].set_id(obstacle_id);
-  obstacle_st_map_[obstacle_id].set_lower_left_point(SetSTPoint(sl_boundary.start_s, 0.0));
-  obstacle_st_map_[obstacle_id].set_lower_right_point(SetSTPoint(sl_boundary.start_s, max_lookahed_time_));
-  obstacle_st_map_[obstacle_id].set_upper_left_point(SetSTPoint(sl_boundary.end_s, 0.0));
-  obstacle_st_map_[obstacle_id].set_upper_right_point(SetSTPoint(sl_boundary.end_s,
-                                                                 max_lookahed_time_));
+  st_map_[obstacle_id].set_id(obstacle_id);
+  st_map_[obstacle_id].set_lower_left_point(SetSTPoint(sl_boundary.start_s, 0.0));
+  st_map_[obstacle_id].set_lower_right_point(SetSTPoint(sl_boundary.start_s, max_lookahed_time_));
+  st_map_[obstacle_id].set_upper_left_point(SetSTPoint(sl_boundary.end_s, 0.0));
+  st_map_[obstacle_id].set_upper_right_point(SetSTPoint(sl_boundary.end_s, max_lookahed_time_));
   obstacles_sl_boundary_.push_back(std::move(sl_boundary));
-
 }
-void STGraph::SetUpDynamicObstacle(std::shared_ptr<Obstacle> obstacle,
-                                   std::shared_ptr<ReferenceLine> ref_line) {
+
+void STGraph::SetUpDynamicObstacle(const std::shared_ptr<Obstacle> &obstacle,
+                                   const std::shared_ptr<ReferenceLine> &ref_line) {
 
   double relative_time = time_range_.first;
   while (relative_time < time_range_.second) {
@@ -87,27 +88,23 @@ void STGraph::SetUpDynamicObstacle(std::shared_ptr<Obstacle> obstacle,
     ref_line->GetLaneWidth(sl_boundary.start_s, &left_width, &right_width);
 
     // The obstacle is not shown on the region to be considered.
-    if (sl_boundary.start_s > s_range_.second ||
-        sl_boundary.end_s < s_range_.first ||
-        sl_boundary.start_l > left_width ||
-        sl_boundary.end_l < -right_width) {
-      if (obstacle_st_map_.find(obstacle->Id()) !=
-          obstacle_st_map_.end()) {
+    if (sl_boundary.start_s > s_range_.second || sl_boundary.end_s < s_range_.first ||
+        sl_boundary.start_l > left_width || sl_boundary.end_l < -right_width) {
+      if (st_map_.find(obstacle->Id()) != st_map_.end()) {
         break;
       }
       relative_time += delta_t_;
       continue;
     }
 
-    if (obstacle_st_map_.find(obstacle->Id()) ==
-        obstacle_st_map_.end()) {
-      obstacle_st_map_[obstacle->Id()].set_id(obstacle->Id());
-      obstacle_st_map_[obstacle->Id()].set_lower_left_point(SetSTPoint(sl_boundary.start_s, relative_time));
-      obstacle_st_map_[obstacle->Id()].set_upper_left_point(SetSTPoint(sl_boundary.end_s, relative_time));
+    if (st_map_.find(obstacle->Id()) == st_map_.end()) {
+      st_map_[obstacle->Id()].set_id(obstacle->Id());
+      st_map_[obstacle->Id()].set_lower_left_point(SetSTPoint(sl_boundary.start_s, relative_time));
+      st_map_[obstacle->Id()].set_upper_left_point(SetSTPoint(sl_boundary.end_s, relative_time));
     }
 
-    obstacle_st_map_[obstacle->Id()].set_lower_right_point(SetSTPoint(sl_boundary.start_s, relative_time));
-    obstacle_st_map_[obstacle->Id()].set_upper_right_point(SetSTPoint(sl_boundary.end_s, relative_time));
+    st_map_[obstacle->Id()].set_lower_right_point(SetSTPoint(sl_boundary.start_s, relative_time));
+    st_map_[obstacle->Id()].set_upper_right_point(SetSTPoint(sl_boundary.end_s, relative_time));
     relative_time += delta_t_;
   }
 }
@@ -119,10 +116,10 @@ bool STGraph::GetSTObstacle(int id, STBoundary *st_boundary) {
   if (st_boundary == nullptr) {
     return false;
   }
-  if (obstacle_st_map_.find(id) == obstacle_st_map_.end()) {
+  if (st_map_.find(id) == st_map_.end()) {
     return false;
   } else {
-    *st_boundary = obstacle_st_map_[id];
+    *st_boundary = st_map_[id];
     return true;
   }
 
@@ -152,10 +149,10 @@ std::vector<std::pair<double, double>> STGraph::GetPathBlockingIntervals(const d
 std::vector<STPoint> STGraph::GetObstacleSurroundingPoints(int obstacle_id, double s_dist, double t_density) const {
   ROS_ASSERT(t_density > 0.0);
   std::vector<STPoint> pt_pairs;
-  if (obstacle_st_map_.find(obstacle_id) == obstacle_st_map_.end()) {
+  if (st_map_.find(obstacle_id) == st_map_.end()) {
     return pt_pairs;
   }
-  const auto &pt_obstacle = obstacle_st_map_.at(obstacle_id);
+  const auto &pt_obstacle = st_map_.at(obstacle_id);
   double s0;
   double s1;
   double t0;
@@ -194,7 +191,7 @@ std::vector<STPoint> STGraph::GetObstacleSurroundingPoints(int obstacle_id, doub
 
 }
 bool STGraph::IsObstacleInGraph(int obstacle_id) {
-  return obstacle_st_map_.find(obstacle_id) != obstacle_st_map_.end();
+  return st_map_.find(obstacle_id) != st_map_.end();
 }
 
 std::vector<std::vector<std::pair<double, double>>>
