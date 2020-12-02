@@ -2,12 +2,13 @@
 #include "behaviour_strategy/mpdm_planner/mpdm_planner.hpp"
 #include <memory>
 #include "name/string_name.hpp"
+#include "planning_msgs/Behaviour.h"
 
 namespace planning {
 
 BehaviourPlanner::BehaviourPlanner(const ros::NodeHandle &nh) : nh_(nh) {
 
-  nh_.param<size_t>("/behaviour_planner/pool_size", pool_size_, 6);
+  nh_.param<int>("/behaviour_planner/pool_size", pool_size_, 6);
   nh_.param<std::string>("/behaviour_planner/planner_type", planner_type_, "mpdm");
   nh_.param<double>("/behaviour_planner/desired_velocity", simulate_config_.desired_vel, 8.333);
   nh_.param<double>("/behaviour_planner/max_lat_acc", simulate_config_.max_lat_acc, 0.8);
@@ -74,6 +75,18 @@ void BehaviourPlanner::RunOnce() {
   }
 }
 
+bool BehaviourPlanner::ConvertBehaviourToRosMsg(const Behaviour &behaviour,
+                                                planning_msgs::Behaviour &behaviour_msg) const {
+  if (behaviour.forward_behaviours.empty()){
+    return false;
+  }
+  if (behaviour.forward_behaviours.size() != behaviour.forward_trajs.size()){
+    return false;
+  }
+
+}
+
+
 bool BehaviourPlanner::GetKeyAgents() {
   if (!has_ego_vehicle_) {
     return false;
@@ -109,11 +122,8 @@ bool BehaviourPlanner::GetKeyAgents() {
       key_agent_set_.insert(agent);
     }
   }
-
+  return true;
 }
-
-
-
 
 }
 

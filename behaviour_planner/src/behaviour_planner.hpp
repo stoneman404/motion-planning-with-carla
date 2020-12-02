@@ -13,6 +13,7 @@
 #include <carla_msgs/CarlaTrafficLightStatusList.h>
 #include <carla_msgs/CarlaTrafficLightInfo.h>
 #include <behaviour_strategy/mpdm_planner/mpdm_planner.hpp>
+#include "planning_msgs/Behaviour.h"
 
 namespace planning {
 
@@ -25,10 +26,11 @@ class BehaviourPlanner {
  private:
   bool GetKeyAgents();
   void VisualizeBehaviourTrajectories(const Behaviour &behaviour);
+  bool ConvertBehaviourToRosMsg(const Behaviour& behaviour, planning_msgs::Behaviour& behaviour_msg) const;
 
  private:
   ros::NodeHandle nh_;
-  size_t pool_size_ = 6;
+  int pool_size_ = 6;
   double sample_key_agent_lat_threshold_;
   double sample_min_lon_threshold_;
   std::string planner_type_;
