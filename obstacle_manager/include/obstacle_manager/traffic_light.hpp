@@ -25,9 +25,9 @@ class TrafficLight {
   }
   const common::Box2d& GetBox2d() const;;
   const uint32_t &Id() const;
-  const uint32_t &LaneId() const;
-  const uint32_t &SectionId() const;
-  const uint32_t &RoadId() const;
+//  const uint32_t &LaneId() const;
+//  const uint32_t &SectionId() const;
+//  const uint32_t &RoadId() const;
   const geometry_msgs::Pose &Transform() const;
 
  private:

@@ -5,7 +5,7 @@
 //#include <future>
 //#include <queue>
 //#include <functional>
-//namespace planning {
+//namespace behaviour_planner {
 //class ThreadPool {
 // public:
 //  explicit ThreadPool(size_t pool_size = 1);
@@ -160,6 +160,6 @@ std::future<typename std::result_of<Func(Args...)>::type> ThreadPool::PushTask(
   return task_ptr->get_future();
 }
 
-}  // namespace planning
+}  // namespace behaviour_planner
 
 #endif //CATKIN_WS_SRC_MOTION_PLANNING_WITH_CARLA_MOTION_PLANNING_COMMON_INCLUDE_THREAD_POOL_HPP_

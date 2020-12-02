@@ -30,12 +30,16 @@ struct SimulateAgent {
 class PolicyDecider {
   using Policy = std::pair<LateralBehaviour, std::shared_ptr<ReferenceLine>>;
   using Policies = std::vector<Policy>;
+  using SurroundingTrajectories = std::unordered_map<int, planning_msgs::Trajectory>;
  public:
   explicit PolicyDecider(const PolicySimulateConfig &config);
-  bool PolicyDesicion(const Agent &ego_agent, const std::unordered_map<int, Agent> &other_agents,
-                      const Policies &available_polices_with_ref_lane,
-                      Behaviour &best_policy,
-                      double &desired_velocity);
+  bool PolicyDesicion(const Agent &ego_agent,
+                      const std::unordered_map<int, Agent> &agents_set,
+                      const Policies &possible_policies,
+                      Policy &best_policy,
+                      Policies &forward_policies,
+                      std::vector<SurroundingTrajectories> &forward_surrounding_trajectories,
+                      std::vector<planning_msgs::Trajectory> &forward_trajectories);
 
  private:
 
@@ -91,10 +95,21 @@ class PolicyDecider {
                                        planning_msgs::Trajectory &winner_forward_trajectory,
                                        double &winner_score);
 
+  void EvaluateSinglePolicyTrajectory(const Policy &policy,
+                                      const planning_msgs::Trajectory &trajectory,
+                                      const std::unordered_map<int, planning_msgs::Trajectory> &surrounding_trajs,
+                                      double *score) const;
+
+  bool EvaluateSafetyCost(const int ego_id, const planning_msgs::Trajectory &trajectory,
+                          const std::pair<int, planning_msgs::Trajectory> &other_trajectory,
+                          double *safety_cost) const;
+
  private:
+  int ego_id_;
   PolicySimulateConfig config_;
   std::unique_ptr<OnLaneForwardSimulator> forward_simulator_;
   std::unordered_map<int, Agent> agent_set_;
+
 
 };
 

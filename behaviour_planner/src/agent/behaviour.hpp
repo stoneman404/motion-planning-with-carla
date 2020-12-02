@@ -44,14 +44,11 @@ struct ProbDistributeOfLatBehaviour {
 };
 
 struct Behaviour {
+  std::vector<std::pair<LateralBehaviour,std::shared_ptr<ReferenceLine>>> forward_behaviours;
+  std::vector<planning_msgs::Trajectory> forward_trajs;
   LateralBehaviour lateral_behaviour;
   LongitudinalBehaviour longitudinal_behaviour;
-//  ReferenceLine reference_line;
-  double desired_velocity_{0.0};
-  std::vector<std::unordered_map<int, planning_msgs::Trajectory>> surround_trajs;
-  std::vector<LateralBehaviour> forward_behaviours;
-  std::pair<ReferenceLine, planning_msgs::Trajectory> forward_trajs;
-
+  std::vector<std::unordered_map<int, planning_msgs::Trajectory>> surrounding_trajs;
 };
 
 }

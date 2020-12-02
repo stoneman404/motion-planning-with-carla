@@ -7,7 +7,6 @@
 #include <planning_msgs/Trajectory.h>
 #include <derived_object_msgs/ObjectArray.h>
 #include <carla_msgs/CarlaActorInfo.h>
-
 #include "polygon/box2d.hpp"
 
 namespace planning {
@@ -17,10 +16,12 @@ class Obstacle {
   ~Obstacle() = default;
   explicit Obstacle(const derived_object_msgs::Object &object);
   Obstacle(const Obstacle &other);
-//    void SetId(const int& id) { this->id_ = id;}
-  void set_lane_id(const int &lane_id);
-  void set_section_id(const int &section_id);
-  void set_road_id(const int &road_id);
+  void PredictTrajectory(double predict_horizon, double predict_step);
+
+////    void SetId(const int& id) { this->id_ = id;}
+//  void set_lane_id(const int &lane_id);
+//  void set_section_id(const int &section_id);
+//  void set_road_id(const int &road_id);
 
   planning_msgs::TrajectoryPoint GetPointAtTime(double relative_time) const;
   const common::Box2d &GetBoundingBox() const;
@@ -36,11 +37,11 @@ class Obstacle {
   const bool &IsStatic() const;
   const double &Speed() const;
   const int &Id() const;
-  const int &road_id() const;
-  const int &section_id() const;
-  const int &lane_id() const;
+//  const int &road_id() const;
+//  const int &section_id() const;
+//  const int &lane_id() const;
   const bool &IsValidObstacle() const;
-  const planning_msgs::Trajectory &Trajectory() const;
+  const planning_msgs::Trajectory &GetPredictedTrajectory() const;
   const double &AngularSpeed() const;
   const double &Heading() const;
   const double &Length() const;

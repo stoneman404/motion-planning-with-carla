@@ -82,7 +82,7 @@ Visualization Manager:
       Value: true
     - Class: rviz/MarkerArray
       Enabled: true
-      Marker Topic: /planning/visualized_traffic_light_boxes
+      Marker Topic: /behaviour_planner/visualized_traffic_light_boxes
       Name: MarkerArray
       Namespaces:
         "": true
@@ -90,7 +90,7 @@ Visualization Manager:
       Value: true
     - Class: rviz/MarkerArray
       Enabled: true
-      Marker Topic: /planning/visualized_reference_lines
+      Marker Topic: /behaviour_planner/visualized_reference_lines
       Name: MarkerArray
       Namespaces:
         "": true
@@ -98,7 +98,7 @@ Visualization Manager:
       Value: true
     - Class: rviz/Marker
       Enabled: true
-      Marker Topic: /planning/visualized_trajectory
+      Marker Topic: /behaviour_planner/visualized_trajectory
       Name: Marker
       Namespaces:
         "": true
@@ -106,7 +106,7 @@ Visualization Manager:
       Value: true
     - Class: rviz/MarkerArray
       Enabled: true
-      Marker Topic: /planning/visualized_route
+      Marker Topic: /behaviour_planner/visualized_route
       Name: MarkerArray
       Namespaces:
         "": true

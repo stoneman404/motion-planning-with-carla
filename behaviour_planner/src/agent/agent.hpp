@@ -9,6 +9,7 @@
 #include <obstacle_manager/obstacle.hpp>
 #include "behaviour.hpp"
 #include "vehicle_state/kinodynamic_state.hpp"
+#include <derived_object_msgs/Object.h>
 namespace planning {
 
 /**
@@ -21,6 +22,7 @@ class Agent {
 
   Agent();
 
+  explicit Agent(const derived_object_msgs::Object& object);
   /**
    * the ego agent
    * @param vehicle_state
@@ -32,30 +34,18 @@ class Agent {
    * @param obstacle
    */
   explicit Agent(const Obstacle &obstacle);
-
   ~Agent() = default;
-
   int id() const;;
-
-  const planning_msgs::WayPoint &way_point() const;
-
   const common::Box2d &bounding_box() const;
-
   const vehicle_state::KinoDynamicState &state() const;
-
   bool is_valid() const;
   bool is_host() const;
-
   const std::shared_ptr<ReferenceLine> &current_ref_lane() const;
-
   const std::shared_ptr<ReferenceLine> &target_ref_lane() const;
-
   const LateralBehaviour &most_likely_behaviour() const;
-
   void set_current_ref_lane(const std::shared_ptr<ReferenceLine> &ref_line);
-
   void set_target_ref_lane(const std::shared_ptr<ReferenceLine> &ref_lane);
-
+  void set_is_host(bool host_agent) { is_host_ = host_agent;}
   void set_trajectory(const planning_msgs::Trajectory &trajectory);
   void set_most_likely_behaviour(const LateralBehaviour &lateral_behaviour);
 
@@ -70,7 +60,6 @@ class Agent {
   bool is_valid_{false};
   // the bounding box of the agent
   common::Box2d bounding_box_{};
-  planning_msgs::WayPoint way_point_;
   vehicle_state::KinoDynamicState state_{};
   LateralBehaviour max_lat_behaviour_{LateralBehaviour::kUndefined};
   ProbDistributeOfLatBehaviour probs_lat_behaviour_;
@@ -78,6 +67,7 @@ class Agent {
   std::shared_ptr<ReferenceLine> target_ref_lane_;
   bool has_trajectory_{false};
   planning_msgs::Trajectory trajectory_;
+
 };
 
 }

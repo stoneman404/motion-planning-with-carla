@@ -1,17 +1,17 @@
-#include <planning_config.hpp>
 #include <tf/transform_datatypes.h>
 #include <agent/behaviour.hpp>
 #include <agent/agent.hpp>
-#include "behaviour_planner/behaviour_strategy.hpp"
 #include "mpdm_planner.hpp"
 
 namespace planning {
-MPDMPlanner::MPDMPlanner(const ros::NodeHandle &nh, common::ThreadPool *thread_pool)
+MPDMPlanner::MPDMPlanner(const ros::NodeHandle &nh,
+                         const PolicySimulateConfig &config,
+                         common::ThreadPool *thread_pool)
     : nh_(nh), thread_pool_(thread_pool) {
   behavior_.longitudinal_behaviour = LongitudinalBehaviour::kStopping;
   behavior_.lateral_behaviour = LateralBehaviour::kLaneKeeping;
-  behavior_.desired_velocity_ = 0.0;
   behavior_.forward_behaviours = decltype(behavior_.forward_behaviours)();
+  policy_decider_ = std::make_unique<PolicyDecider>(config);
 }
 
 bool MPDMPlanner::Execute(const planning_msgs::TrajectoryPoint &init_point, Behaviour &behaviour) {
@@ -23,28 +23,41 @@ bool MPDMPlanner::Execute(const planning_msgs::TrajectoryPoint &init_point, Beha
     ROS_ERROR("[MPDMPlanner::Execute], no available policy found");
     return false;
   }
-
+  std::vector<std::pair<LateralBehaviour, std::shared_ptr<ReferenceLine>>> possible_policies;
+  std::pair<LateralBehaviour, std::shared_ptr<ReferenceLine>> best_policy;
+  std::vector<std::pair<LateralBehaviour, std::shared_ptr<ReferenceLine>>> forward_policies;
+  std::vector<std::unordered_map<int, planning_msgs::Trajectory>> surround_trajs;
+  std::vector<planning_msgs::Trajectory> forward_trajectories;
+  for (const auto& policy : available_policies_with_ref_lanes_){
+    possible_policies.emplace_back(policy);
+  }
+  if (!policy_decider_->PolicyDesicion(ego_agent_, behaviour_agent_set_, possible_policies, best_policy,
+                                       forward_policies, surround_trajs, forward_trajectories)){
+    return false;
+  }
+  behaviour.lateral_behaviour = best_policy.first;
+  behaviour.forward_behaviours = forward_policies;
+  behaviour.forward_trajs = forward_trajectories;
+  behaviour.surrounding_trajs = surround_trajs;
   return true;
 }
 
-void MPDMPlanner::UpdateAgentsMostLikelyPolicies(const std::vector<Agent> &agents) {
-  auto agents_vec = agents;
-  behaviour_agent_set_ = decltype(behaviour_agent_set_)();
-  for (auto &agent : agents_vec) {
-    if (!GetAgentMostLikelyPolicyAndReferenceLane(agent)) {
+
+void MPDMPlanner::SetAgentSet(const std::unordered_map<int,Agent> &agent_set) {
+//  auto agents_vec = agent_set;
+  behaviour_agent_set_ = agent_set;
+  for (auto &agent : behaviour_agent_set_) {
+    if (!GetAgentMostLikelyPolicyAndReferenceLane(agent.second)) {
       continue;
     }
-    behaviour_agent_set_.insert(std::make_pair(agent.id(), agent));
-    if (agent.is_host()) {
-      ego_agent_ = agent;
+    if (agent.second.is_host()) {
+      ego_agent_ = agent.second;
     }
   }
 }
 
 bool MPDMPlanner::GetReferenceLane(const geometry_msgs::Pose &current_pose,
                                    const LateralBehaviour &lateral_behaviour,
-                                   double forward_length,
-                                   double backward_length,
                                    bool need_to_smooth,
                                    std::shared_ptr<ReferenceLine> &ref_line) {
   geometry_msgs::Pose end_pose;
@@ -53,61 +66,7 @@ bool MPDMPlanner::GetReferenceLane(const geometry_msgs::Pose &current_pose,
     ROS_FATAL("[Failed to GetRoute]");
     return false;
   }
-//  double min_index = 0;
-//  double min_dist = std::numeric_limits<double>::max();
-//
-//  // find nearest waypoint in route
-//  for (size_t i = 0; i < response.route.size(); ++i) {
-//    auto waypoint = response.route.at(i);
-//    double distance = std::pow(waypoint.pose.position.x - current_pose.position.x, 2) +
-//        std::pow(waypoint.pose.position.y - current_pose.position.y, 2);
-//    if (distance < min_dist) {
-//      min_dist = distance;
-//      min_index = i;
-//    }
-//  }
-//
-//  double s = 0.0;
-//  // get start index
-//  size_t current_index = min_index;
-//  while (s < backward_length && current_index - 1 >= 0) {
-//    auto cur_waypoint = response.route.at(current_index);
-//    auto prev_waypoint = response.route.at(current_index - 1);
-//    s += std::hypot(cur_waypoint.pose.position.x - prev_waypoint.pose.position.x,
-//                    cur_waypoint.pose.position.y - prev_waypoint.pose.position.y);
-//    current_index = current_index - 1;
-//  }
-//  size_t start_index = current_index;
-//  // get end index
-//  current_index = min_index;
-//  s = 0.0;
-//  while (s < forward_length && current_index + 1 < response.route.size()) {
-//    auto cur_waypoint = response.route.at(current_index);
-//    auto next_waypoint = response.route.at(current_index + 1);
-//    s += std::hypot(cur_waypoint.pose.position.x - next_waypoint.pose.position.x,
-//                    cur_waypoint.pose.position.y - next_waypoint.pose.position.y);
-//    current_index = current_index + 1;
-//  }
-//  size_t end_index = current_index;
-//  if (end_index - start_index < 3) {
-//    ROS_FATAL("the reference line is too short, end_index - start_index =%ld", end_index - start_index);
-//    return false;
-//  }
-//  std::vector<planning_msgs::WayPoint> waypoints;
-//  waypoints.reserve(end_index - start_index + 1);
-//  for (size_t i = start_index; i <= end_index; ++i) {
-//    waypoints.push_back(response.route.at(i));
-//  }
   ref_line = std::make_shared<ReferenceLine>(response.route);
-  if (need_to_smooth) {
-    auto result = ref_line->Smooth(PlanningConfig::Instance().reference_smoother_deviation_weight(),
-                                   PlanningConfig::Instance().reference_smoother_heading_weight(),
-                                   PlanningConfig::Instance().reference_smoother_distance_weight(),
-                                   PlanningConfig::Instance().reference_smoother_max_curvature());
-    if (!result) {
-      ROS_WARN("the smooth reference line is failed");
-    }
-  }
   return true;
 }
 
@@ -118,13 +77,20 @@ bool MPDMPlanner::GetRoute(const geometry_msgs::Pose &start,
 
   planning_srvs::RoutePlanService srv;
   switch (lateral_behaviour) {
-    case LateralBehaviour::kLaneChangeLeft:srv.request.offset = 1;
+    case LateralBehaviour::kLaneChangeLeft: {
+      srv.request.offset = 1;
       break;
-    case LateralBehaviour::kLaneChangeRight:srv.request.offset = -1;
+    }
+    case LateralBehaviour::kLaneChangeRight: {
+      srv.request.offset = -1;
       break;
+    }
     case LateralBehaviour::kUndefined:
     case LateralBehaviour::kLaneKeeping:
-    default:srv.request.offset = 0;
+    default: {
+      srv.request.offset = 0;
+      break;
+    }
   }
 //    srv.request.offset = 0;
   srv.request.start_pose = start;
@@ -132,7 +98,7 @@ bool MPDMPlanner::GetRoute(const geometry_msgs::Pose &start,
   if (!route_service_client_.call(srv)) {
     return false;
   }
-  route_response = std::move(srv.response);
+  route_response = srv.response;
   return true;
 }
 
@@ -140,11 +106,12 @@ bool MPDMPlanner::GetAgentMostLikelyPolicyAndReferenceLane(Agent &agent) {
   // 1. first get current ref lane for agent
   geometry_msgs::Pose current_pose;
   const auto state = agent.state();
-  current_pose = agent.way_point().pose;
+  current_pose.position.x= agent.state().x_;
+  current_pose.position.y = agent.state().y_;
+  current_pose.position.z = agent.state().z_;
+  current_pose.orientation = tf::createQuaternionMsgFromYaw(agent.state().theta_);
   std::shared_ptr<ReferenceLine> ref_lane = std::make_shared<ReferenceLine>();
   if (!this->GetReferenceLane(current_pose, LateralBehaviour::kLaneKeeping,
-                              PlanningConfig::Instance().reference_max_forward_distance(),
-                              PlanningConfig::Instance().reference_max_backward_distance(),
                               false, ref_lane)) {
     agent.set_most_likely_behaviour(LateralBehaviour::kUndefined);
     return false;
@@ -161,8 +128,6 @@ bool MPDMPlanner::GetAgentMostLikelyPolicyAndReferenceLane(Agent &agent) {
     case LateralBehaviour::kLaneChangeRight: {
       std::shared_ptr<ReferenceLine> right_ref_lane = std::make_shared<ReferenceLine>();
       if (!this->GetReferenceLane(current_pose, LateralBehaviour::kLaneChangeRight,
-                                  PlanningConfig::Instance().reference_max_forward_distance(),
-                                  PlanningConfig::Instance().reference_max_backward_distance(),
                                   false, right_ref_lane)) {
         agent.set_most_likely_behaviour(LateralBehaviour::kLaneKeeping);
         agent.set_target_ref_lane(agent.current_ref_lane());
@@ -173,8 +138,6 @@ bool MPDMPlanner::GetAgentMostLikelyPolicyAndReferenceLane(Agent &agent) {
     case LateralBehaviour::kLaneChangeLeft: {
       std::shared_ptr<ReferenceLine> left_lane = std::make_shared<ReferenceLine>();
       if (!this->GetReferenceLane(current_pose, LateralBehaviour::kLaneChangeLeft,
-                                  PlanningConfig::Instance().reference_max_forward_distance(),
-                                  PlanningConfig::Instance().reference_max_backward_distance(),
                                   false, left_lane)) {
         agent.set_most_likely_behaviour(LateralBehaviour::kLaneKeeping);
         agent.set_target_ref_lane(agent.current_ref_lane());
@@ -209,8 +172,6 @@ bool MPDMPlanner::UpdateAvailablePoliciesAndRefLanes() {
         cur_pose.orientation = tf::createQuaternionMsgFromYaw(ego_agent_.state().theta_);
         if (GetReferenceLane(cur_pose,
                              LateralBehaviour::kLaneChangeRight,
-                             PlanningConfig::Instance().reference_max_forward_distance(),
-                             PlanningConfig::Instance().reference_max_backward_distance(),
                              false,
                              ref_lane)) {
           available_policies_with_ref_lanes_.insert({LateralBehaviour::kLaneChangeRight, ref_lane});
@@ -232,8 +193,6 @@ bool MPDMPlanner::UpdateAvailablePoliciesAndRefLanes() {
         cur_pose.orientation = tf::createQuaternionMsgFromYaw(ego_agent_.state().theta_);
         if (GetReferenceLane(cur_pose,
                              LateralBehaviour::kLaneChangeLeft,
-                             PlanningConfig::Instance().reference_max_forward_distance(),
-                             PlanningConfig::Instance().reference_max_backward_distance(),
                              false,
                              ref_lane)) {
           available_policies_with_ref_lanes_.insert({LateralBehaviour::kLaneChangeLeft, ref_lane});
@@ -243,35 +202,12 @@ bool MPDMPlanner::UpdateAvailablePoliciesAndRefLanes() {
     }
     case LateralBehaviour::kLaneKeeping:
     case LateralBehaviour::kUndefined:
-    default:break;
-  }
-  return true;
-
-}
-bool MPDMPlanner::MultiPoliciesDecision(Behaviour &mpdm_decision, double &desired_velocity) {
-//   size_t available_policies_num = available_policies_with_ref_lanes_.size();
-
-  for (const auto &policy : available_policies_with_ref_lanes_) {
-    planning_msgs::Trajectory trajectory;
-    std::pair<int, planning_msgs::Trajectory> surround_trajs;
-    if (!SimulateEgoAgentPolicy(policy.first, trajectory, surround_trajs)) {
-
-      continue;
+    default:{
+      break;
     }
   }
-
+  return true;
 }
-bool MPDMPlanner::SimulateEgoAgentPolicy(const LateralBehaviour &policy,
-                                         planning_msgs::Trajectory &ego_traj,
-                                         std::pair<int, planning_msgs::Trajectory> &surrounding_trajs) {
 
-  return false;
-}
-bool MPDMPlanner::CloseLoopSimForward(const LateralBehaviour &policy,
-                                      planning_msgs::Trajectory &ego_traj,
-                                      std::pair<int, planning_msgs::Trajectory> &surrounding_trajs) {
-
-  return false;
-}
 
 }

@@ -1,8 +1,7 @@
 #include <Eigen/Geometry>
 #include <planning_msgs/TrajectoryPoint.h>
-
-
 #include "math/math_utils.hpp"
+
 namespace common {
 
 double MathUtils::NormalizeAngle(const double &angle) {
@@ -52,8 +51,8 @@ planning_msgs::TrajectoryPoint MathUtils::InterpolateTrajectoryPoint(
   tp.path_point.kappa = lerp(p0.path_point.kappa, t0, p1.path_point.kappa, t1, time);
   tp.path_point.dkappa = lerp(p0.path_point.dkappa, t0, p1.path_point.dkappa, t1, time);
   return tp;
-
 }
+
 double MathUtils::lerp(const double &x0, const double &t0,
                        const double &x1, const double &t1,
                        const double &t) {
@@ -93,7 +92,7 @@ Eigen::Vector3d MathUtils::Transform(const geometry_msgs::Pose &base_transform, 
 
   Eigen::Vector4d transitional_point;
   transitional_point << in_point.x(), in_point.y(), in_point.z(), 1;
-  Eigen::Vector4d out_transitional_point = transitional_matrix * transitional_point;
+  Eigen::Vector4d out_transitional_point = transitional_matrix.transpose() * transitional_point;
   return {out_transitional_point(0),
           out_transitional_point(1),
           out_transitional_point(2)};
@@ -106,4 +105,5 @@ double MathUtils::CrossProd(const Eigen::Vector2d &start_point,
   Eigen::Vector2d vec_2 = end_point2 - start_point;
   return vec_1.x() * vec_2.y() - vec_1.y() * vec_2.x();
 }
+
 }

@@ -23,7 +23,7 @@ VehicleState::VehicleState(const carla_msgs::CarlaEgoVehicleStatus &ego_vehicle_
   this->vehicle_params_.min_r_ = this->vehicle_params_.axle_length_ / std::tan(this->vehicle_params_.max_steer_angle_);
   this->vehicle_params_.lr_ = std::fabs(vehicle_info.wheels[3].position.x - vehicle_info.center_of_mass.x);
   this->vehicle_params_.lf_ = std::fabs(vehicle_info.wheels[0].position.x - vehicle_info.center_of_mass.y);
-  double ego_theta = tf::getYaw(odometry.pose.pose.orientation);
+  double ego_theta = tf::getYaw(ego_vehicle_status.orientation);
   double ego_x = odometry.pose.pose.position.x - vehicle_params_.back_axle_to_center_length * std::cos(ego_theta);
   double ego_y = odometry.pose.pose.position.y - vehicle_params_.back_axle_to_center_length * std::sin(ego_theta);
   this->time_stamp_ = ego_vehicle_status.header.stamp;

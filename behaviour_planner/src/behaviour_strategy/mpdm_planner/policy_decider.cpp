@@ -1,7 +1,6 @@
 #include "policy_decider.hpp"
 
 namespace planning {
-using SurroundingTrajectories = std::unordered_map<int, planning_msgs::Trajectory>;
 
 PolicyDecider::PolicyDecider(const PolicySimulateConfig &config)
     : config_(config),
@@ -10,16 +9,19 @@ PolicyDecider::PolicyDecider(const PolicySimulateConfig &config)
 }
 
 bool PolicyDecider::PolicyDesicion(const Agent &ego_agent,
-                                   const std::unordered_map<int, Agent> &other_agents,
-                                   const PolicyDecider::Policies &policies,
-                                   Behaviour &best_policy,
-                                   double &desired_velocity) {
-
+                                   const std::unordered_map<int, Agent> &agent_set,
+                                   const PolicyDecider::Policies &possible_policies,
+                                   Policy &best_policy,
+                                   Policies &forward_policies,
+                                   std::vector<SurroundingTrajectories> &forward_surrounding_trajectories,
+                                   std::vector<planning_msgs::Trajectory> &forward_trajectories) {
+  ego_id_ = ego_agent.id();
+  agent_set_ = agent_set;
   std::vector<planning_msgs::Trajectory> valid_trajectories;
   std::vector<Policy> valid_policies;
   std::vector<std::unordered_map<int, planning_msgs::Trajectory>> valid_surrounding_trajectories;
 
-  for (const auto &policy : policies) {
+  for (const auto &policy : possible_policies) {
     planning_msgs::Trajectory trajectory;
     std::unordered_map<int, planning_msgs::Trajectory> surround_trajs;
     if (!SimulateEgoAgentPolicy(policy, trajectory, surround_trajs)) {
@@ -35,7 +37,23 @@ bool PolicyDecider::PolicyDesicion(const Agent &ego_agent,
   if (valid_trajectories.empty()) {
     return false;
   }
+  Policy winner_policy;
+  planning_msgs::Trajectory winner_forward_trajectory;
+  double winner_score = 0.0;
 
+  if (!EvaluateMultiPolicyTrajectories(valid_policies,
+                                       valid_trajectories,
+                                       valid_surrounding_trajectories,
+                                       winner_policy,
+                                       winner_forward_trajectory,
+                                       winner_score)) {
+    return false;
+  }
+  best_policy = winner_policy;
+  forward_policies = valid_policies;
+  forward_trajectories = valid_trajectories;
+  forward_surrounding_trajectories = valid_surrounding_trajectories;
+  return true;
 }
 
 bool PolicyDecider::SimulateEgoAgentPolicy(const Policy &policy,
@@ -89,7 +107,7 @@ bool PolicyDecider::SimulateEgoAgentPolicy(const Policy &policy,
       return false;
     }
   }
-
+  return true;
 }
 
 bool PolicyDecider::OpenLoopSimForward(const Policy &policy,
@@ -234,8 +252,85 @@ bool PolicyDecider::EvaluateMultiPolicyTrajectories(const std::vector<Policy> &v
                                                     PolicyDecider::Policy &winner_policy,
                                                     planning_msgs::Trajectory &winner_forward_trajectory,
                                                     double &winner_score) {
-
+  if (valid_forward_trajectory.empty()) {
+    return false;
+  }
+  if (valid_policy.size() != valid_forward_trajectory.size()) {
+    return false;
+  }
+  if (valid_policy.size() != valid_surrounding_trajectories.size()) {
+    return false;
+  }
+  double min_score = std::numeric_limits<double>::max();
+  Policy policy;
+  planning_msgs::Trajectory trajectory;
+  for (size_t i = 0; i < valid_policy.size(); ++i) {
+    double score = 0.0;
+    EvaluateSinglePolicyTrajectory(valid_policy[i],
+                                   valid_forward_trajectory[i],
+                                   valid_surrounding_trajectories[i],
+                                   &score);
+    if (score < min_score) {
+      min_score = score;
+      policy = valid_policy.at(i);
+      trajectory = valid_forward_trajectory[i];
+    }
+  }
+  winner_forward_trajectory = trajectory;
+  winner_policy = policy;
+  winner_score = min_score;
   return false;
+}
+
+void PolicyDecider::EvaluateSinglePolicyTrajectory(const Policy &policy,
+                                                   const planning_msgs::Trajectory &trajectory,
+                                                   const SurroundingTrajectories &surrounding_trajs,
+                                                   double *score) const {
+  // 1.efficiency
+  const planning_msgs::TrajectoryPoint terminal_trajectory_point = trajectory.trajectory_points.back();
+  double cost_efficiency = std::fabs(terminal_trajectory_point.vel - config_.desired_vel) / 10.0;
+
+  //2.safety
+  double cost_safety = 0.0;
+  for (const auto &traj : surrounding_trajs) {
+    double cost_safety_tmp = 0.0;
+    EvaluateSafetyCost(ego_id_, trajectory, traj, &cost_safety_tmp);
+    cost_safety += cost_safety_tmp;
+  }
+  double cost_action = 0.0;
+  if (policy.first != LateralBehaviour::kLaneKeeping) {
+    cost_action += 0.5;
+  }
+  *score = cost_action + cost_safety + cost_efficiency;
+}
+
+bool PolicyDecider::EvaluateSafetyCost(const int ego_id, const planning_msgs::Trajectory &trajectory,
+                                       const std::pair<int, planning_msgs::Trajectory> &other_trajectory,
+                                       double *safety_cost) const {
+  if (trajectory.trajectory_points.size() != other_trajectory.second.trajectory_points.size()) {
+    return false;
+  }
+  auto ego_box = agent_set_.at(ego_id).bounding_box();
+  const double length = ego_box.length();
+  const double width = ego_box.width();
+  auto other_box = agent_set_.at(other_trajectory.first).bounding_box();
+  const double other_length = other_box.length();
+  const double other_width = other_box.width();
+  double cost_tmp = 0.0;
+  for (size_t i = 0; i < trajectory.trajectory_points.size(); ++i) {
+    const auto ego_path_point = trajectory.trajectory_points[i].path_point;
+    const auto tmp_ego_box = common::Box2d({ego_path_point.x, ego_path_point.y},
+                                           ego_path_point.theta, length, width);
+    const auto other_path_point = other_trajectory.second.trajectory_points[i].path_point;
+    const auto tmp_other_box = common::Box2d({other_path_point.x, other_path_point.y},
+                                             other_path_point.theta, other_length, other_width);
+    if (tmp_ego_box.HasOverlapWithBox2d(tmp_other_box)) {
+      cost_tmp +=
+          0.01 * fabs(trajectory.trajectory_points[i].vel - other_trajectory.second.trajectory_points[i].vel) *
+              0.5;
+    }
+  }
+  return true;
 }
 
 }

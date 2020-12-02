@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(planning)
+project(behaviour_planner)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 add_compile_options(-std=c++14 -g -Werror -Wall -Wno-unused -Wno-sign-compare)
@@ -112,7 +112,7 @@ find_package(Eigen3 REQUIRED)
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
         #  INCLUDE_DIRS include
-        #  LIBRARIES planning
+        #  LIBRARIES behaviour_planner
         #  CATKIN_DEPENDS planning_msgs planning_srvs roscpp rospy
         #  DEPENDS system_lib
 )
@@ -132,7 +132,7 @@ include_directories(
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
-#   src/${PROJECT_NAME}/planning.cpp
+#   src/${PROJECT_NAME}/behaviour_planner.cpp
 # )
 
 ## Add cmake target dependencies of the library
@@ -144,18 +144,17 @@ include_directories(
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 
-add_executable(planning_node
-        src/planning_node.cpp
-        src/planner.cpp
-        src/planning_context.cpp
-        src/planning_config.cpp
-        src/behaviour_planner/behaviour_planner.cpp
-
-        src/behaviour_planner/mpdm_planner/mpdm_planner.cpp
+add_executable(behaviour_planning_node
+        src/behaviour_planner_node.cpp
+        src/behaviour_planner.cpp
+        src/behaviour_strategy/mpdm_planner/mpdm_planner.cpp
         src/agent/agent.cpp
         src/agent/agent.hpp
         src/agent/behaviour.cpp
-        src/agent/behaviour.hpp src/forward_simulator/on_lane_forward_simulator.cpp src/forward_simulator/on_lane_forward_simulator.hpp src/behaviour_planner/mpdm_planner/policy_decider.cpp src/behaviour_planner/mpdm_planner/policy_decider.hpp)
+        src/agent/behaviour.hpp
+        src/forward_simulator/on_lane_forward_simulator.cpp
+        src/behaviour_strategy/mpdm_planner/policy_decider.cpp
+       )
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -165,10 +164,10 @@ add_executable(planning_node
 
 ## Add cmake target dependencies of the executable
 ## same as for the library above
-add_dependencies(planning_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+add_dependencies(behaviour_planning_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(planning_node
+target_link_libraries(behaviour_planning_node
         ${catkin_LIBRARIES}
         ${Eigen3_LIBRARIES}
 #        common
@@ -190,7 +189,7 @@ target_link_libraries(planning_node
 
 ## Mark executables for installation
 ## See http://docs.ros.org/melodic/api/catkin/html/howto/format1/building_executables.html
-install(TARGETS planning_node
+install(TARGETS behaviour_planning_node
         RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
         )
 

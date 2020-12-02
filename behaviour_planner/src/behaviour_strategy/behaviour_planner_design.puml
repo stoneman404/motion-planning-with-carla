@@ -100,7 +100,7 @@ class MotionPlanner{
 }
 
 abstract class MotionPlanStrategy{
-+bool Execute(const TrajectoryPoint& init_point, const Behaviour& behaviour, Trajectory& traj)
++bool Execute(const TrajectoryPoint& init_point, const Behaviour& behaviour, GetPredictedTrajectory& traj)
 }
 
 class FrenetLatticePlanner{

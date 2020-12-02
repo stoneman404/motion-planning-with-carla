@@ -24,9 +24,9 @@ void TrafficLight::UpdateTrafficLightStatus(const carla_msgs::CarlaTrafficLightS
 
 const common::Box2d &TrafficLight::GetBox2d() const { return traffic_light_box_; }
 const uint32_t &TrafficLight::Id() const { return id_; }
-const uint32_t &TrafficLight::LaneId() const { return lane_id_; }
-const uint32_t &TrafficLight::SectionId() const { return section_id_; }
-const uint32_t &TrafficLight::RoadId() const { return road_id_; }
+//const uint32_t &TrafficLight::LaneId() const { return lane_id_; }
+//const uint32_t &TrafficLight::SectionId() const { return section_id_; }
+//const uint32_t &TrafficLight::RoadId() const { return road_id_; }
 const geometry_msgs::Pose &TrafficLight::Transform() const { return transform_; }
 TrafficLight::TrafficLight(const carla_msgs::CarlaTrafficLightInfo &traffic_light_info,
                            const carla_msgs::CarlaTrafficLightStatus &traffic_light_status,
