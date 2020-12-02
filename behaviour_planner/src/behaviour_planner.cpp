@@ -58,7 +58,6 @@ BehaviourPlanner::BehaviourPlanner(const ros::NodeHandle &nh) : nh_(nh) {
 
 }
 
-
 void BehaviourPlanner::RunOnce() {
   if (behaviour_strategy_ == nullptr) {
     ROS_FATAL("BehaviourPlanner, Not Init BehaviourStrategy");
@@ -73,19 +72,59 @@ void BehaviourPlanner::RunOnce() {
   if (!behaviour_strategy_->Execute(behaviour)) {
     return;
   }
+
+  planning_msgs::Behaviour publishable_behaviour;
+  if (!BehaviourPlanner::ConvertBehaviourToRosMsg(behaviour, publishable_behaviour)) {
+    return;
+  }
+
 }
 
 bool BehaviourPlanner::ConvertBehaviourToRosMsg(const Behaviour &behaviour,
-                                                planning_msgs::Behaviour &behaviour_msg) const {
-  if (behaviour.forward_behaviours.empty()){
+                                                planning_msgs::Behaviour &behaviour_msg) {
+  if (behaviour.forward_behaviours.empty()) {
     return false;
   }
-  if (behaviour.forward_behaviours.size() != behaviour.forward_trajs.size()){
+  const size_t behaviour_size = behaviour.forward_behaviours.size();
+  if (behaviour_size != behaviour.forward_trajs.size()) {
     return false;
   }
+  if (behaviour_size != behaviour.surrounding_trajs.size()) {
+    return false;
+  }
+  behaviour_msg.forward_behaviours.resize(behaviour_size);
+  behaviour_msg.forward_trajectories.resize(behaviour_size);
+  behaviour_msg.surroud_trajectories.resize(behaviour_size);
+  behaviour_msg.reference_lane.reserve(behaviour_size);
+  for (size_t i = 0; i < behaviour_size; ++i) {
+    switch (behaviour.forward_behaviours[i].first) {
 
+      case LateralBehaviour::kLaneKeeping:
+        behaviour_msg.forward_behaviours[i].behaviour = planning_msgs::LateralBehaviour::LANEKEEPING;
+        break;
+      case LateralBehaviour::kLaneChangeLeft:
+        behaviour_msg.forward_behaviours[i].behaviour = planning_msgs::LateralBehaviour::LANECHANGELEFT;
+        break;
+      case LateralBehaviour::kLaneChangeRight:
+        behaviour_msg.forward_behaviours[i].behaviour = planning_msgs::LateralBehaviour::LANECHANGERIGHT;
+        break;
+      case LateralBehaviour::kUndefined:
+      default:behaviour_msg.forward_behaviours[i].behaviour = planning_msgs::LateralBehaviour::UNDEFINED;
+        break;
+    }
+    behaviour_msg.reference_lane[i].way_points = behaviour.forward_behaviours[i].second->way_points();
+    behaviour_msg.forward_trajectories[i] = behaviour.forward_trajs[i];
+    // for each agent
+    behaviour_msg.surroud_trajectories[i].trajectories.reserve(behaviour.surrounding_trajs[i].size());
+    for (const auto &item : behaviour.surrounding_trajs[i]) {
+      planning_msgs::AgentTrajectory agent_trajectory;
+      agent_trajectory.trajectory = item.second;
+      agent_trajectory.id = item.first;
+      behaviour_msg.surroud_trajectories[i].trajectories.emplace_back(agent_trajectory);
+    }
+  }
+  return true;
 }
-
 
 bool BehaviourPlanner::GetKeyAgents() {
   if (!has_ego_vehicle_) {

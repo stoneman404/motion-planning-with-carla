@@ -26,7 +26,7 @@ class BehaviourPlanner {
  private:
   bool GetKeyAgents();
   void VisualizeBehaviourTrajectories(const Behaviour &behaviour);
-  bool ConvertBehaviourToRosMsg(const Behaviour& behaviour, planning_msgs::Behaviour& behaviour_msg) const;
+  static bool ConvertBehaviourToRosMsg(const Behaviour &behaviour, planning_msgs::Behaviour &behaviour_msg);
 
  private:
   ros::NodeHandle nh_;
