@@ -24,6 +24,7 @@ class BehaviourPlanner {
   void RunOnce();
  private:
   bool GetKeyAgents();
+  void VisualizeBehaviourTrajectories(const Behaviour &behaviour);
 
  private:
   ros::NodeHandle nh_;
@@ -41,10 +42,11 @@ class BehaviourPlanner {
   ////////////////////// Subscriber /////////////////////
   ros::Subscriber ego_vehicle_subscriber_;
   ros::Subscriber objects_subscriber_;
-  ros::Subscriber traffic_lights_subscriber_;
-  ros::Subscriber traffic_lights_info_subscriber_;
   ros::Subscriber ego_vehicle_info_subscriber_;
-  ros::Subscriber ego_vehicle_odometry_subscriber_;
+
+  /////////////////////Publisher///////////////////////
+  ros::Publisher behaviour_publisher_;
+  ros::Publisher visualized_behaviour_trajectories_publisher_;
 
   carla_msgs::CarlaEgoVehicleInfo ego_vehicle_info_;
   carla_msgs::CarlaEgoVehicleStatus ego_vehicle_status_;

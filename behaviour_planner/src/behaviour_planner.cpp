@@ -54,6 +54,7 @@ BehaviourPlanner::BehaviourPlanner(const ros::NodeHandle &nh) : nh_(nh) {
           agent_set_.emplace(object.id, object);
         }
       });
+
 }
 
 
@@ -63,12 +64,13 @@ void BehaviourPlanner::RunOnce() {
     return;
   }
 
-  if (!this->GetKeyAgents()){
+  if (!this->GetKeyAgents()) {
     return;
   }
   behaviour_strategy_->SetAgentSet(key_agent_set_);
-  if (!behaviour_strategy_->Execute(init_point, behaviour)) {
-    return ;
+  Behaviour behaviour;
+  if (!behaviour_strategy_->Execute(behaviour)) {
+    return;
   }
 }
 

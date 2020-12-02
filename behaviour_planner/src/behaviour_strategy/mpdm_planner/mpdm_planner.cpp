@@ -14,7 +14,7 @@ MPDMPlanner::MPDMPlanner(const ros::NodeHandle &nh,
   policy_decider_ = std::make_unique<PolicyDecider>(config);
 }
 
-bool MPDMPlanner::Execute(const planning_msgs::TrajectoryPoint &init_point, Behaviour &behaviour) {
+bool MPDMPlanner::Execute(Behaviour &behaviour) {
   if (!this->UpdateAvailablePoliciesAndRefLanes()) {
     ROS_FATAL("[MPDMPlanner::Execute], failed to [UpdateAvailablePoliciesAndRefLanes]");
     return false;

@@ -15,8 +15,8 @@ class MPDMPlanner : public BehaviourStrategy {
                        const PolicySimulateConfig &config,
                        common::ThreadPool *thread_pool);
   ~MPDMPlanner() override = default;
-  bool Execute(const planning_msgs::TrajectoryPoint &init_point, Behaviour &behaviour) override;
-  void SetAgentSet(const std::unordered_map<int, Agent>& agent_set) override;
+  bool Execute(Behaviour &behaviour) override;
+  void SetAgentSet(const std::unordered_map<int, Agent> &agent_set) override;
 
  private:
 

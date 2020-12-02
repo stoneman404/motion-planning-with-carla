@@ -11,8 +11,8 @@ class BehaviourStrategy {
  public:
   BehaviourStrategy() = default;
   virtual ~BehaviourStrategy() = default;
-  virtual void SetAgentSet(const std::unordered_map<int, Agent>& agent_set) = 0;
-  virtual bool Execute(const planning_msgs::TrajectoryPoint &init_point, Behaviour &behaviour) = 0;
+  virtual void SetAgentSet(const std::unordered_map<int, Agent> &agent_set) = 0;
+  virtual bool Execute(Behaviour &behaviour) = 0;
 };
 
 }
