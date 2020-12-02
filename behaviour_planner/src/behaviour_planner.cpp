@@ -1,6 +1,7 @@
 #include "behaviour_planner.hpp"
 #include "behaviour_strategy/mpdm_planner/mpdm_planner.hpp"
 #include <memory>
+#include <visualization_msgs/MarkerArray.h>
 #include "name/string_name.hpp"
 #include "planning_msgs/Behaviour.h"
 
@@ -55,6 +56,9 @@ BehaviourPlanner::BehaviourPlanner(const ros::NodeHandle &nh) : nh_(nh) {
           agent_set_.emplace(object.id, object);
         }
       });
+  this->behaviour_publisher_ = nh_.advertise<planning_msgs::Behaviour>(common::topic::kBehaviourName, 10);
+  this->visualized_behaviour_trajectories_publisher_ =
+      nh_.advertise<visualization_msgs::MarkerArray>(common::topic::kVisualizedBehaviourTrajectoryName, 10);
 
 }
 
@@ -77,7 +81,7 @@ void BehaviourPlanner::RunOnce() {
   if (!BehaviourPlanner::ConvertBehaviourToRosMsg(behaviour, publishable_behaviour)) {
     return;
   }
-
+  behaviour_publisher_.publish(publishable_behaviour);
 }
 
 bool BehaviourPlanner::ConvertBehaviourToRosMsg(const Behaviour &behaviour,
@@ -92,6 +96,36 @@ bool BehaviourPlanner::ConvertBehaviourToRosMsg(const Behaviour &behaviour,
   if (behaviour_size != behaviour.surrounding_trajs.size()) {
     return false;
   }
+  switch (behaviour.lateral_behaviour) {
+    case LateralBehaviour::kLaneKeeping:
+      behaviour_msg.lat_behaviour.behaviour = planning_msgs::LateralBehaviour::LANEKEEPING;
+      break;
+    case LateralBehaviour::kLaneChangeRight:
+      behaviour_msg.lat_behaviour.behaviour = planning_msgs::LateralBehaviour::LANECHANGERIGHT;
+      break;
+    case LateralBehaviour::kLaneChangeLeft:
+      behaviour_msg.lat_behaviour.behaviour = planning_msgs::LateralBehaviour::LANECHANGELEFT;
+      break;
+    case LateralBehaviour::kUndefined:
+    default:behaviour_msg.lat_behaviour.behaviour = planning_msgs::LateralBehaviour::UNDEFINED;
+      break;
+  }
+
+  switch (behaviour.longitudinal_behaviour) {
+    case LongitudinalBehaviour::kMaintain:
+      behaviour_msg.lon_behaviour.behaviour = planning_msgs::LongitudinalBehaviour::MAINTAIN;
+      break;
+    case LongitudinalBehaviour::kAccelate:
+      behaviour_msg.lon_behaviour.behaviour = planning_msgs::LongitudinalBehaviour::ACCELERATE;
+      break;
+    case LongitudinalBehaviour::kDecelate:
+      behaviour_msg.lon_behaviour.behaviour = planning_msgs::LongitudinalBehaviour::DECELERATE;
+      break;
+    case LongitudinalBehaviour::kStopping:
+    default:behaviour_msg.lon_behaviour.behaviour = planning_msgs::LongitudinalBehaviour::STOPPING;
+      break;
+  }
+
   behaviour_msg.forward_behaviours.resize(behaviour_size);
   behaviour_msg.forward_trajectories.resize(behaviour_size);
   behaviour_msg.surroud_trajectories.resize(behaviour_size);
@@ -162,6 +196,9 @@ bool BehaviourPlanner::GetKeyAgents() {
     }
   }
   return true;
+}
+void BehaviourPlanner::VisualizeBehaviourTrajectories(const Behaviour &behaviour) {
+
 }
 
 }

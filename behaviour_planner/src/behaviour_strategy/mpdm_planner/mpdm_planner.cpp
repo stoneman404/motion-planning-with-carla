@@ -2,7 +2,7 @@
 #include <agent/behaviour.hpp>
 #include <agent/agent.hpp>
 #include "mpdm_planner.hpp"
-
+#include "name/string_name.hpp"
 namespace planning {
 MPDMPlanner::MPDMPlanner(const ros::NodeHandle &nh,
                          const PolicySimulateConfig &config,
@@ -11,6 +11,7 @@ MPDMPlanner::MPDMPlanner(const ros::NodeHandle &nh,
   behavior_.longitudinal_behaviour = LongitudinalBehaviour::kStopping;
   behavior_.lateral_behaviour = LateralBehaviour::kLaneKeeping;
   behavior_.forward_behaviours = decltype(behavior_.forward_behaviours)();
+  route_service_client_ = nh_.serviceClient<planning_srvs::RoutePlanService>(common::service::kRouteServiceName);
   policy_decider_ = std::make_unique<PolicyDecider>(config);
 }
 

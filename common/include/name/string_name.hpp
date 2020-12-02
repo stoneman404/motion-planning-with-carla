@@ -18,6 +18,7 @@ const std::string kTrafficLightsInfoName = "/carla/traffic_lights_info";        
 const std::string kVisualizedTrafficLightBoxName = "/motion_planner/visualized_traffic_light_boxes";    //NOLINT
 const std::string kVisualizedReferenceLinesName = "/motion_planner/visualized_reference_lines";         //NOLINT
 const std::string kVisualizedBehaviourTrajectoryName = "/behaviour_planner/visualized_behaviour_trajectories"; //NOLINT
+const std::string kBehaviourName = "/behaviour_planner/behaviour";                                        //NOLINT
 }
 
 namespace service {
