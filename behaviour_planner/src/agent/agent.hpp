@@ -12,6 +12,13 @@
 #include <derived_object_msgs/Object.h>
 namespace planning {
 
+enum class AgentType : uint32_t {
+  UNKNOWN = 0u,
+  VEHICLE = 1u,
+  BIKE = 2U,
+  PEDESTRAIN = 3U
+};
+
 /**
  * Agent class represents the ego vehicle and other vehicle,
  * other traffic participants like pedestrians and traffic sign/light
@@ -22,7 +29,7 @@ class Agent {
 
   Agent();
 
-  explicit Agent(const derived_object_msgs::Object& object);
+  explicit Agent(const derived_object_msgs::Object &object);
   /**
    * the ego agent
    * @param vehicle_state
@@ -45,7 +52,7 @@ class Agent {
   const LateralBehaviour &most_likely_behaviour() const;
   void set_current_ref_lane(const std::shared_ptr<ReferenceLine> &ref_line);
   void set_target_ref_lane(const std::shared_ptr<ReferenceLine> &ref_lane);
-  void set_is_host(bool host_agent) { is_host_ = host_agent;}
+  void set_is_host(bool host_agent) { is_host_ = host_agent; }
   void set_trajectory(const planning_msgs::Trajectory &trajectory);
   void set_most_likely_behaviour(const LateralBehaviour &lateral_behaviour);
 
