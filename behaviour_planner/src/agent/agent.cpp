@@ -191,6 +191,9 @@ void Agent::StateToPathPoint(const vehicle_state::KinoDynamicState &state, plann
   path_point.kappa = state.kappa_;
   path_point.dkappa = 0.0;
 }
+const AgentType &Agent::agent_type() const {
+  return agent_type_;
+}
 
 }
 

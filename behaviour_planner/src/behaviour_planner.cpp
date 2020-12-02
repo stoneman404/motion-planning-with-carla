@@ -23,7 +23,7 @@ BehaviourPlanner::BehaviourPlanner(const ros::NodeHandle &nh) : nh_(nh) {
   nh_.param<double>("/behaviour_planner/lat_vel_ratio", simulate_config_.lat_vel_ratio, 0.17);
   nh_.param<double>("/behaviour_planner/lat_offset_threshold", simulate_config_.lat_offset_threshold, 0.3);
   nh_.param<double>("/behaviour_planner/sample_lat_threshold", sample_key_agent_lat_threshold_, 6.0);
-  nh_.param<double>("/behaviour_planner/sample_min_lon_threshold", sample_min_lon_threshold_, 80.0);
+  nh_.param<double>("/behaviour_planner/sample_min_lon_threshold", sample_min_lon_threshold_, 20.0);
   thread_pool_ = std::make_unique<common::ThreadPool>(pool_size_);
   if (planner_type_ == "mpdm") {
     behaviour_strategy_ = std::make_unique<MPDMPlanner>(nh, simulate_config_, thread_pool_.get());
@@ -79,7 +79,11 @@ bool BehaviourPlanner::GetKeyAgents() {
   if (agent_set_.find(ego_vehicle_id_) == agent_set_.end()) {
     return false;
   }
+
   auto ego_agent = agent_set_[ego_vehicle_id_];
+  const double front_distance =
+      std::max(simulate_config_.desired_vel * simulate_config_.sim_horizon_, sample_min_lon_threshold_);
+  const double back_distance = front_distance / 2.0;
   Eigen::Vector2d ego_heading{std::cos(ego_agent.state().theta_), std::sin(ego_agent.state().theta_)};
   key_agent_set_.insert({ego_vehicle_id_, agent_set_[ego_vehicle_id_]});
   key_agent_set_[ego_vehicle_id_].set_is_host(true);
@@ -88,10 +92,20 @@ bool BehaviourPlanner::GetKeyAgents() {
     if (agent.first == ego_vehicle_id_) {
       continue;
     }
+    if (agent.second.agent_type() != AgentType::VEHICLE) {
+      continue;
+    }
     Eigen::Vector2d agent_to_ego{agent.second.state().x_ - ego_agent.state().x_,
                                  agent.second.state().y_ - ego_agent.state().y_};
 
-
+    const double cross_prod = agent_to_ego.x() * ego_heading.y() - agent_to_ego.y() * ego_heading.x();
+    if (std::fabs(cross_prod) > sample_key_agent_lat_threshold_) {
+      continue;
+    }
+    const double dot_prod = agent_to_ego.x() * ego_heading.x() + agent_to_ego.y() * ego_heading.y();
+    if (dot_prod < front_distance && dot_prod > -back_distance) {
+      key_agent_set_.insert(agent);
+    }
   }
 
 }

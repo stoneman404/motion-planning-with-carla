@@ -47,6 +47,7 @@ class Agent {
   const vehicle_state::KinoDynamicState &state() const;
   bool is_valid() const;
   bool is_host() const;
+  const AgentType &agent_type() const;
   const std::shared_ptr<ReferenceLine> &current_ref_lane() const;
   const std::shared_ptr<ReferenceLine> &target_ref_lane() const;
   const LateralBehaviour &most_likely_behaviour() const;
