@@ -16,7 +16,7 @@ enum class AgentType : uint32_t {
   UNKNOWN = 0u,
   VEHICLE = 1u,
   BIKE = 2U,
-  PEDESTRAIN = 3U
+  PEDESTRIAN = 3U
 };
 
 /**
@@ -59,6 +59,7 @@ class Agent {
   bool PredictAgentBehaviour();
 
  protected:
+  void RetriveAgentType(const derived_object_msgs::Object &object);
   static void StateToPathPoint(const vehicle_state::KinoDynamicState &state, planning_msgs::PathPoint &path_point);
 
  protected:
@@ -74,6 +75,7 @@ class Agent {
   std::shared_ptr<ReferenceLine> target_ref_lane_;
   bool has_trajectory_{false};
   planning_msgs::Trajectory trajectory_;
+  AgentType agent_type_;
 
 };
 

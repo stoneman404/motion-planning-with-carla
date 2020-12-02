@@ -21,6 +21,7 @@ Agent::Agent(const Obstacle &obstacle) : id_(obstacle.Id()),
   double kappa = obstacle.kappa();
   double centripental_acc = obstacle.centripental_acc();
   state_ = vehicle_state::KinoDynamicState(x, y, z, theta, kappa, v, a, centripental_acc);
+  RetriveAgentType(obstacle.Object());
 }
 
 Agent::Agent(const derived_object_msgs::Object &object)
@@ -51,6 +52,7 @@ Agent::Agent(const derived_object_msgs::Object &object)
     kappa = centripental_acc / (v * v);
   }
   state_ = vehicle_state::KinoDynamicState(x, y, z, theta, kappa, v, a, centripental_acc);
+  RetriveAgentType(object);
 }
 
 Agent::Agent(const vehicle_state::VehicleState &vehicle_state) : id_(vehicle_state.id()),
@@ -62,7 +64,8 @@ Agent::Agent(const vehicle_state::VehicleState &vehicle_state) : id_(vehicle_sta
                                                                  current_ref_lane_(nullptr),
                                                                  target_ref_lane_(nullptr),
                                                                  has_trajectory_(false),
-                                                                 trajectory_(planning_msgs::Trajectory()) {
+                                                                 trajectory_(planning_msgs::Trajectory()),
+                                                                 agent_type_(AgentType::VEHICLE) {
 
 }
 
@@ -75,7 +78,38 @@ Agent::Agent() : id_(-1),
                  current_ref_lane_(nullptr),
                  target_ref_lane_(nullptr),
                  has_trajectory_(false),
-                 trajectory_(planning_msgs::Trajectory()) {}
+                 trajectory_(planning_msgs::Trajectory()),
+                 agent_type_(AgentType::UNKNOWN) {}
+
+void Agent::RetriveAgentType(const derived_object_msgs::Object &object) {
+  switch (object.classification) {
+    case derived_object_msgs::Object::CLASSIFICATION_CAR:
+    case derived_object_msgs::Object::CLASSIFICATION_MOTORCYCLE:
+    case derived_object_msgs::Object::CLASSIFICATION_OTHER_VEHICLE:
+    case derived_object_msgs::Object::CLASSIFICATION_TRUCK: {
+      agent_type_ = AgentType::VEHICLE;
+      break;
+    }
+    case derived_object_msgs::Object::CLASSIFICATION_PEDESTRIAN: {
+      agent_type_ = AgentType::PEDESTRIAN;
+      break;
+    }
+    case derived_object_msgs::Object::CLASSIFICATION_BIKE: {
+      agent_type_ = AgentType::BIKE;
+      break;
+    }
+    case derived_object_msgs::Object::CLASSIFICATION_BARRIER:
+    case derived_object_msgs::Object::CLASSIFICATION_SIGN:
+    case derived_object_msgs::Object::CLASSIFICATION_UNKNOWN:
+    case derived_object_msgs::Object::CLASSIFICATION_UNKNOWN_BIG:
+    case derived_object_msgs::Object::CLASSIFICATION_UNKNOWN_MEDIUM:
+    case derived_object_msgs::Object::CLASSIFICATION_UNKNOWN_SMALL:
+    default: {
+      agent_type_ = AgentType::UNKNOWN;
+      break;
+    }
+  }
+}
 
 const common::Box2d &Agent::bounding_box() const {
   return bounding_box_;
