@@ -33,7 +33,7 @@ class PolicyDecider {
   using SurroundingTrajectories = std::unordered_map<int, planning_msgs::Trajectory>;
  public:
   explicit PolicyDecider(const PolicySimulateConfig &config);
-  bool PolicyDesicion(const Agent &ego_agent,
+  bool PolicyDecision(const Agent &ego_agent,
                       const std::unordered_map<int, Agent> &agents_set,
                       const Policies &possible_policies,
                       Policy &best_policy,
@@ -80,8 +80,8 @@ class PolicyDecider {
    * @brief: get the leading agent on the \ref_lane
    * @param agent
    * @param ref_lane
-   * @param agent_id
-   * @return true if find leading agent, false: no leading agent
+   * @param agent_id : -1, no leading vehicle, otherwise , it is the id of leading agent.
+   * @return true if normal,
    */
   bool GetLeadingAgentOnRefLane(const Agent &agent,
                                 const std::shared_ptr<ReferenceLine> &ref_lane,
@@ -100,7 +100,7 @@ class PolicyDecider {
                                       const std::unordered_map<int, planning_msgs::Trajectory> &surrounding_trajs,
                                       double *score) const;
 
-  bool EvaluateSafetyCost(const int ego_id, const planning_msgs::Trajectory &trajectory,
+  bool EvaluateSafetyCost(int ego_id, const planning_msgs::Trajectory &trajectory,
                           const std::pair<int, planning_msgs::Trajectory> &other_trajectory,
                           double *safety_cost) const;
 

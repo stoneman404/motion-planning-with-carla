@@ -20,9 +20,10 @@ find_package(catkin REQUIRED COMPONENTS
         std_msgs
         visualization_msgs
         carla_waypoint_types
-#        reference_line
-#        common
-#        vehicle_state
+        reference_line
+        common
+        vehicle_state
+        obstacle_manager
         )
 
 find_package(Eigen3 REQUIRED)
@@ -135,7 +136,6 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
-        include
         src
         ${catkin_INCLUDE_DIRS}
         ${IPOPT_INCLUDE_DIRS}
@@ -155,16 +155,15 @@ include_directories(
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 set(planning_SRC
-        src/motion_planner/frenet_lattice_planner/constraint_checker.cpp
-        src/motion_planner/frenet_lattice_planner/end_condition_sampler.cpp
-        src/motion_planner/frenet_lattice_planner/polynomial_trajectory_evaluator.cpp
-        src/motion_planner/frenet_lattice_planner/lattice_trajectory1d.cpp
-        src/motion_planner/frenet_lattice_planner/frenet_lattice_planner.cpp
-        src/motion_planner/planner.cpp
-        src/motion_planner/planning_config.cpp
-        src/motion_planner/planning_context.cpp
+        src/frenet_lattice_planner/constraint_checker.cpp
+        src/frenet_lattice_planner/end_condition_sampler.cpp
+        src/frenet_lattice_planner/polynomial_trajectory_evaluator.cpp
+        src/frenet_lattice_planner/lattice_trajectory1d.cpp
+        src/frenet_lattice_planner/frenet_lattice_planner.cpp
+        src/motion_planner.cpp
+        src/planning_config.cpp
         src/planning_node.cpp)
-# add_executable(motion_planning_node ${planning_SRC})
+add_executable(motion_planning_node ${planning_SRC})
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -177,9 +176,11 @@ set(planning_SRC
 # add_dependencies(motion_planning_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
-# target_link_libraries(motion_planning_node
-#   ${catkin_LIBRARIES}
-# )
+target_link_libraries(motion_planning_node
+        ${catkin_LIBRARIES}
+        Eigen3::Eigen
+        Ipopt
+        )
 
 #############
 ## Install ##
@@ -201,10 +202,10 @@ set(planning_SRC
 #   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 # )
 #
-#install(DIRECTORY launch/
-#        DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch)
-#install(DIRECTORY param/
-#        DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/param)
+install(DIRECTORY launch/
+        DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch)
+install(DIRECTORY param/
+        DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/param)
 
 ## Mark libraries for installation
 ## See http://docs.ros.org/melodic/api/catkin/html/howto/format1/building_libraries.html

@@ -36,11 +36,6 @@ class Agent {
    */
   explicit Agent(const vehicle_state::VehicleState &vehicle_state);
 
-  /**
-   * the other agent
-   * @param obstacle
-   */
-  explicit Agent(const Obstacle &obstacle);
   ~Agent() = default;
   int id() const;;
   const common::Box2d &bounding_box() const;

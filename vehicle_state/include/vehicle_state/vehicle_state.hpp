@@ -17,13 +17,11 @@ class VehicleState {
   ~VehicleState() = default;
 
   VehicleState(const carla_msgs::CarlaEgoVehicleStatus &ego_vehicle_status,
-               const nav_msgs::Odometry &odometry,
                const carla_msgs::CarlaEgoVehicleInfo &vehicle_info,
                const derived_object_msgs::Object &object);
 
 //  static behaviour_planner::VehicleState &Instance();
   void Update(const carla_msgs::CarlaEgoVehicleStatus &ego_vehicle_status,
-              const nav_msgs::Odometry &odometry,
               const carla_msgs::CarlaEgoVehicleInfo &vehicle_info,
               const derived_object_msgs::Object &object);
   // getter

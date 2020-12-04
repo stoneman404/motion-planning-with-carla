@@ -135,7 +135,7 @@ include_directories(
 add_library(obstacle_manager
         src/obstacle_manager/obstacle.cpp
         src/obstacle_manager/traffic_light.cpp
-        src/obstacle_manager/st_graph.cpp src/obstacle_manager/obstacle_manager.cpp)
+        src/obstacle_manager/st_graph.cpp)
 
 target_link_libraries(obstacle_manager
         ${catkin_LIBRARIES}

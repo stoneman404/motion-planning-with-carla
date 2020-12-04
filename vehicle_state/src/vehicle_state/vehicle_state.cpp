@@ -7,7 +7,6 @@ namespace vehicle_state {
 // the vehicle's coordinate, x--->forward, y-->left, z--->up
 
 VehicleState::VehicleState(const carla_msgs::CarlaEgoVehicleStatus &ego_vehicle_status,
-                           const nav_msgs::Odometry &odometry,
                            const carla_msgs::CarlaEgoVehicleInfo &vehicle_info,
                            const derived_object_msgs::Object &object) {
 
@@ -23,13 +22,13 @@ VehicleState::VehicleState(const carla_msgs::CarlaEgoVehicleStatus &ego_vehicle_
   this->vehicle_params_.min_r_ = this->vehicle_params_.axle_length_ / std::tan(this->vehicle_params_.max_steer_angle_);
   this->vehicle_params_.lr_ = std::fabs(vehicle_info.wheels[3].position.x - vehicle_info.center_of_mass.x);
   this->vehicle_params_.lf_ = std::fabs(vehicle_info.wheels[0].position.x - vehicle_info.center_of_mass.y);
-  double ego_theta = tf::getYaw(ego_vehicle_status.orientation);
-  double ego_x = odometry.pose.pose.position.x - vehicle_params_.back_axle_to_center_length * std::cos(ego_theta);
-  double ego_y = odometry.pose.pose.position.y - vehicle_params_.back_axle_to_center_length * std::sin(ego_theta);
+  double ego_theta = tf::getYaw(object.pose.orientation);
+  double ego_x = object.pose.position.x - vehicle_params_.back_axle_to_center_length * std::cos(ego_theta);
+  double ego_y = object.pose.position.y - vehicle_params_.back_axle_to_center_length * std::sin(ego_theta);
   this->time_stamp_ = ego_vehicle_status.header.stamp;
   // 我们假设车辆的滑移角很小，为零 所以车速朝向和车头朝向一致，
   double ego_v = ego_vehicle_status.velocity;
-  double ego_omega = odometry.twist.twist.angular.z;
+  double ego_omega = object.twist.angular.z;
   double ego_kappa = 0.0;
   if (ego_v < 1e-6) {
     ego_kappa = 0.0;
@@ -39,7 +38,8 @@ VehicleState::VehicleState(const carla_msgs::CarlaEgoVehicleStatus &ego_vehicle_
 
   double ego_a = ego_vehicle_status.acceleration.linear.x * std::cos(ego_theta) + ego_vehicle_status.acceleration.linear.y * std::sin(ego_theta);
   double centripental_acc = -1.0 * ego_vehicle_status.acceleration.linear.x * std::sin(ego_theta) + ego_vehicle_status.acceleration.linear.y * std::cos(ego_theta);
-  kino_dynamic_state_ = KinoDynamicState(ego_x, ego_y, odometry.pose.pose.position.z, ego_theta, ego_kappa, ego_v, ego_a, centripental_acc);
+  kino_dynamic_state_ =
+      KinoDynamicState(ego_x, ego_y, object.pose.position.z, ego_theta, ego_kappa, ego_v, ego_a, centripental_acc);
 
   ROS_INFO("centripental_acc is %lf", centripental_acc);
   this->time_stamp_ = ego_vehicle_status.header.stamp;
@@ -51,7 +51,6 @@ VehicleState::VehicleState(const carla_msgs::CarlaEgoVehicleStatus &ego_vehicle_
 const ros::Time &VehicleState::time_stamp() const { return this->time_stamp_; }
 
 void VehicleState::Update(const carla_msgs::CarlaEgoVehicleStatus &ego_vehicle_status,
-                          const nav_msgs::Odometry &odometry,
                           const carla_msgs::CarlaEgoVehicleInfo &vehicle_info,
                           const derived_object_msgs::Object &object) {
   this->vehicle_params_.length = object.shape.dimensions[0];
@@ -60,19 +59,20 @@ void VehicleState::Update(const carla_msgs::CarlaEgoVehicleStatus &ego_vehicle_s
   this->vehicle_params_.half_width = vehicle_params_.width / 2.0;
   this->vehicle_params_.back_axle_to_center_length = std::fabs(vehicle_info.wheels[3].position.x);
   this->vehicle_params_.front_axle_to_center_length = std::fabs(vehicle_info.wheels[0].position.x);
-  this->vehicle_params_.axle_length_ = this->vehicle_params_.front_axle_to_center_length + this->vehicle_params_.back_axle_to_center_length;
+  this->vehicle_params_.axle_length_ =
+      this->vehicle_params_.front_axle_to_center_length + this->vehicle_params_.back_axle_to_center_length;
   this->vehicle_params_.max_steer_angle_ = vehicle_info.wheels.front().max_steer_angle;
   this->vehicle_params_.min_r_ = this->vehicle_params_.axle_length_ / std::tan(this->vehicle_params_.max_steer_angle_);
   this->vehicle_params_.lr_ = std::fabs(vehicle_info.wheels[3].position.x - vehicle_info.center_of_mass.x);
   this->vehicle_params_.lf_ = std::fabs(vehicle_info.wheels[0].position.x - vehicle_info.center_of_mass.y);
-  double ego_theta = tf::getYaw(odometry.pose.pose.orientation);
+  double ego_theta = tf::getYaw(object.pose.orientation);
 
-  double ego_x = odometry.pose.pose.position.x - vehicle_params_.back_axle_to_center_length * std::cos(ego_theta);
-  double ego_y = odometry.pose.pose.position.y - vehicle_params_.back_axle_to_center_length * std::sin(ego_theta);
+  double ego_x = object.pose.position.x - vehicle_params_.back_axle_to_center_length * std::cos(ego_theta);
+  double ego_y = object.pose.position.y - vehicle_params_.back_axle_to_center_length * std::sin(ego_theta);
   this->time_stamp_ = ego_vehicle_status.header.stamp;
   // 我们假设车辆的滑移角很小，为零 所以车速朝向和车头朝向一致，
   double ego_v = ego_vehicle_status.velocity;
-  double ego_omega = odometry.twist.twist.angular.z;
+  double ego_omega = object.twist.angular.z;
   double ego_kappa = 0.0;
   if (ego_v < 1e-6) {
     ego_kappa = 0.0;
@@ -82,12 +82,11 @@ void VehicleState::Update(const carla_msgs::CarlaEgoVehicleStatus &ego_vehicle_s
   double ego_a = ego_vehicle_status.acceleration.linear.x * std::cos(ego_theta) + ego_vehicle_status.acceleration.linear.y * std::sin(ego_theta);
   double centripental_acc = -1.0 * ego_vehicle_status.acceleration.linear.x * std::sin(ego_theta) + ego_vehicle_status.acceleration.linear.y * std::cos(ego_theta);
   kino_dynamic_state_ =
-      KinoDynamicState(ego_x, ego_y, odometry.pose.pose.position.z, ego_theta, ego_kappa, ego_v, ego_a, centripental_acc);
+      KinoDynamicState(ego_x, ego_y, object.pose.position.z, ego_theta, ego_kappa, ego_v, ego_a, centripental_acc);
   ROS_INFO("centripental_acc is %lf", centripental_acc);
   this->time_stamp_ = ego_vehicle_status.header.stamp;
   this->steer_percentage_ = ego_vehicle_status.control.steer;
   this->reverse_ = ego_vehicle_status.control.reverse;
-//  this->center_of_mass_ = vehicle_info.center_of_mass;
 }
 
 

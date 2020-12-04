@@ -1,28 +1,6 @@
-
 #include <tf/transform_datatypes.h>
 #include "agent.hpp"
 namespace planning {
-
-Agent::Agent(const Obstacle &obstacle) : id_(obstacle.Id()),
-                                         is_host_(false),
-                                         is_valid_(true),
-                                         bounding_box_(obstacle.GetBoundingBox()),
-                                         max_lat_behaviour_(LateralBehaviour::kUndefined),
-                                         current_ref_lane_(nullptr),
-                                         target_ref_lane_(nullptr),
-                                         has_trajectory_(false),
-                                         trajectory_(planning_msgs::Trajectory()) {
-  double x = obstacle.Center().x();
-  double y = obstacle.Center().y();
-  double z = obstacle.Object().pose.position.z;
-  double theta = obstacle.Heading();
-  double v = obstacle.Speed();
-  double a = obstacle.acc();
-  double kappa = obstacle.kappa();
-  double centripental_acc = obstacle.centripental_acc();
-  state_ = vehicle_state::KinoDynamicState(x, y, z, theta, kappa, v, a, centripental_acc);
-  RetriveAgentType(obstacle.Object());
-}
 
 Agent::Agent(const derived_object_msgs::Object &object)
     : id_(object.id),

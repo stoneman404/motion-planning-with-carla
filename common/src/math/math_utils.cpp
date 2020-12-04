@@ -80,14 +80,16 @@ double MathUtils::CalcDKappa(double dx, double dy, double ddx, double ddy, doubl
   return (a * b - 3 * c * d) / (b * b * sqrt_b);
 }
 
-Eigen::Vector3d MathUtils::Transform(const geometry_msgs::Pose &base_transform, const Eigen::Vector3d &in_point) {
+Eigen::Vector3d MathUtils::Transform(const geometry_msgs::Pose &local_coordinate_transform,
+                                     const Eigen::Vector3d &in_point) {
   Eigen::Matrix4d transitional_matrix;
-  Eigen::Quaternion<double> quaternion(base_transform.orientation.w, base_transform.orientation.x,
-                                       base_transform.orientation.y, base_transform.orientation.z);
+  Eigen::Quaternion<double>
+      quaternion(local_coordinate_transform.orientation.w, local_coordinate_transform.orientation.x,
+                 local_coordinate_transform.orientation.y, local_coordinate_transform.orientation.z);
   Eigen::Matrix3d R = quaternion.toRotationMatrix();
-  transitional_matrix << R(0, 0), R(0, 1), R(0, 2), base_transform.position.x,
-      R(1, 0), R(1, 1), R(1, 2), base_transform.position.y,
-      R(2, 0), R(2, 1), R(2, 2), base_transform.position.z,
+  transitional_matrix << R(0, 0), R(0, 1), R(0, 2), local_coordinate_transform.position.x,
+      R(1, 0), R(1, 1), R(1, 2), local_coordinate_transform.position.y,
+      R(2, 0), R(2, 1), R(2, 2), local_coordinate_transform.position.z,
       0, 0, 0, 1;
 
   Eigen::Vector4d transitional_point;

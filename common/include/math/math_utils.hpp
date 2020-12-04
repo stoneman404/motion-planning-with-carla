@@ -14,7 +14,7 @@ class MathUtils {
   static planning_msgs::TrajectoryPoint InterpolateTrajectoryPoint(
       const planning_msgs::TrajectoryPoint &p0,
       const planning_msgs::TrajectoryPoint &p1, double time);
-  static Eigen::Vector3d Transform(const geometry_msgs::Pose &base_transform,
+  static Eigen::Vector3d Transform(const geometry_msgs::Pose &local_coordinate_transform,
                                    const Eigen::Vector3d &in_point);
 
   static double CalcKappa(double dx, double dy, double ddx, double ddy);

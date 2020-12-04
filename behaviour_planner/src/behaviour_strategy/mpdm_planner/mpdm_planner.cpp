@@ -11,6 +11,7 @@ MPDMPlanner::MPDMPlanner(const ros::NodeHandle &nh,
   behavior_.longitudinal_behaviour = LongitudinalBehaviour::kStopping;
   behavior_.lateral_behaviour = LateralBehaviour::kLaneKeeping;
   behavior_.forward_behaviours = decltype(behavior_.forward_behaviours)();
+  behavior_.forward_trajs = decltype(behavior_.forward_trajs)();
   route_service_client_ = nh_.serviceClient<planning_srvs::RoutePlanService>(common::service::kRouteServiceName);
   policy_decider_ = std::make_unique<PolicyDecider>(config);
 }
@@ -32,8 +33,8 @@ bool MPDMPlanner::Execute(Behaviour &behaviour) {
   for (const auto& policy : available_policies_with_ref_lanes_){
     possible_policies.emplace_back(policy);
   }
-  if (!policy_decider_->PolicyDesicion(ego_agent_, behaviour_agent_set_, possible_policies, best_policy,
-                                       forward_policies, surround_trajs, forward_trajectories)){
+  if (!policy_decider_->PolicyDecision(ego_agent_, behaviour_agent_set_, possible_policies, best_policy,
+                                       forward_policies, surround_trajs, forward_trajectories)) {
     return false;
   }
   behaviour.lateral_behaviour = best_policy.first;
@@ -106,7 +107,6 @@ bool MPDMPlanner::GetRoute(const geometry_msgs::Pose &start,
 bool MPDMPlanner::GetAgentMostLikelyPolicyAndReferenceLane(Agent &agent) {
   // 1. first get current ref lane for agent
   geometry_msgs::Pose current_pose;
-  const auto state = agent.state();
   current_pose.position.x= agent.state().x_;
   current_pose.position.y = agent.state().y_;
   current_pose.position.z = agent.state().z_;
@@ -148,6 +148,7 @@ bool MPDMPlanner::GetAgentMostLikelyPolicyAndReferenceLane(Agent &agent) {
     }
     case LateralBehaviour::kUndefined:
     default: {
+      agent.set_most_likely_behaviour(LateralBehaviour::kLaneKeeping);
       agent.set_target_ref_lane(ref_lane);
       break;
     }

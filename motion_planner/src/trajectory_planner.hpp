@@ -4,7 +4,6 @@
 #include <planning_msgs/TrajectoryPoint.h>
 #include <planning_msgs/Trajectory.h>
 #include "reference_line/reference_line.hpp"
-#include "planning_context.hpp"
 
 namespace planning {
 class TrajectoryPlanner {

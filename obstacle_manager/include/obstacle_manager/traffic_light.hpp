@@ -32,11 +32,8 @@ class TrafficLight {
 
  private:
   uint32_t id_{};
-  uint32_t lane_id_{};
-  uint32_t section_id_{};
-  uint32_t road_id_{};
+
   common::Box2d traffic_light_box_;
-  carla_msgs::CarlaBoundingBox trigger_volume_;
   carla_msgs::CarlaTrafficLightStatus traffic_light_status_;
   geometry_msgs::Pose transform_;
 

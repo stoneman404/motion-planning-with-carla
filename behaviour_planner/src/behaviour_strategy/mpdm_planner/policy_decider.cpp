@@ -8,15 +8,15 @@ PolicyDecider::PolicyDecider(const PolicySimulateConfig &config)
 
 }
 
-bool PolicyDecider::PolicyDesicion(const Agent &ego_agent,
-                                   const std::unordered_map<int, Agent> &agent_set,
+bool PolicyDecider::PolicyDecision(const Agent &ego_agent,
+                                   const std::unordered_map<int, Agent> &agents_set,
                                    const PolicyDecider::Policies &possible_policies,
                                    Policy &best_policy,
                                    Policies &forward_policies,
                                    std::vector<SurroundingTrajectories> &forward_surrounding_trajectories,
                                    std::vector<planning_msgs::Trajectory> &forward_trajectories) {
   ego_id_ = ego_agent.id();
-  agent_set_ = agent_set;
+  agent_set_ = agents_set;
   std::vector<planning_msgs::Trajectory> valid_trajectories;
   std::vector<Policy> valid_policies;
   std::vector<std::unordered_map<int, planning_msgs::Trajectory>> valid_surrounding_trajectories;
@@ -154,6 +154,9 @@ bool PolicyDecider::CloseLoopSimulate(const Policy &policy,
       int leading_agent_id = -1;
       //has no leading agent
       if (!this->GetLeadingAgentOnRefLane(agent.second.agent, agent.second.reference_line, leading_agent_id)) {
+        return false;
+      }
+      if (leading_agent_id == -1) {
         if (!this->SimulateOneStepForAgent(desired_velocity, agent.second, Agent(), trajectory_point)) {
           return false;
         }
@@ -214,8 +217,7 @@ bool PolicyDecider::GetLeadingAgentOnRefLane(const Agent &agent,
       }
     }
   }
-
-  return false;
+  return true;
 }
 
 bool PolicyDecider::SimulateOneStepForAgent(double desired_vel,
@@ -304,7 +306,7 @@ void PolicyDecider::EvaluateSinglePolicyTrajectory(const Policy &policy,
   *score = cost_action + cost_safety + cost_efficiency;
 }
 
-bool PolicyDecider::EvaluateSafetyCost(const int ego_id, const planning_msgs::Trajectory &trajectory,
+bool PolicyDecider::EvaluateSafetyCost(int ego_id, const planning_msgs::Trajectory &trajectory,
                                        const std::pair<int, planning_msgs::Trajectory> &other_trajectory,
                                        double *safety_cost) const {
   if (trajectory.trajectory_points.size() != other_trajectory.second.trajectory_points.size()) {

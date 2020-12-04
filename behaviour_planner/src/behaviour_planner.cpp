@@ -56,10 +56,10 @@ BehaviourPlanner::BehaviourPlanner(const ros::NodeHandle &nh) : nh_(nh) {
           agent_set_.emplace(object.id, object);
         }
       });
+
   this->behaviour_publisher_ = nh_.advertise<planning_msgs::Behaviour>(common::topic::kBehaviourName, 10);
   this->visualized_behaviour_trajectories_publisher_ =
       nh_.advertise<visualization_msgs::MarkerArray>(common::topic::kVisualizedBehaviourTrajectoryName, 10);
-
 }
 
 void BehaviourPlanner::RunOnce() {
@@ -71,6 +71,7 @@ void BehaviourPlanner::RunOnce() {
   if (!this->GetKeyAgents()) {
     return;
   }
+
   behaviour_strategy_->SetAgentSet(key_agent_set_);
   Behaviour behaviour;
   if (!behaviour_strategy_->Execute(behaviour)) {
@@ -81,6 +82,8 @@ void BehaviourPlanner::RunOnce() {
   if (!BehaviourPlanner::ConvertBehaviourToRosMsg(behaviour, publishable_behaviour)) {
     return;
   }
+
+  this->VisualizeBehaviourTrajectories(behaviour);
   behaviour_publisher_.publish(publishable_behaviour);
 }
 
@@ -197,8 +200,32 @@ bool BehaviourPlanner::GetKeyAgents() {
   }
   return true;
 }
-void BehaviourPlanner::VisualizeBehaviourTrajectories(const Behaviour &behaviour) {
 
+void BehaviourPlanner::VisualizeBehaviourTrajectories(const Behaviour &behaviour) {
+  visualization_msgs::MarkerArray marker_array;
+  auto forward_trajectories = behaviour.forward_trajs;
+  int i = 0;
+  for (const auto &traj : forward_trajectories) {
+    visualization_msgs::Marker points;
+    points.type = visualization_msgs::Marker::POINTS;
+    points.id = i;
+    points.header.frame_id = "/map";
+    points.action = visualization_msgs::Marker::ADD;
+    points.scale.x = 0.2;
+    points.scale.y = 0.2;
+    points.color.a = 1.0;
+    points.color.b = 0.5;
+    points.color.r = 0.4;
+    for (const auto &tp : traj.trajectory_points) {
+      geometry_msgs::Point point;
+      point.x = tp.path_point.x;
+      point.y = tp.path_point.y;
+      point.z = 2.0;
+      points.points.push_back(point);
+    }
+    i++;
+  }
+  visualized_behaviour_trajectories_publisher_.publish(marker_array);
 }
 
 }

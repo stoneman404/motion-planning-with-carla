@@ -5,7 +5,7 @@
 
 
 
-## 1. Free Space Planner
+## 1. Free Space MotionPlanner
 
 hybrid a star is the main planner for open space planner. Note that this planner is not integrated with carla simulator.
 
@@ -35,11 +35,11 @@ hybrid a star is the main planner for open space planner. Note that this planner
 
 ### 1.5 References
 
-[1]  [Apollo Open Space Planner](https://github.com/ApolloAuto/apollo/tree/master/modules/planning) 
+[1]  [Apollo Open Space MotionPlanner](https://github.com/ApolloAuto/apollo/tree/master/modules/planning) 
 
-[2] [Hybrid A* Path Planner for the KTH Research Concept Vehicle](https://github.com/karlkurzer/path_planner)
+[2] [Hybrid A* Path MotionPlanner for the KTH Research Concept Vehicle](https://github.com/karlkurzer/path_planner)
 
-## 2. On Reference Line Planner
+## 2. On Reference Line MotionPlanner
 
 ### 2.1 Dependencies
 
@@ -51,7 +51,7 @@ hybrid a star is the main planner for open space planner. Note that this planner
 ### 2.2 How To Use
 
 
-### 2.3 Carla Route Planner
+### 2.3 Carla Route MotionPlanner
 #### 2.3.1 Introduction
 I modified the [carla_waypoint_publisher](https://github.com/carla-simulator/ros-bridge/tree/master/carla_waypoint_publisher) in [carla-ros-bridge](https://github.com/carla-simulator/ros-bridge)  to the route planner, which now is a ROS service.
 
@@ -75,21 +75,21 @@ this planner also provided another two services, which can be used to get waypoi
 
 3. [carla_navigation](https://github.com/carla-simulator/carla/tree/master/PythonAPI/carla/agents/navigation)
 
-### 2.4 State Lattice Planner 
+### 2.4 State Lattice MotionPlanner 
 #### 2.4.1 Introduction
 
 #### 2.4.2 Methods
 
 #### 2.4.3 References
 
-### 2.5 Frenet Lattice Planner
+### 2.5 Frenet Lattice MotionPlanner
 #### 2.5.1 Introduction
 
 #### 2.5.2 Methods
 
 #### 2.5.3 References
 
-### 2.6 SSC Planner
+### 2.6 SSC MotionPlanner
 #### 2.6.1 Introduction
 
 #### 2.6.2 Methods
