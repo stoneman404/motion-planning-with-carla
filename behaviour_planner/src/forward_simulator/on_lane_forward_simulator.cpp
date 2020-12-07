@@ -13,18 +13,15 @@ bool OnLaneForwardSimulator::ForwardOneStep(const Agent &agent,
   if (!agent.is_valid()) {
     return false;
   }
-  double lat_vel = 0.0;
+//  double lat_vel = 0.0;
   std::array<double, 3> s_conditions{0, 0, 0};
   std::array<double, 3> d_conditions{0, 0, 0};
   if (!GetAgentFrenetState(agent, reference_line, s_conditions, d_conditions)) {
     return false;
   }
-  if (d_conditions[0] < -params_.lat_offset_threshold) {
-    // if agent on the right side
-    lat_vel = std::min(params_.lat_vel_ratio * s_conditions[1], params_.max_default_lat_vel);
-  } else if (d_conditions[0] > params_.lat_offset_threshold) {
-    // if agent on on the left side
-    lat_vel = -1.0 * std::min(params_.lat_vel_ratio * s_conditions[1], params_.max_default_lat_vel);
+  double lateral_approach_ratio = params.default_lateral_approach_ratio;
+  if (!reference_line.IsOnLane({s_conditions[0], d_conditions[0]})) {
+    lateral_approach_ratio = params.cutting_in_lateral_approach_ratio;
   }
   double lon_acc = 0.0;
   if (!GetIDMLonAcc(s_conditions, reference_line, leading_agent, &lon_acc)) {
@@ -33,8 +30,14 @@ bool OnLaneForwardSimulator::ForwardOneStep(const Agent &agent,
 
   std::array<double, 3> next_s_conditions{0, 0, 0};
   std::array<double, 3> next_d_conditions{0, 0, 0};
-  AgentMotionModel(s_conditions, d_conditions, lat_vel, lon_acc, sim_time_step, next_s_conditions, next_d_conditions);
-  FrenetStateToTrajectoryPoint(next_s_conditions, next_d_conditions, reference_line, point);
+  OnLaneForwardSimulator::AgentMotionModel(s_conditions,
+                                           d_conditions,
+                                           lateral_approach_ratio,
+                                           lon_acc,
+                                           sim_time_step,
+                                           next_s_conditions,
+                                           next_d_conditions);
+  OnLaneForwardSimulator::FrenetStateToTrajectoryPoint(next_s_conditions, next_d_conditions, reference_line, point);
   return true;
 }
 
@@ -66,7 +69,7 @@ bool OnLaneForwardSimulator::GetIDMLonAcc(const std::array<double, 3> &ego_s_con
     const double b = params_.idm_params.max_decel;
     desired_min_gap = s0 + s1 * std::sqrt(ego_lon_v / v0)
         + T * ego_lon_v + (ego_lon_v * delta_v) / (2.0 * std::sqrt(a * b));
-    const double s_a = leading_s_conditions[0] - ego_s_conditions[0] + params_.idm_params.leading_vehicle_length_;
+    const double s_a = leading_s_conditions[0] - ego_s_conditions[0] + params_.idm_params.leading_vehicle_length;
     *lon_acc =
         ego_lon_a * (1 - std::pow(ego_lon_v / v0, params_.idm_params.acc_exponet) - std::pow(desired_min_gap / s_a, 2));
     return true;
@@ -76,7 +79,6 @@ bool OnLaneForwardSimulator::GetIDMLonAcc(const std::array<double, 3> &ego_s_con
 }
 
 planning_msgs::PathPoint OnLaneForwardSimulator::AgentStateToPathPoint(const vehicle_state::KinoDynamicState &kino_dynamic_state) {
-
   planning_msgs::PathPoint path_point;
   path_point.x = kino_dynamic_state.x_;
   path_point.y = kino_dynamic_state.y_;
@@ -105,38 +107,33 @@ bool OnLaneForwardSimulator::GetAgentFrenetState(const Agent &agent,
   double a = agent.state().a_;
   double kappa = agent.state().kappa_;
   double theta = agent.state().theta_;
-
   common::CoordinateTransformer::CartesianToFrenet(rs, rx, ry, rtheta,
                                                    rkappa, rdkappa,
                                                    x, y, v, a,
                                                    theta, kappa,
                                                    &s_conditions,
                                                    &d_conditions);
-
   return true;
 }
 
 void OnLaneForwardSimulator::AgentMotionModel(const std::array<double, 3> &s_conditions,
                                               const std::array<double, 3> &d_conditions,
-                                              const double v_lat,
-                                              const double lon_acc,
-                                              const double delta_t,
+                                              double lateral_approach_ratio,
+                                              double lon_acc,
+                                              double delta_t,
                                               std::array<double, 3> &next_s_conditions,
-                                              std::array<double, 3> &next_d_conditions) const {
+                                              std::array<double, 3> &next_d_conditions) {
   next_s_conditions[0] = s_conditions[0] + s_conditions[1] * delta_t + 0.5 * delta_t * delta_t * lon_acc;
   next_s_conditions[1] = s_conditions[1] + delta_t * lon_acc;
   next_s_conditions[2] = lon_acc;
-  next_d_conditions[0] = d_conditions[0] + v_lat * delta_t;
-  if (std::fabs(next_s_conditions[1]) < 1e-3) {
+  next_d_conditions[0] = d_conditions[0] * lateral_approach_ratio;
+  const double ds = s_conditions[1] * delta_t + 0.5 * delta_t * delta_t * lon_acc;
+  if (std::fabs(ds) < 1e-3) {
     next_d_conditions[1] = 0.0;
-  } else {
-    next_d_conditions[1] = v_lat / next_s_conditions[1];
-
-  }
-  if (std::fabs(next_s_conditions[2]) < 1e-3) {
     next_d_conditions[2] = 0.0;
   } else {
-    next_d_conditions[2] = v_lat / next_d_conditions[2];
+    next_d_conditions[1] = (next_d_conditions[0] - d_conditions[0]) / ds;
+    next_d_conditions[2] = (next_d_conditions[1] - d_conditions[1]) / ds;
   }
 }
 
@@ -144,8 +141,8 @@ void OnLaneForwardSimulator::FrenetStateToTrajectoryPoint(const std::array<doubl
                                                           const std::array<double, 3> &d_conditions,
                                                           const ReferenceLine &ref_line,
                                                           planning_msgs::TrajectoryPoint &trajectory_point) {
-  auto ref_point = ref_line.GetReferencePoint(s_conditions[0]);
 
+  auto ref_point = ref_line.GetReferencePoint(s_conditions[0]);
   common::CoordinateTransformer::FrenetToCartesian(s_conditions[0],
                                                    ref_point.x(),
                                                    ref_point.y(),
@@ -161,5 +158,4 @@ void OnLaneForwardSimulator::FrenetStateToTrajectoryPoint(const std::array<doubl
                                                    &trajectory_point.vel,
                                                    &trajectory_point.acc);
 }
-
 }

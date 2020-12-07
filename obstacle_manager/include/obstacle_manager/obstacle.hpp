@@ -23,6 +23,8 @@ class Obstacle {
   Obstacle(const Obstacle &other);
   void PredictTrajectory(double predict_horizon, double predict_step);
 
+  void SetTrajectory(const planning_msgs::Trajectory &trajectory);
+  const planning_msgs::Trajectory &trajectory() const { return trajectory_; }
   planning_msgs::TrajectoryPoint GetPointAtTime(double relative_time) const;
   const common::Box2d &GetBoundingBox() const;
   bool HasTrajectory() const;

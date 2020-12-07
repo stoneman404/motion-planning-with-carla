@@ -2,6 +2,7 @@
 #include "behaviour_strategy/mpdm_planner/mpdm_planner.hpp"
 #include <memory>
 #include <visualization_msgs/MarkerArray.h>
+#include <carla_msgs/CarlaTrafficLightInfoList.h>
 #include "name/string_name.hpp"
 #include "planning_msgs/Behaviour.h"
 
@@ -21,9 +22,10 @@ BehaviourPlanner::BehaviourPlanner(const ros::NodeHandle &nh) : nh_(nh) {
   nh_.param<double>("/behaviour_planner/acc_exponet", simulate_config_.acc_exponet, 4.0);
   nh_.param<double>("/behaviour_planner/s0", simulate_config_.s0, 2.0);
   nh_.param<double>("/behaviour_planner/s1", simulate_config_.s1, 0.0);
-  nh_.param<double>("/behaviour_planner/max_default_lat_vel", simulate_config_.max_default_lat_vel, 0.5);
-  nh_.param<double>("/behaviour_planner/lat_vel_ratio", simulate_config_.lat_vel_ratio, 0.17);
-  nh_.param<double>("/behaviour_planner/lat_offset_threshold", simulate_config_.lat_offset_threshold, 0.3);
+  nh_.param<double>("/behaviour_planner/lateral_approach_ratio", simulate_config_.default_lat_approach_ratio, 0.995);
+  nh_.param<double>("/behaviour_planner/cutting_in_lateral_approach_ratio",
+                    simulate_config_.cutting_in_lateral_approach_ratio,
+                    0.95);
   nh_.param<double>("/behaviour_planner/sample_lat_threshold", sample_key_agent_lat_threshold_, 6.0);
   nh_.param<double>("/behaviour_planner/sample_min_lon_threshold", sample_min_lon_threshold_, 20.0);
   thread_pool_ = std::make_unique<common::ThreadPool>(pool_size_);
@@ -42,7 +44,18 @@ BehaviourPlanner::BehaviourPlanner(const ros::NodeHandle &nh) : nh_(nh) {
         this->has_ego_vehicle_ = true;
         ROS_INFO("the ego_vehicle_id_: %i", ego_vehicle_id_);
       });
-
+  this->traffic_light_info_subscriber_ =
+      nh_.subscribe<carla_msgs::CarlaTrafficLightInfoList>(
+          common::topic::kTrafficLightsInfoName, 10,
+          [this](const carla_msgs::CarlaTrafficLightInfoList::ConstPtr &traffic_light_info_list) {
+            this->traffic_light_info_list_ = *traffic_light_info_list;
+          });
+  this->traffic_light_status_subscriber_ = nh_.subscribe<carla_msgs::CarlaTrafficLightStatusList>(
+      common::topic::kTrafficLigthsStatusName, 10,
+      [this](const carla_msgs::CarlaTrafficLightStatusList::ConstPtr &traffic_light_status_list) {
+        this->traffic_light_status_list_ = *traffic_light_status_list;
+      }
+  );
   this->ego_vehicle_subscriber_ = nh_.subscribe<carla_msgs::CarlaEgoVehicleStatus>(
       common::topic::kEgoVehicleStatusName, 10,
       [this](const carla_msgs::CarlaEgoVehicleStatus::ConstPtr &ego_vehicle_status) {
@@ -52,9 +65,10 @@ BehaviourPlanner::BehaviourPlanner(const ros::NodeHandle &nh) : nh_(nh) {
   this->objects_subscriber_ = nh_.subscribe<derived_object_msgs::ObjectArray>(
       common::topic::kObjectsName, 10,
       [this](const derived_object_msgs::ObjectArray::ConstPtr &objects) {
-        for (const auto &object : objects->objects) {
-          agent_set_.emplace(object.id, object);
-        }
+//        for (const auto &object : objects->objects) {
+//          agent_set_.emplace(object.id, object);
+//        }
+        this->objects_list_ = *objects;
       });
 
   this->behaviour_publisher_ = nh_.advertise<planning_msgs::Behaviour>(common::topic::kBehaviourName, 10);
@@ -67,24 +81,27 @@ void BehaviourPlanner::RunOnce() {
     ROS_FATAL("BehaviourPlanner, Not Init BehaviourStrategy");
     return;
   }
-
+  if (traffic_light_status_list_.traffic_lights.size() != traffic_light_info_list_.traffic_lights.size()) {
+    return;
+  }
+  if (!MakeAgentSet()) {
+    return;
+  }
   if (!this->GetKeyAgents()) {
     return;
   }
-
   behaviour_strategy_->SetAgentSet(key_agent_set_);
   Behaviour behaviour;
   if (!behaviour_strategy_->Execute(behaviour)) {
     return;
   }
-
   planning_msgs::Behaviour publishable_behaviour;
   if (!BehaviourPlanner::ConvertBehaviourToRosMsg(behaviour, publishable_behaviour)) {
     return;
   }
-
   this->VisualizeBehaviourTrajectories(behaviour);
   behaviour_publisher_.publish(publishable_behaviour);
+
 }
 
 bool BehaviourPlanner::ConvertBehaviourToRosMsg(const Behaviour &behaviour,
@@ -100,31 +117,31 @@ bool BehaviourPlanner::ConvertBehaviourToRosMsg(const Behaviour &behaviour,
     return false;
   }
   switch (behaviour.lateral_behaviour) {
-    case LateralBehaviour::kLaneKeeping:
+    case LateralBehaviour::LANE_KEEPING:
       behaviour_msg.lat_behaviour.behaviour = planning_msgs::LateralBehaviour::LANEKEEPING;
       break;
-    case LateralBehaviour::kLaneChangeRight:
+    case LateralBehaviour::LANE_CHANGE_RIGHT:
       behaviour_msg.lat_behaviour.behaviour = planning_msgs::LateralBehaviour::LANECHANGERIGHT;
       break;
-    case LateralBehaviour::kLaneChangeLeft:
+    case LateralBehaviour::LANE_CHANGE_LEFT:
       behaviour_msg.lat_behaviour.behaviour = planning_msgs::LateralBehaviour::LANECHANGELEFT;
       break;
-    case LateralBehaviour::kUndefined:
+    case LateralBehaviour::UNDEFINED:
     default:behaviour_msg.lat_behaviour.behaviour = planning_msgs::LateralBehaviour::UNDEFINED;
       break;
   }
 
   switch (behaviour.longitudinal_behaviour) {
-    case LongitudinalBehaviour::kMaintain:
+    case LongitudinalBehaviour::MAINTAIN:
       behaviour_msg.lon_behaviour.behaviour = planning_msgs::LongitudinalBehaviour::MAINTAIN;
       break;
-    case LongitudinalBehaviour::kAccelate:
+    case LongitudinalBehaviour::ACCELERATE:
       behaviour_msg.lon_behaviour.behaviour = planning_msgs::LongitudinalBehaviour::ACCELERATE;
       break;
-    case LongitudinalBehaviour::kDecelate:
+    case LongitudinalBehaviour::DECELERATE:
       behaviour_msg.lon_behaviour.behaviour = planning_msgs::LongitudinalBehaviour::DECELERATE;
       break;
-    case LongitudinalBehaviour::kStopping:
+    case LongitudinalBehaviour::STOPPING:
     default:behaviour_msg.lon_behaviour.behaviour = planning_msgs::LongitudinalBehaviour::STOPPING;
       break;
   }
@@ -136,16 +153,16 @@ bool BehaviourPlanner::ConvertBehaviourToRosMsg(const Behaviour &behaviour,
   for (size_t i = 0; i < behaviour_size; ++i) {
     switch (behaviour.forward_behaviours[i].first) {
 
-      case LateralBehaviour::kLaneKeeping:
+      case LateralBehaviour::LANE_KEEPING:
         behaviour_msg.forward_behaviours[i].behaviour = planning_msgs::LateralBehaviour::LANEKEEPING;
         break;
-      case LateralBehaviour::kLaneChangeLeft:
+      case LateralBehaviour::LANE_CHANGE_LEFT:
         behaviour_msg.forward_behaviours[i].behaviour = planning_msgs::LateralBehaviour::LANECHANGELEFT;
         break;
-      case LateralBehaviour::kLaneChangeRight:
+      case LateralBehaviour::LANE_CHANGE_RIGHT:
         behaviour_msg.forward_behaviours[i].behaviour = planning_msgs::LateralBehaviour::LANECHANGERIGHT;
         break;
-      case LateralBehaviour::kUndefined:
+      case LateralBehaviour::UNDEFINED:
       default:behaviour_msg.forward_behaviours[i].behaviour = planning_msgs::LateralBehaviour::UNDEFINED;
         break;
     }
@@ -170,7 +187,6 @@ bool BehaviourPlanner::GetKeyAgents() {
   if (agent_set_.find(ego_vehicle_id_) == agent_set_.end()) {
     return false;
   }
-
   auto ego_agent = agent_set_[ego_vehicle_id_];
   const double front_distance =
       std::max(simulate_config_.desired_vel * simulate_config_.sim_horizon_, sample_min_lon_threshold_);
@@ -181,9 +197,6 @@ bool BehaviourPlanner::GetKeyAgents() {
 
   for (const auto &agent : agent_set_) {
     if (agent.first == ego_vehicle_id_) {
-      continue;
-    }
-    if (agent.second.agent_type() != AgentType::VEHICLE) {
       continue;
     }
     Eigen::Vector2d agent_to_ego{agent.second.state().x_ - ego_agent.state().x_,
@@ -226,6 +239,22 @@ void BehaviourPlanner::VisualizeBehaviourTrajectories(const Behaviour &behaviour
     i++;
   }
   visualized_behaviour_trajectories_publisher_.publish(marker_array);
+}
+
+bool BehaviourPlanner::MakeAgentSet() {
+  agent_set_.clear();
+  for (const auto &object : objects_list_.objects) {
+    agent_set_.emplace(object.id, object);
+  }
+  for (size_t i = 0; i < traffic_light_info_list_.traffic_lights.size(); ++i) {
+    if (traffic_light_status_list_.traffic_lights[i].state == carla_msgs::CarlaTrafficLightStatus::RED) {
+      agent_set_.emplace(traffic_light_info_list_.traffic_lights[i].id,
+                         Agent({traffic_light_status_list_.traffic_lights[i],
+                                traffic_light_info_list_.traffic_lights[i]}));
+    }
+
+  }
+  return true;
 }
 
 }

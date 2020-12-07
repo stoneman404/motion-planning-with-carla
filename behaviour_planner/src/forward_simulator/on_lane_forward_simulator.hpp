@@ -1,4 +1,3 @@
-
 #ifndef CATKIN_WS_SRC_MOTION_PLANNING_WITH_CARLA_PLANNING_SRC_FORWARD_SIMULATOR_ON_LANE_FORWARD_SIMULATOR_HPP_
 #define CATKIN_WS_SRC_MOTION_PLANNING_WITH_CARLA_PLANNING_SRC_FORWARD_SIMULATOR_ON_LANE_FORWARD_SIMULATOR_HPP_
 #include <reference_line/reference_line.hpp>
@@ -6,6 +5,24 @@
 #include <agent/agent.hpp>
 namespace planning {
 struct IDMParams {
+  IDMParams()
+      : desired_velocity(0.0),
+        safe_time_headway(0.0),
+        max_acc(0.0), max_decel(0.0),
+        acc_exponet(0.0), s0(0.0), s1(0.0),
+        leading_vehicle_length(0.0) {}
+  IDMParams(double v, double t,
+            double acc, double decel,
+            double exp, double jam_distance_s0,
+            double jam_distance_s1,
+            double leading_length) : desired_velocity(v),
+                                     safe_time_headway(t),
+                                     max_acc(acc),
+                                     max_decel(decel),
+                                     acc_exponet(exp),
+                                     s0(jam_distance_s0),
+                                     s1(jam_distance_s1),
+                                     leading_vehicle_length(leading_length) {}
   double desired_velocity{}; // v0
   double safe_time_headway{}; // T
   double max_acc{}; // a
@@ -13,14 +30,13 @@ struct IDMParams {
   double acc_exponet{}; // /delta
   double s0{}; //jam_distance
   double s1{}; // jam distance
-  double leading_vehicle_length_{};
+  double leading_vehicle_length{};
 };
 
 struct SimulationParams {
   IDMParams idm_params;
-  double max_default_lat_vel = 0.5;
-  double lat_vel_ratio = 0.17;
-  double lat_offset_threshold = 0.6;
+  double default_lateral_approach_ratio = 0.995;
+  double cutting_in_lateral_approach_ratio = 0.95;
 };
 
 class OnLaneForwardSimulator {
@@ -32,9 +48,7 @@ class OnLaneForwardSimulator {
                       const Agent &leading_agent,
                       double sim_time_step,
                       planning_msgs::TrajectoryPoint &point);
-
  private:
-
   /**
    * @brief: get the agent's frenet state
    * @param[in] agent:
@@ -64,12 +78,12 @@ class OnLaneForwardSimulator {
   static planning_msgs::PathPoint AgentStateToPathPoint(
       const vehicle_state::KinoDynamicState &kino_dynamic_state);
 
-  void AgentMotionModel(const std::array<double, 3> &s_conditions,
-                        const std::array<double, 3> &d_conditions,
-                        const double v_lat, const double lon_acc,
-                        const double delta_t,
-                        std::array<double, 3> &next_s_conditions,
-                        std::array<double, 3> &next_d_conditions) const;
+  static void AgentMotionModel(const std::array<double, 3> &s_conditions,
+                               const std::array<double, 3> &d_conditions,
+                               double lateral_approach_ratio, double lon_acc,
+                               double delta_t,
+                               std::array<double, 3> &next_s_conditions,
+                               std::array<double, 3> &next_d_conditions);
   static void FrenetStateToTrajectoryPoint(const std::array<double, 3> &s_conditions,
                                            const std::array<double, 3> &d_conditions,
                                            const ReferenceLine &ref_line,

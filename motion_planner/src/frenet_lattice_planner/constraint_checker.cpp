@@ -1,5 +1,5 @@
-#include "motion_planner/frenet_lattice_planner/constraint_checker.hpp"
-#include "motion_planner/planning_config.hpp"
+#include "frenet_lattice_planner/constraint_checker.hpp"
+#include "planning_config.hpp"
 
 namespace planning {
 

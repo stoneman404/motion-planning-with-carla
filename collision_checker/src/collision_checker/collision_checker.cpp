@@ -1,5 +1,4 @@
 #include "collision_checker/collision_checker.hpp"
-
 #include <utility>
 
 namespace planning {
@@ -30,12 +29,13 @@ CollisionChecker::CollisionChecker(const std::unordered_map<int, std::shared_ptr
 bool CollisionChecker::IsCollision(const planning_msgs::Trajectory &trajectory) const {
   double ego_width = vehicle_params_.width;
   double ego_length = vehicle_params_.length;
+  double shift_distance = vehicle_params_.back_axle_to_center_length;
   if (this->thread_pool_ == nullptr) {
     for (size_t i = 0; i < trajectory.trajectory_points.size(); ++i) {
       const auto &traj_point = trajectory.trajectory_points.at(i);
       double ego_theta = traj_point.path_point.theta;
       Box2d ego_box = Box2d({traj_point.path_point.x, traj_point.path_point.y}, ego_theta, ego_length, ego_width);
-//      ego_box.Shift({shift_distance * std::cos(ego_theta), shift_distance * std::sin(ego_theta)});
+      ego_box.Shift({shift_distance * std::cos(ego_theta), shift_distance * std::sin(ego_theta)});
       for (const auto &obstacle_box : predicted_obstacle_box_[i]) {
         if (ego_box.HasOverlapWithBox2d(obstacle_box)) {
           return true;
@@ -45,7 +45,7 @@ bool CollisionChecker::IsCollision(const planning_msgs::Trajectory &trajectory) 
     return false;
   } else {
     std::vector<std::future<bool>> futures;
-    double shift_distance = vehicle_params_.back_axle_to_center_length;
+//    double shift_distance = vehicle_params_.back_axle_to_center_length;
     for (size_t i = 0; i < trajectory.trajectory_points.size(); ++i) {
       const auto &traj_point = trajectory.trajectory_points[i];
       double ego_theta = traj_point.path_point.theta;

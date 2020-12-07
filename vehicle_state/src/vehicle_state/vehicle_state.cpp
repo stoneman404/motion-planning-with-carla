@@ -95,20 +95,20 @@ double VehicleState::steer_percentage() const { return steer_percentage_; }
 
 bool VehicleState::is_junction() const { return is_junction_; }
 void VehicleState::set_is_junction(bool is_junction) { this->is_junction_ = is_junction; }
-const planning_msgs::WayPoint &VehicleState::ego_waypoint() const { return ego_waypoint_; }
-const int &VehicleState::lane_id() const { return lane_id_; }
-void VehicleState::set_lane_id(int lane_id) { this->lane_id_ = lane_id; }
-void VehicleState::set_waypoint(const planning_msgs::WayPoint &way_point) { this->ego_waypoint_ = way_point; }
-void VehicleState::set_road_id(int road_id) { this->road_id_ = road_id; }
-void VehicleState::set_section_id(int section_id) { this->section_id_ = section_id; }
+//const planning_msgs::WayPoint &VehicleState::ego_waypoint() const { return ego_waypoint_; }
+//const int &VehicleState::lane_id() const { return lane_id_; }
+//void VehicleState::set_lane_id(int lane_id) { this->lane_id_ = lane_id; }
+//void VehicleState::set_waypoint(const planning_msgs::WayPoint &way_point) { this->ego_waypoint_ = way_point; }
+//void VehicleState::set_road_id(int road_id) { this->road_id_ = road_id; }
+//void VehicleState::set_section_id(int section_id) { this->section_id_ = section_id; }
 common::Box2d VehicleState::GetEgoBox() const {
   return ego_box_;
 }
-const int &VehicleState::section_id() const { return section_id_; }
+//const int &VehicleState::section_id() const { return section_id_; }
+//
+//const int &VehicleState::road_id() const { return road_id_; }
 
-const int &VehicleState::road_id() const { return road_id_; }
-
-const KinoDynamicState & VehicleState::GetKinoDynamicVehicleState() const {
+const KinoDynamicState &VehicleState::GetKinoDynamicVehicleState() const {
   return kino_dynamic_state_;
 }
 

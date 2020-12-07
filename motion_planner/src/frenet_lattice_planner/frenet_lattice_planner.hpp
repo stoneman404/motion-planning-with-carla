@@ -3,13 +3,11 @@
 
 #include <planning_msgs/TrajectoryPoint.h>
 #include <planning_msgs/Trajectory.h>
-#include "motion_planner/trajectory_planner.hpp"
-#include "motion_planner/planning_context.hpp"
-#include "collision_checker/st_graph.hpp"
+#include "trajectory_planner.hpp"
 #include "end_condition_sampler.hpp"
 #include "curves/quartic_polynomial.hpp"
 #include "curves/quintic_polynomial.hpp"
-#include "common/thread_pool.hpp"
+#include "thread_pool/thread_pool.hpp"
 
 namespace planning {
 
@@ -30,7 +28,7 @@ class FrenetLatticePlanner : public TrajectoryPlanner {
    * @return
    */
   bool Process(const planning_msgs::TrajectoryPoint &init_trajectory_point,
-               const ManeuverGoal &maneuver_goal,
+               const std::vector<PlanningTarget> &planning_targets,
                planning_msgs::Trajectory &pub_trajectory,
                std::vector<planning_msgs::Trajectory> *valid_trajectories) override;
 
@@ -45,7 +43,7 @@ class FrenetLatticePlanner : public TrajectoryPlanner {
    * @param[out] ptr_lat_traj_vec: lat trajectories
    */
   bool PlanningOnRef(const planning_msgs::TrajectoryPoint &init_trajectory_point,
-                     const ManeuverInfo &maneuver_info,
+                     const PlanningTarget &planning_target,
                      std::pair<planning_msgs::Trajectory, double> &optimal_trajectory,
                      std::vector<planning_msgs::Trajectory> *valid_trajectories) const;
 
@@ -82,7 +80,7 @@ class FrenetLatticePlanner : public TrajectoryPlanner {
    * @param maneuver_info
    * @param ptr_lon_traj_vec
    */
-  static void GenerateLonTrajectories(const ManeuverInfo &maneuver_info,
+  static void GenerateLonTrajectories(const PlanningTarget &planning_target,
                                       const std::array<double, 3> &init_s,
                                       const std::shared_ptr<EndConditionSampler> &end_condition_sampler,
                                       std::vector<std::shared_ptr<common::Polynomial>> *ptr_lon_traj_vec);

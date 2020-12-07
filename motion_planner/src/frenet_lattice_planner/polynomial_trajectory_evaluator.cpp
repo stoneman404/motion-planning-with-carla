@@ -1,12 +1,13 @@
-#include "motion_planner/frenet_lattice_planner/polynomial_trajectory_evaluator.hpp"
+#include "frenet_lattice_planner/polynomial_trajectory_evaluator.hpp"
 #include <utility>
-#include "motion_planner/frenet_lattice_planner/constraint_checker.hpp"
+#include <planning_config.hpp>
+#include "frenet_lattice_planner/constraint_checker.hpp"
 
 namespace planning {
 PolynomialTrajectoryEvaluator::PolynomialTrajectoryEvaluator(const std::array<double, 3> &init_s,
-                                                             const ManeuverInfo &maneuver_info,
-                                                             const std::vector<std::shared_ptr<Polynomial>> &lon_trajectory_vec,
-                                                             const std::vector<std::shared_ptr<Polynomial>> &lat_trajectory_vec,
+                                                             const PlanningTarget &planning_target,
+                                                             const std::vector<std::shared_ptr<common::Polynomial>> &lon_trajectory_vec,
+                                                             const std::vector<std::shared_ptr<common::Polynomial>> &lat_trajectory_vec,
                                                              std::shared_ptr<ReferenceLine> ptr_ref_line,
                                                              std::shared_ptr<STGraph> ptr_st_graph)
     : init_s_(init_s), ptr_st_graph_(std::move(ptr_st_graph)),
@@ -15,8 +16,8 @@ PolynomialTrajectoryEvaluator::PolynomialTrajectoryEvaluator(const std::array<do
   double end_time = PlanningConfig::Instance().max_lookahead_time();
   intervals_ = ptr_st_graph_->GetPathBlockingIntervals(start_time, end_time, PlanningConfig::Instance().delta_t());
   double stop_point = std::numeric_limits<double>::max();
-  if (maneuver_info.has_stop_point) {
-    stop_point = maneuver_info.maneuver_target.target_s;
+  if (planning_target.has_stop_point) {
+    stop_point = planning_target.stop_s;
   }
   for (const auto &lon_traj : lon_trajectory_vec) {
     double lon_end_s = lon_traj->Evaluate(0, end_time);
@@ -28,14 +29,14 @@ PolynomialTrajectoryEvaluator::PolynomialTrajectoryEvaluator(const std::array<do
       continue;
     }
     for (const auto &lat_traj : lat_trajectory_vec) {
-      double cost = Evaluate(maneuver_info, lon_traj, lat_traj);
+      double cost = Evaluate(planning_target, lon_traj, lat_traj);
       cost_queue_.emplace(TrajectoryPair(lon_traj, lat_traj), cost);
     }
   }
   ROS_DEBUG("[PolynomialTrajectoryEvaluator], the numeber of trajectory pairs: %zu", cost_queue_.size());
 }
 
-bool PolynomialTrajectoryEvaluator::IsValidLongitudinalTrajectory(const Polynomial &lon_traj) {
+bool PolynomialTrajectoryEvaluator::IsValidLongitudinalTrajectory(const common::Polynomial &lon_traj) {
 
   double t = 0.0;
   while (t < lon_traj.ParamLength()) {
@@ -61,10 +62,10 @@ bool PolynomialTrajectoryEvaluator::IsValidLongitudinalTrajectory(const Polynomi
   return true;
 }
 
-double PolynomialTrajectoryEvaluator::Evaluate(const ManeuverInfo &maneuver_info,
-                                               const std::shared_ptr<Polynomial> &lon_traj,
-                                               const std::shared_ptr<Polynomial> &lat_traj) {
-  double lon_target_cost = PolynomialTrajectoryEvaluator::LonTargetCost(lon_traj, maneuver_info);
+double PolynomialTrajectoryEvaluator::Evaluate(const PlanningTarget &planning_target,
+                                               const std::shared_ptr<common::Polynomial> &lon_traj,
+                                               const std::shared_ptr<common::Polynomial> &lat_traj) {
+  double lon_target_cost = PolynomialTrajectoryEvaluator::LonTargetCost(lon_traj, planning_target);
   double lon_jerk_cost = PolynomialTrajectoryEvaluator::LonJerkCost(lon_traj);
   double lon_collision_cost = this->LonCollisionCost(lon_traj);
   double lat_offset_cost = PolynomialTrajectoryEvaluator::LatOffsetCost(lat_traj, lon_traj);
@@ -83,8 +84,8 @@ bool PolynomialTrajectoryEvaluator::has_more_trajectory_pairs() const {
   return !cost_queue_.empty();
 }
 
-double PolynomialTrajectoryEvaluator::LatJerkCost(const std::shared_ptr<Polynomial> &lat_trajectory,
-                                                  const std::shared_ptr<Polynomial> &lon_trajectory) const {
+double PolynomialTrajectoryEvaluator::LatJerkCost(const std::shared_ptr<common::Polynomial> &lat_trajectory,
+                                                  const std::shared_ptr<common::Polynomial> &lon_trajectory) const {
 
   double cost = 0.0;
   for (double t = 0.0; t < PlanningConfig::Instance().max_lookahead_time();
@@ -100,8 +101,8 @@ double PolynomialTrajectoryEvaluator::LatJerkCost(const std::shared_ptr<Polynomi
   return cost;
 }
 
-double PolynomialTrajectoryEvaluator::LatOffsetCost(const std::shared_ptr<Polynomial> &lat_trajectory,
-                                                    const std::shared_ptr<Polynomial> &lon_trajectory) {
+double PolynomialTrajectoryEvaluator::LatOffsetCost(const std::shared_ptr<common::Polynomial> &lat_trajectory,
+                                                    const std::shared_ptr<common::Polynomial> &lon_trajectory) {
   const double param_length = lon_trajectory->ParamLength();
   double evaluation_horizon = std::min(PlanningConfig::Instance().max_lookback_distance(),
                                        lon_trajectory->Evaluate(0, param_length));
@@ -126,7 +127,7 @@ double PolynomialTrajectoryEvaluator::LatOffsetCost(const std::shared_ptr<Polyno
   return cost_sqr_sum / (cost_abs_sum + 1e-3);
 }
 
-double PolynomialTrajectoryEvaluator::LonJerkCost(const std::shared_ptr<Polynomial> &lon_trajectory) {
+double PolynomialTrajectoryEvaluator::LonJerkCost(const std::shared_ptr<common::Polynomial> &lon_trajectory) {
   double cost = 0.0;
   double cost_sqr_sum = 0.0;
   double cost_abs_sum = 0.0;
@@ -139,14 +140,14 @@ double PolynomialTrajectoryEvaluator::LonJerkCost(const std::shared_ptr<Polynomi
   return cost_sqr_sum / (cost_abs_sum + 1e-3);
 }
 
-double PolynomialTrajectoryEvaluator::LonTargetCost(const std::shared_ptr<Polynomial> &lon_trajectory,
-                                                    const ManeuverInfo &maneuver_info) {
+double PolynomialTrajectoryEvaluator::LonTargetCost(const std::shared_ptr<common::Polynomial> &lon_trajectory,
+                                                    const PlanningTarget &planning_target) {
 
   double t_max = lon_trajectory->ParamLength();
   double dist_s = lon_trajectory->Evaluate(0, t_max) - lon_trajectory->Evaluate(0, 0.0);
   double speed_cost_sqr_sum = 0.0;
   double speed_cost_weight_sum = 0.0;
-  double target_speed = maneuver_info.has_stop_point ? 0.0 : maneuver_info.maneuver_target.target_speed;
+  double target_speed = planning_target.has_stop_point ? 0.0 : planning_target.desired_vel;
   for (double t = 0; t <= t_max; t += PlanningConfig::Instance().delta_t()) {
     double cost = target_speed - lon_trajectory->Evaluate(1, t);
     speed_cost_sqr_sum += t * t * std::fabs(cost);
@@ -158,7 +159,7 @@ double PolynomialTrajectoryEvaluator::LonTargetCost(const std::shared_ptr<Polyno
       dist_travelled_cost * PlanningConfig::Instance().lattice_weight_dist_travelled();
 }
 
-double PolynomialTrajectoryEvaluator::LonCollisionCost(const std::shared_ptr<Polynomial> &lon_trajectory) const {
+double PolynomialTrajectoryEvaluator::LonCollisionCost(const std::shared_ptr<common::Polynomial> &lon_trajectory) const {
   double cost_sqr_sum = 0.0;
   double cost_abs_sum = 0.0;
   for (size_t i = 0; i < intervals_.size(); ++i) {

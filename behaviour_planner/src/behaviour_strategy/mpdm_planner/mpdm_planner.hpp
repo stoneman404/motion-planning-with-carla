@@ -22,8 +22,7 @@ class MPDMPlanner : public BehaviourStrategy {
 
   /**
    * @brief: update ego agent's available policies, e.g. lane keeping or lane change left and lane change right,
-   * as well as get the corresponding reference lines., e.g. the left lane and the right lane for lane change left and
-   * lane change right.
+   * as well as the corresponding reference lines.,
    * @return true if success
    */
   bool UpdateAvailablePoliciesAndRefLanes();
@@ -49,13 +48,13 @@ class MPDMPlanner : public BehaviourStrategy {
                 planning_srvs::RoutePlanServiceResponse &route_response);
 
   /**
-   * @brief: get
-   * @param current_pose
-   * @param lateral_behaviour
-   * @param forward_length
-   * @param backward_length
-   * @param need_to_smooth
-   * @param ref_line
+   * @brief: get reference line
+   * @param[in] current_pose: current pose in world frame
+   * @param[in] lateral_behaviour: lateral behaviour, e.g. LANE_CHANGE_RIGHT, will given the right ref lane
+   * @param[in] forward_length
+   * @param[in] backward_length
+   * @param[in] need_to_smooth
+   * @param[out] ref_line
    * @return
    */
   bool GetReferenceLane(const geometry_msgs::Pose &current_pose,

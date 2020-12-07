@@ -11,7 +11,9 @@ Agent::Agent(const derived_object_msgs::Object &object)
                                   tf::getYaw(object.pose.orientation),
                                   object.shape.dimensions[object.shape.BOX_X],
                                   object.shape.dimensions[object.shape.BOX_Y])),
-      max_lat_behaviour_(LateralBehaviour::kUndefined),
+      length_(object.shape.dimensions[object.shape.BOX_X]),
+      width_(object.shape.dimensions[object.shape.BOX_Y]),
+      max_lat_behaviour_(LateralBehaviour::UNDEFINED),
       current_ref_lane_(nullptr),
       target_ref_lane_(nullptr),
       has_trajectory_(false),
@@ -33,12 +35,35 @@ Agent::Agent(const derived_object_msgs::Object &object)
   RetriveAgentType(object);
 }
 
+Agent::Agent(const carla_msgs::CarlaTrafficLightStatus &traffic_light_status,
+             const carla_msgs::CarlaTrafficLightInfo &traffic_light_info)
+    : id_(traffic_light_info.id),
+      is_host_(false),
+      is_valid_(true),
+      max_lat_behaviour_(LateralBehaviour::UNDEFINED),
+      current_ref_lane_(nullptr),
+      target_ref_lane_(nullptr),
+      has_trajectory_(false),
+      trajectory_(planning_msgs::Trajectory()),
+      agent_type_(AgentType::TRAFFIC_LIGHT) {
+  double box_length = traffic_light_info.trigger_volume.size.x;
+  double box_width = traffic_light_info.trigger_volume.size.y;
+  length_ = box_length;
+  width_ = box_width;
+  Eigen::Vector2d center{traffic_light_info.transform.position.x + traffic_light_info.trigger_volume.center.x,
+                         traffic_light_info.transform.position.y + traffic_light_info.trigger_volume.center.y};
+  double heading = tf::getYaw(traffic_light_info.transform.orientation);
+  bounding_box_ = common::Box2d(center, heading, box_length, box_width);
+}
+
 Agent::Agent(const vehicle_state::VehicleState &vehicle_state) : id_(vehicle_state.id()),
                                                                  is_host_(true),
                                                                  is_valid_(true),
                                                                  bounding_box_(vehicle_state.GetEgoBox()),
+                                                                 length_(bounding_box_.length()),
+                                                                 width_(bounding_box_.width()),
                                                                  state_(vehicle_state.GetKinoDynamicVehicleState()),
-                                                                 max_lat_behaviour_(LateralBehaviour::kUndefined),
+                                                                 max_lat_behaviour_(LateralBehaviour::UNDEFINED),
                                                                  current_ref_lane_(nullptr),
                                                                  target_ref_lane_(nullptr),
                                                                  has_trajectory_(false),
@@ -50,9 +75,11 @@ Agent::Agent(const vehicle_state::VehicleState &vehicle_state) : id_(vehicle_sta
 Agent::Agent() : id_(-1),
                  is_host_(false),
                  is_valid_(false),
+                 length_(0.0),
+                 width_(0.0),
                  bounding_box_(common::Box2d()),
                  state_(vehicle_state::KinoDynamicState()),
-                 max_lat_behaviour_(LateralBehaviour::kUndefined),
+                 max_lat_behaviour_(LateralBehaviour::UNDEFINED),
                  current_ref_lane_(nullptr),
                  target_ref_lane_(nullptr),
                  has_trajectory_(false),
@@ -136,29 +163,33 @@ void Agent::set_most_likely_behaviour(const LateralBehaviour &lateral_behaviour)
 }
 
 bool Agent::PredictAgentBehaviour() {
-  common::FrenetFramePoint frame_point;
-  planning_msgs::PathPoint path_point;
-  StateToPathPoint(state_, path_point);
-  auto frenet_point = current_ref_lane_->GetFrenetFramePoint(path_point);
-  double prob_lcl = 0.0;
-  double prob_lcr = 0.0;
-  double prob_lk = 0.0;
-  constexpr double kLatDistanceThreshold = 0.4;
-  constexpr double kLatVelThreshold = 0.35; // with respect to s
-  if (frenet_point.l > kLatDistanceThreshold && frenet_point.dl > kLatVelThreshold
-      && current_ref_lane_->CanChangeLeft(frenet_point.s)) {
-    prob_lcl = 1.0;
-  } else if (frenet_point.l < -kLatDistanceThreshold && frenet_point.dl < -kLatVelThreshold
-      && current_ref_lane_->CanChangeRight(frenet_point.s)) {
-    prob_lcr = 1.0;
+  if (agent_type_ != AgentType::VEHICLE) {
+    probs_lat_behaviour_.SetEntry(LateralBehaviour::UNDEFINED, 1.0);
   } else {
-    prob_lk = 1.0;
+    // naive prediction agent's behaviour
+    common::FrenetFramePoint frame_point;
+    planning_msgs::PathPoint path_point;
+    StateToPathPoint(state_, path_point);
+    auto frenet_point = current_ref_lane_->GetFrenetFramePoint(path_point);
+    double prob_lcl = 0.0;
+    double prob_lcr = 0.0;
+    double prob_lk = 0.0;
+    constexpr double kLatDistanceThreshold = 0.4;
+    constexpr double kLatVelThreshold = 0.35; // with respect to s
+    if (frenet_point.l > kLatDistanceThreshold && frenet_point.dl > kLatVelThreshold
+        && current_ref_lane_->CanChangeLeft(frenet_point.s)) {
+      prob_lcl = 1.0;
+    } else if (frenet_point.l < -kLatDistanceThreshold && frenet_point.dl < -kLatVelThreshold
+        && current_ref_lane_->CanChangeRight(frenet_point.s)) {
+      prob_lcr = 1.0;
+    } else {
+      prob_lk = 1.0;
+    }
+    probs_lat_behaviour_.SetEntry(LateralBehaviour::LANE_CHANGE_LEFT, prob_lcl);
+    probs_lat_behaviour_.SetEntry(LateralBehaviour::LANE_KEEPING, prob_lk);
+    probs_lat_behaviour_.SetEntry(LateralBehaviour::LANE_CHANGE_RIGHT, prob_lcr);
+    probs_lat_behaviour_.GetMaxProbBehaviour(max_lat_behaviour_);
   }
-  probs_lat_behaviour_.SetEntry(LateralBehaviour::kLaneChangeLeft, prob_lcl);
-  probs_lat_behaviour_.SetEntry(LateralBehaviour::kLaneKeeping, prob_lk);
-  probs_lat_behaviour_.SetEntry(LateralBehaviour::kLaneChangeRight, prob_lcr);
-  probs_lat_behaviour_.GetMaxProbBehaviour(max_lat_behaviour_);
-
   return true;
 }
 
@@ -169,8 +200,21 @@ void Agent::StateToPathPoint(const vehicle_state::KinoDynamicState &state, plann
   path_point.kappa = state.kappa_;
   path_point.dkappa = 0.0;
 }
+
 const AgentType &Agent::agent_type() const {
   return agent_type_;
+}
+bool Agent::UpdateAgent(planning_msgs::TrajectoryPoint &trajectory_point) {
+  state_.x_ = trajectory_point.path_point.x;
+  state_.y_ = trajectory_point.path_point.y;
+  state_.z_ = 0.0;
+  state_.theta_ = trajectory_point.path_point.theta;
+  state_.kappa_ = trajectory_point.path_point.kappa;
+  state_.v_ = trajectory_point.vel;
+  state_.a_ = trajectory_point.acc;
+  state_.centripental_acc_ = state_.v_ * state_.v_ * state_.kappa_;
+  Eigen::Vector2d center{state_.x_, state_.y_};
+  bounding_box_ = common::Box2d(center, state_.theta_, length_, width_);
 }
 
 }

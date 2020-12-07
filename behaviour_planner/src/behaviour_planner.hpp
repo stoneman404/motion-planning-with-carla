@@ -13,6 +13,7 @@
 #include <carla_msgs/CarlaTrafficLightStatusList.h>
 #include <carla_msgs/CarlaTrafficLightInfo.h>
 #include <behaviour_strategy/mpdm_planner/mpdm_planner.hpp>
+#include <carla_msgs/CarlaTrafficLightInfoList.h>
 #include "planning_msgs/Behaviour.h"
 
 namespace planning {
@@ -24,15 +25,38 @@ class BehaviourPlanner {
   explicit BehaviourPlanner(const ros::NodeHandle &nh);
   void RunOnce();
  private:
+  /**
+   * @brief: make agent set from objects and traffic light infos.
+   * @note: when the traffic is red, traffic light is considered as an agent, otherwise just ignored.
+   * @return: true if successful
+   */
+  bool MakeAgentSet();
+
+  /**
+   * @brief: get the key agents according to the lateral and longitudinal distance from ego agent.
+   * @return
+   */
   bool GetKeyAgents();
+
+  /**
+   * @brief: for visualization.
+   * @param behaviour: best behaviours
+   */
   void VisualizeBehaviourTrajectories(const Behaviour &behaviour);
+
+  /**
+   * @brief: convert the behaviour to ros msgs.
+   * @param behaviour
+   * @param behaviour_msg
+   * @return
+   */
   static bool ConvertBehaviourToRosMsg(const Behaviour &behaviour, planning_msgs::Behaviour &behaviour_msg);
 
  private:
   ros::NodeHandle nh_;
   int pool_size_ = 6;
-  double sample_key_agent_lat_threshold_;
-  double sample_min_lon_threshold_;
+  double sample_key_agent_lat_threshold_{};
+  double sample_min_lon_threshold_{};
   std::string planner_type_;
   int ego_vehicle_id_ = -1;
   bool has_ego_vehicle_ = false;
@@ -45,6 +69,8 @@ class BehaviourPlanner {
   ros::Subscriber ego_vehicle_subscriber_;
   ros::Subscriber objects_subscriber_;
   ros::Subscriber ego_vehicle_info_subscriber_;
+  ros::Subscriber traffic_light_info_subscriber_;
+  ros::Subscriber traffic_light_status_subscriber_;
 
   /////////////////////Publisher///////////////////////
   ros::Publisher behaviour_publisher_;
@@ -53,8 +79,8 @@ class BehaviourPlanner {
   carla_msgs::CarlaEgoVehicleInfo ego_vehicle_info_;
   carla_msgs::CarlaEgoVehicleStatus ego_vehicle_status_;
   carla_msgs::CarlaTrafficLightStatusList traffic_light_status_list_;
-  std::unordered_map<int, carla_msgs::CarlaTrafficLightInfo> traffic_lights_info_list_;
-//  std::unordered_map<int, derived_object_msgs::Object> objects_map_;
+  carla_msgs::CarlaTrafficLightInfoList traffic_light_info_list_;
+  derived_object_msgs::ObjectArray objects_list_;
   std::unordered_map<int, Agent> agent_set_;
   std::unordered_map<int, Agent> key_agent_set_;
   std::unique_ptr<BehaviourStrategy> behaviour_strategy_;

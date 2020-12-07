@@ -1,6 +1,7 @@
-#include "motion_planner/frenet_lattice_planner/end_condition_sampler.hpp"
-#include "obstacle_filter/obstacle_filter.hpp"
-#include "motion_planner/planning_config.hpp"
+#include "frenet_lattice_planner/end_condition_sampler.hpp"
+#include <obstacle_manager/st_graph.hpp>
+#include "obstacle_manager/obstacle.hpp"
+#include "planning_config.hpp"
 
 #include <utility>
 
@@ -11,11 +12,16 @@ using EndCondition = std::pair<std::array<double, 3>, double>;
 EndConditionSampler::EndConditionSampler(const std::array<double, 3> &init_s,
                                          const std::array<double, 3> &init_d,
                                          std::shared_ptr<ReferenceLine> ptr_ref_line,
+                                         const std::vector<std::shared_ptr<Obstacle>> &obstacles,
                                          std::shared_ptr<STGraph> ptr_st_graph)
     : init_s_(init_s),
       init_d_(init_d),
       ptr_ref_line_(std::move(ptr_ref_line)),
-      ptr_st_graph_(std::move(ptr_st_graph)) {}
+      ptr_st_graph_(std::move(ptr_st_graph)) {
+  for (const auto &obstacle : obstacles) {
+    obstacles_.emplace(obstacle->Id(), obstacle);
+  }
+}
 
 std::vector<EndCondition> EndConditionSampler::SampleLonEndConditionForStopping(
     const double ref_stop_point) const {
@@ -174,17 +180,19 @@ std::vector<std::pair<STPoint, double>> EndConditionSampler::FollowingSamplePoin
 }
 
 double EndConditionSampler::GetObstacleSpeedAlongReferenceLine(int obstacle_id, double s, double t,
-                                                               std::shared_ptr<ReferenceLine> ptr_ref_line) {
-  if (ObstacleFilter::Instance().Obstacles().find(obstacle_id) == ObstacleFilter::Instance().Obstacles().end()) {
-    ROS_DEBUG("[EndConditionSampler::GetObstacleSpeedAlongReferenceLine], the obstacle_id %i is not found",
-              obstacle_id);
+                                                               const std::shared_ptr<ReferenceLine> &ptr_ref_line) const {
+
+  if (obstacles_.empty()) {
     return 0.0;
   }
-  const auto &obstacle = ObstacleFilter::Instance().Obstacles().at(obstacle_id);
-  const auto &trajectory = obstacle->Trajectory();
+  if (obstacles_.find(obstacle_id) == obstacles_.end()) {
+    return 0.0;
+  }
+  auto matched_obstacle = obstacles_.at(obstacle_id);
+  const auto &trajectory = matched_obstacle->trajectory();
   size_t num_traj_point = trajectory.trajectory_points.size();
   if (num_traj_point < 2) {
-    return 0;
+    return 0.0;
   }
   if (t < trajectory.trajectory_points[0].relative_time ||
       t > trajectory.trajectory_points.back().relative_time) {
@@ -203,5 +211,4 @@ double EndConditionSampler::GetObstacleSpeedAlongReferenceLine(int obstacle_id, 
   double ref_theta = matched_ref_point.heading();
   return std::cos(ref_theta) * v_x + std::sin(ref_theta) * v_y;
 }
-
 }

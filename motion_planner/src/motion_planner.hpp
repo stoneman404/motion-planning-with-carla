@@ -18,12 +18,15 @@
 #include "thread_pool/thread_pool.hpp"
 #include "obstacle_manager/obstacle.hpp"
 #include <planning_msgs/Trajectory.h>
+#include <planning_msgs/Behaviour.h>
 #include <reference_line/reference_line.hpp>
 #include "trajectory_planner.hpp"
+#include "frenet_lattice_planner/frenet_lattice_planner.hpp"
 
 
 // motion planner
 namespace planning {
+
 
 class MotionPlanner {
  public:
@@ -37,8 +40,10 @@ class MotionPlanner {
   void InitPublisher();
   void InitSubscriber();
   void InitServiceClient();
-  bool UpdateSurroudingObstacles();
-  bool GetWayPoint(const int &object_id, carla_waypoint_types::CarlaWaypoint &carla_waypoint);
+  void GenerateEmergencyStopTrajectory(const planning_msgs::TrajectoryPoint &init_trajectory_point,
+                                       planning_msgs::Trajectory &emergency_stop_trajectory) const;
+  bool GetPlanningTargetFromBehaviour(const planning_msgs::Behaviour &behaviour,
+                                      std::vector<PlanningTarget> &planning_targets);
   std::vector<planning_msgs::TrajectoryPoint> GetStitchingTrajectory(const ros::Time &current_time_stamp,
                                                                      double planning_cycle_time,
                                                                      size_t preserve_points_num);
@@ -48,6 +53,7 @@ class MotionPlanner {
   void VisualizeTrafficLightBox();
   void VisualizeReferenceLine(std::vector<std::shared_ptr<ReferenceLine>> &ref_lines);
   void VisualizeObstacleTrajectories();
+  bool GetLocalGoal(PlanningTarget &planning_target) const;
 
  private:
   bool has_history_trajectory_ = false;
@@ -57,12 +63,14 @@ class MotionPlanner {
   planning_msgs::Behaviour behaviour_;
   carla_msgs::CarlaEgoVehicleInfo ego_vehicle_info_;
   carla_msgs::CarlaEgoVehicleStatus ego_vehicle_status_;
-  carla_msgs::CarlaTrafficLightStatusList traffic_light_status_list_;
+//  carla_msgs::CarlaTrafficLightStatusList traffic_light_status_list_;
+  std::unordered_map<int, carla_msgs::CarlaTrafficLightStatus> traffic_light_status_list_;
   std::unordered_map<int, carla_msgs::CarlaTrafficLightInfo> traffic_lights_info_list_;
   std::unordered_map<int, derived_object_msgs::Object> objects_map_;
   derived_object_msgs::Object ego_object_;
   ros::NodeHandle nh_;
   planning_msgs::Trajectory history_trajectory_;
+  std::unique_ptr<TrajectoryPlanner> trajectory_planner_;
 
   ////////////////// ServiceClinet //////////////////////
   ros::ServiceClient get_actor_waypoint_client_;

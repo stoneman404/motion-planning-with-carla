@@ -20,7 +20,6 @@ class VehicleState {
                const carla_msgs::CarlaEgoVehicleInfo &vehicle_info,
                const derived_object_msgs::Object &object);
 
-//  static behaviour_planner::VehicleState &Instance();
   void Update(const carla_msgs::CarlaEgoVehicleStatus &ego_vehicle_status,
               const carla_msgs::CarlaEgoVehicleInfo &vehicle_info,
               const derived_object_msgs::Object &object);
@@ -29,17 +28,17 @@ class VehicleState {
   const ros::Time &time_stamp() const;
   double steer_percentage() const;
   const int &id() const;
-  const int &lane_id() const;
-  const int &road_id() const;
-  const int &section_id() const;
-  const planning_msgs::WayPoint &ego_waypoint() const;
+//  const int &lane_id() const;
+//  const int &road_id() const;
+//  const int &section_id() const;
+//  const planning_msgs::WayPoint &ego_waypoint() const;
   // setter
-  void set_waypoint(const planning_msgs::WayPoint &way_point);
-  void set_lane_id(int lane_id);
-  void set_section_id(int section_id);
-  void set_road_id(int road_id);
+//  void set_waypoint(const planning_msgs::WayPoint &way_point);
+//  void set_lane_id(int lane_id);
+//  void set_section_id(int section_id);
+//  void set_road_id(int road_id);
   void PredictNextKinoDynamicState(double predict_time, KinoDynamicState *predicted_state) const;
-  const KinoDynamicState & GetKinoDynamicVehicleState() const;
+  const KinoDynamicState &GetKinoDynamicVehicleState() const;
   const vehicle_state::VehicleParams &vehicle_params() const { return vehicle_params_; }
 
   bool is_junction() const;
@@ -47,10 +46,10 @@ class VehicleState {
 
  private:
   int id_{};
-  planning_msgs::WayPoint ego_waypoint_;
-  int lane_id_{};
-  int section_id_{};
-  int road_id_ = {};
+//  planning_msgs::WayPoint ego_waypoint_;
+//  int lane_id_{};
+//  int section_id_{};
+//  int road_id_ = {};
   bool is_junction_ = false;
   double steer_percentage_{};
   bool reverse_ = false;

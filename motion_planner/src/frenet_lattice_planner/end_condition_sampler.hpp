@@ -3,8 +3,7 @@
 #include <array>
 #include <vector>
 #include "math/frenet_frame.hpp"
-#include "collision_checker/st_graph.hpp"
-#include "motion_planner/planning_context.cpp"
+#include "obstacle_manager/st_graph.hpp"
 #include "reference_line/reference_line.hpp"
 namespace planning {
 
@@ -18,6 +17,7 @@ class EndConditionSampler {
   EndConditionSampler(const std::array<double, 3> &init_s,
                       const std::array<double, 3> &init_d,
                       std::shared_ptr<ReferenceLine> ptr_ref_line,
+                      const std::vector<std::shared_ptr<Obstacle>> &ptr_obstacles,
                       std::shared_ptr<STGraph> ptr_st_graph);
   /**
    *
@@ -99,13 +99,14 @@ class EndConditionSampler {
    * @param ptr_ref_line
    * @return
    */
-  static double GetObstacleSpeedAlongReferenceLine(int obstacle_id, double s, double t,
-                                                   std::shared_ptr<ReferenceLine> ptr_ref_line);
+  double GetObstacleSpeedAlongReferenceLine(int obstacle_id, double s, double t,
+                                            const std::shared_ptr<ReferenceLine> &ptr_ref_line) const;
 
  private:
   std::array<double, 3> init_s_{};
   std::array<double, 3> init_d_{};
   std::shared_ptr<ReferenceLine> ptr_ref_line_;
+  std::unordered_map<int, std::shared_ptr<Obstacle>> obstacles_;
   std::shared_ptr<STGraph> ptr_st_graph_;
 };
 }

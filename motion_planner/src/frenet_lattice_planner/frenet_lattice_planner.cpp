@@ -1,45 +1,45 @@
-#include <motion_planner/frenet_lattice_planner/constraint_checker.hpp>
-#include <motion_planner/planning_config.hpp>
-#include "motion_planner/frenet_lattice_planner/frenet_lattice_planner.hpp"
-#include "motion_planner/frenet_lattice_planner/polynomial_trajectory_evaluator.hpp"
-#include "motion_planner/frenet_lattice_planner/end_condition_sampler.hpp"
+#include <frenet_lattice_planner/constraint_checker.hpp>
+#include <planning_config.hpp>
+#include "frenet_lattice_planner/frenet_lattice_planner.hpp"
+#include "frenet_lattice_planner/polynomial_trajectory_evaluator.hpp"
+#include "frenet_lattice_planner/end_condition_sampler.hpp"
 #include "math/coordinate_transformer.hpp"
-//#include "obstacle_filter/obstacle_filter.hpp"
-//#include "collision_checker/collision_checker.hpp"
-#include "motion_planner/frenet_lattice_planner/lattice_trajectory1d.hpp"
+#include "frenet_lattice_planner/lattice_trajectory1d.hpp"
+#include "collision_checker/collision_checker.hpp"
 
 namespace planning {
 using namespace common;
+
+FrenetLatticePlanner::FrenetLatticePlanner(ThreadPool *thread_pool) : thread_pool_(thread_pool) {}
+
 bool FrenetLatticePlanner::Process(const planning_msgs::TrajectoryPoint &init_trajectory_point,
-                                   const ManeuverGoal &maneuver_goal,
+                                   const std::vector<PlanningTarget> &planning_targets,
                                    planning_msgs::Trajectory &pub_trajectory,
                                    std::vector<planning_msgs::Trajectory> *valid_trajectories) {
-  if (maneuver_goal.maneuver_infos.empty()) {
+  if (planning_targets.empty()) {
     FrenetLatticePlanner::GenerateEmergencyStopTrajectory(init_trajectory_point, pub_trajectory);
     ROS_FATAL("[FrenetLatticePlanner::Process]: No reference line provided");
     return false;
   }
-  if (maneuver_goal.decision_type == DecisionType::kEmergencyStop) {
-    FrenetLatticePlanner::GenerateEmergencyStopTrajectory(init_trajectory_point, pub_trajectory);
-    return true;
-  }
+  constexpr double kDefaultNonBestBehaviourCost = 20.0;
   size_t index = 0;
   size_t failed_ref_plan_num = 0;
+  planning_msgs::LateralBehaviour best_lateral_behaviour = planning_targets.front().lateral_behaviour;
   std::vector<std::pair<planning_msgs::Trajectory, double>> optimal_trajectories;
-  for (const auto &maneuver_info : maneuver_goal.maneuver_infos) {
+  for (const auto &planning_target : planning_targets) {
     std::pair<planning_msgs::Trajectory, double> optimal_trajectory;
-    auto result = PlanningOnRef(init_trajectory_point, maneuver_info, optimal_trajectory, valid_trajectories);
+    auto result = PlanningOnRef(init_trajectory_point, planning_target, optimal_trajectory, valid_trajectories);
     if (!result) {
       ROS_DEBUG("[FrenetLatticePlanner::Process], failed plan on reference line: %zu", index);
       failed_ref_plan_num++;
     }
-    if (index == 0) {
-      optimal_trajectory.second += 50.0;
+    ++index;
+    if (!planning_target.is_best_behaviour) {
+      optimal_trajectory.second += kDefaultNonBestBehaviourCost;
     }
     optimal_trajectories.push_back(optimal_trajectory);
-    index++;
   }
-  if (failed_ref_plan_num >= maneuver_goal.maneuver_infos.size()) {
+  if (failed_ref_plan_num >= planning_targets.size()) {
     ROS_FATAL("[FrenetLatticePlanner::Process], the process is failed on every reference line");
     return false;
   }
@@ -54,38 +54,50 @@ bool FrenetLatticePlanner::Process(const planning_msgs::TrajectoryPoint &init_tr
 }
 
 bool FrenetLatticePlanner::PlanningOnRef(const planning_msgs::TrajectoryPoint &init_trajectory_point,
-                                         const ManeuverInfo &maneuver_info,
+                                         const PlanningTarget &planning_target,
                                          std::pair<planning_msgs::Trajectory, double> &optimal_trajectory,
                                          std::vector<planning_msgs::Trajectory> *valid_trajectories) const {
   ros::Time begin = ros::Time::now();
 
-  const auto &ref_line = maneuver_info.ptr_ref_line;
+  std::shared_ptr<ReferenceLine> ref_line = planning_target.ref_lane;
   std::array<double, 3> init_s{};
   std::array<double, 3> init_d{};
   FrenetLatticePlanner::GetInitCondition(ref_line, init_trajectory_point, &init_s, &init_d);
-  const auto &obstacles_map = ObstacleFilter::Instance().Obstacles();
-  std::vector<std::shared_ptr<Obstacle>> obstacle_vec;
-  obstacle_vec.reserve(obstacles_map.size());
-  for (const auto &obstacle : obstacles_map) {
-    obstacle_vec.push_back(obstacle.second);
-  }
+  auto obstacle_vec = planning_target.obstacles;
   auto st_graph = std::make_shared<STGraph>(obstacle_vec, ref_line,
                                             init_s[0],
                                             init_s[0] + PlanningConfig::Instance().max_lookahead_distance(),
                                             0.0, PlanningConfig::Instance().max_lookahead_time(),
-                                            init_d);
+                                            init_d,
+                                            PlanningConfig::Instance().max_lookahead_time(),
+                                            PlanningConfig::Instance().delta_t());
   std::vector<std::shared_ptr<Polynomial>> lon_traj_vec;
   std::vector<std::shared_ptr<Polynomial>> lat_traj_vec;
 
-  auto end_condition_sampler = std::make_shared<EndConditionSampler>(init_s, init_d, ref_line, st_graph);
-  FrenetLatticePlanner::GenerateLonTrajectories(maneuver_info, init_s, end_condition_sampler, &lon_traj_vec);
+  auto end_condition_sampler =
+      std::make_shared<EndConditionSampler>(init_s, init_d, ref_line, planning_target.obstacles, st_graph);
+  FrenetLatticePlanner::GenerateLonTrajectories(planning_target, init_s, end_condition_sampler, &lon_traj_vec);
   FrenetLatticePlanner::GenerateLatTrajectories(init_d, end_condition_sampler, &lat_traj_vec);
   PolynomialTrajectoryEvaluator trajectory_evaluator = PolynomialTrajectoryEvaluator(init_s,
-                                                                                     maneuver_info,
+                                                                                     planning_target,
                                                                                      lon_traj_vec,
                                                                                      lat_traj_vec,
                                                                                      ref_line, st_graph);
-  CollisionChecker collision_checker = CollisionChecker(ref_line, st_graph, init_s[0], init_d[0], thread_pool_);
+  std::unordered_map<int, std::shared_ptr<Obstacle>> obstacle_map;
+  for (const auto &obstacle : planning_target.obstacles) {
+    obstacle_map.emplace(obstacle->Id(), obstacle);
+  }
+  CollisionChecker collision_checker = CollisionChecker(obstacle_map,
+                                                        ref_line,
+                                                        st_graph,
+                                                        init_s[0],
+                                                        init_d[0],
+                                                        PlanningConfig::Instance().lon_safety_buffer(),
+                                                        PlanningConfig::Instance().lat_safety_buffer(),
+                                                        PlanningConfig::Instance().max_lookahead_time(),
+                                                        PlanningConfig::Instance().delta_t(),
+                                                        PlanningConfig::Instance().vehicle_params(),
+                                                        thread_pool_);
   size_t collision_failure_count = 0;
   size_t combined_constraint_failure_count = 0;
   size_t lon_vel_failure_count = 0;
@@ -105,20 +117,32 @@ bool FrenetLatticePlanner::PlanningOnRef(const planning_msgs::TrajectoryPoint &i
     if (result != ConstraintChecker::Result::VALID) {
       ++combined_constraint_failure_count;
       switch (result) {
-        case ConstraintChecker::Result::LON_VELOCITY_OUT_OF_BOUND:lon_vel_failure_count += 1;
+        case ConstraintChecker::Result::LON_VELOCITY_OUT_OF_BOUND: {
+          lon_vel_failure_count += 1;
           break;
-        case ConstraintChecker::Result::LON_ACCELERATION_OUT_OF_BOUND:lon_acc_failure_count += 1;
+        }
+        case ConstraintChecker::Result::LON_ACCELERATION_OUT_OF_BOUND: {
+          lon_acc_failure_count += 1;
           break;
-        case ConstraintChecker::Result::LON_JERK_OUT_OF_BOUND:lon_jerk_failure_count += 1;
+        }
+        case ConstraintChecker::Result::LON_JERK_OUT_OF_BOUND: {
+          lon_jerk_failure_count += 1;
           break;
-        case ConstraintChecker::Result::CURVATURE_OUT_OF_BOUND:curvature_failure_count += 1;
+        }
+        case ConstraintChecker::Result::CURVATURE_OUT_OF_BOUND: {
+          curvature_failure_count += 1;
           break;
-        case ConstraintChecker::Result::LAT_ACCELERATION_OUT_OF_BOUND:lat_acc_failure_count += 1;
+        }
+        case ConstraintChecker::Result::LAT_ACCELERATION_OUT_OF_BOUND: {
+          lat_acc_failure_count += 1;
           break;
-        case ConstraintChecker::Result::LAT_JERK_OUT_OF_BOUND:lat_jerk_failure_count += 1;
+        }
+        case ConstraintChecker::Result::LAT_JERK_OUT_OF_BOUND: {
+          lat_jerk_failure_count += 1;
           break;
+        }
         case ConstraintChecker::Result::VALID:
-        default:break;
+        default: { break; }
       }
       continue;
     }
@@ -140,11 +164,6 @@ bool FrenetLatticePlanner::PlanningOnRef(const planning_msgs::TrajectoryPoint &i
       break;
     }
   }
-//  int i = 0;
-//  for (const auto& traj : *valid_trajectories){
-//    std::cout << " traj: " << i << ": " << traj.trajectory_points.back().path_point.x << " " << traj.trajectory_points.back().path_point.y << std::endl;
-//    i++;
-//  }
   ros::Time end = ros::Time::now();
   ROS_WARN("[FrenetLatticePlanner::PlanningOnRef], the total time elapsed is %lf",
            static_cast<double>((end - begin).toNSec()) / 1000000.0);
@@ -231,7 +250,7 @@ void FrenetLatticePlanner::GenerateLatTrajectories(const std::array<double, 3> &
   FrenetLatticePlanner::GeneratePolynomialTrajectories(init_d, lat_end_conditions, 5, ptr_lat_traj_vec);
 }
 
-void FrenetLatticePlanner::GenerateLonTrajectories(const ManeuverInfo &maneuver_info,
+void FrenetLatticePlanner::GenerateLonTrajectories(const PlanningTarget &planning_target,
                                                    const std::array<double, 3> &init_s,
                                                    const std::shared_ptr<EndConditionSampler> &end_condition_sampler,
                                                    std::vector<std::shared_ptr<Polynomial>> *ptr_lon_traj_vec) {
@@ -241,11 +260,11 @@ void FrenetLatticePlanner::GenerateLonTrajectories(const ManeuverInfo &maneuver_
     return;
   }
   ptr_lon_traj_vec->clear();
-  FrenetLatticePlanner::GenerateCruisingLonTrajectories(PlanningConfig::Instance().target_speed(), init_s,
+  FrenetLatticePlanner::GenerateCruisingLonTrajectories(planning_target.desired_vel, init_s,
                                                         end_condition_sampler, ptr_lon_traj_vec);
   FrenetLatticePlanner::GenerateOvertakeAndFollowingLonTrajectories(init_s, end_condition_sampler, ptr_lon_traj_vec);
-  if (maneuver_info.has_stop_point) {
-    FrenetLatticePlanner::GenerateStoppingLonTrajectories(maneuver_info.maneuver_target.target_s,
+  if (planning_target.has_stop_point) {
+    FrenetLatticePlanner::GenerateStoppingLonTrajectories(planning_target.stop_s,
                                                           init_s, end_condition_sampler,
                                                           ptr_lon_traj_vec);
   }
@@ -359,7 +378,6 @@ void FrenetLatticePlanner::GetInitCondition(const std::shared_ptr<ReferenceLine>
                                            init_trajectory_point.path_point.kappa,
                                            init_s, init_d);
 }
-FrenetLatticePlanner::FrenetLatticePlanner(ThreadPool *thread_pool) : thread_pool_(thread_pool) {}
 
 void FrenetLatticePlanner::GenerateEmergencyStopTrajectory(const planning_msgs::TrajectoryPoint &init_trajectory_point,
                                                            planning_msgs::Trajectory &stop_trajectory) {

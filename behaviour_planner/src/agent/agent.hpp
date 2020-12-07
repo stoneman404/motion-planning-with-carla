@@ -16,26 +16,26 @@ enum class AgentType : uint32_t {
   UNKNOWN = 0u,
   VEHICLE = 1u,
   BIKE = 2U,
-  PEDESTRIAN = 3U
+  PEDESTRIAN = 3U,
+  TRAFFIC_LIGHT = 4u
 };
 
 /**
  * Agent class represents the ego vehicle and other vehicle,
- * other traffic participants like pedestrians and traffic sign/light
- * is not considered in this class
  */
 class Agent {
  public:
-
   Agent();
-
   explicit Agent(const derived_object_msgs::Object &object);
   /**
    * the ego agent
    * @param vehicle_state
    */
   explicit Agent(const vehicle_state::VehicleState &vehicle_state);
+  Agent(const carla_msgs::CarlaTrafficLightStatus &traffic_light_status,
+        const carla_msgs::CarlaTrafficLightInfo &traffic_light_info);
 
+  bool UpdateAgent(planning_msgs::TrajectoryPoint &trajectory_point);
   ~Agent() = default;
   int id() const;;
   const common::Box2d &bounding_box() const;
@@ -51,7 +51,6 @@ class Agent {
   void set_is_host(bool host_agent) { is_host_ = host_agent; }
   void set_trajectory(const planning_msgs::Trajectory &trajectory);
   void set_most_likely_behaviour(const LateralBehaviour &lateral_behaviour);
-
   bool PredictAgentBehaviour();
 
  protected:
@@ -62,10 +61,13 @@ class Agent {
   int id_{}; // the agent id
   bool is_host_{true};
   bool is_valid_{false};
+
   // the bounding box of the agent
   common::Box2d bounding_box_{};
+  double length_{};
+  double width_{};
   vehicle_state::KinoDynamicState state_{};
-  LateralBehaviour max_lat_behaviour_{LateralBehaviour::kUndefined};
+  LateralBehaviour max_lat_behaviour_{LateralBehaviour::UNDEFINED};
   ProbDistributeOfLatBehaviour probs_lat_behaviour_;
   std::shared_ptr<ReferenceLine> current_ref_lane_;
   std::shared_ptr<ReferenceLine> target_ref_lane_;
@@ -74,7 +76,6 @@ class Agent {
   AgentType agent_type_;
 
 };
-
 }
 
 #endif //CATKIN_WS_SRC_MOTION_PLANNING_WITH_CARLA_PLANNING_SRC_AGENT_AGENT_HPP_

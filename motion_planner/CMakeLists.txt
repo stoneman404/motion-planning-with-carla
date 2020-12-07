@@ -24,10 +24,12 @@ find_package(catkin REQUIRED COMPONENTS
         common
         vehicle_state
         obstacle_manager
+        collision_checker
         )
 
 find_package(Eigen3 REQUIRED)
-
+set(IPOPT_LIBRARY_DIRS /usr/local/lib)
+set(IPOPT_INCLUDE_DIRS /usr/local/include/coin)
 #set(QPOASES_INLUDE_DIRS /usr/local/include/qpOASES)
 #set(QPOASES_LIBRARY_DIRS /usr/local/lib)
 #set(IPOPT_LIBRARY_DIRS /usr/local/lib)
@@ -162,7 +164,7 @@ set(planning_SRC
         src/frenet_lattice_planner/frenet_lattice_planner.cpp
         src/motion_planner.cpp
         src/planning_config.cpp
-        src/planning_node.cpp)
+        src/motion_planner_node.cpp)
 add_executable(motion_planning_node ${planning_SRC})
 
 ## Rename C++ executable without prefix
@@ -179,7 +181,7 @@ add_executable(motion_planning_node ${planning_SRC})
 target_link_libraries(motion_planning_node
         ${catkin_LIBRARIES}
         Eigen3::Eigen
-        Ipopt
+        ipopt
         )
 
 #############

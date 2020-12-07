@@ -1,4 +1,4 @@
-#include "motion_planner/frenet_lattice_planner/lattice_trajectory1d.hpp"
+#include "frenet_lattice_planner/lattice_trajectory1d.hpp"
 
 #include <utility>
 namespace planning {

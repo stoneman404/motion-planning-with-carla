@@ -13,7 +13,7 @@ KinoDynamicState::KinoDynamicState(double x,
     : x_(x), y_(y), z_(z),
       theta_(theta), kappa_(kappa), v_(v), a_(a), centripental_acc_(centripental_acc) {}
 KinoDynamicState KinoDynamicState::GetNextStateAfterTime(double predict_time) const {
-  double dt = 0.05;
+  double dt = 0.1;
   ROS_ASSERT(predict_time > 0.0);
 
   double cur_x = x_;

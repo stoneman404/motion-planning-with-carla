@@ -17,9 +17,8 @@ struct PolicySimulateConfig {
   double acc_exponet{4.0}; // /delta
   double s0{2.0}; // jam distance
   double s1{0.0}; // jam distance
-  double max_default_lat_vel = 0.5; //with respect to time
-  double lat_vel_ratio = 0.17;
-  double lat_offset_threshold = 0.6;
+  double default_lat_approach_ratio = 0.995;
+  double cutting_in_lateral_approach_ratio = 0.95;
 };
 
 struct SimulateAgent {
@@ -68,6 +67,10 @@ class PolicyDecider {
                                const Agent &leading_agent,
                                planning_msgs::TrajectoryPoint &trajectory_point);
 
+  static bool NaivePredictionOnStepForAgent(const SimulateAgent &agent,
+                                            double sim_step,
+                                            planning_msgs::TrajectoryPoint &trajectory_point);
+
   /**
    * @brief: get desired speed consider reference lane's curvature and user defined reference velocity
    * @param xy
@@ -105,7 +108,7 @@ class PolicyDecider {
                           double *safety_cost) const;
 
  private:
-  int ego_id_;
+  int ego_id_{};
   PolicySimulateConfig config_;
   std::unique_ptr<OnLaneForwardSimulator> forward_simulator_;
   std::unordered_map<int, Agent> agent_set_;

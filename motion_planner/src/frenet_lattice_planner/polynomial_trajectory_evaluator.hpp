@@ -5,10 +5,10 @@
 #include <memory>
 #include <queue>
 #include <ros/ros.h>
-#include "motion_planner/planning_context.hpp"
-
 #include "curves/polynomial.hpp"
-#include "collision_checker/st_graph.hpp"
+#include "obstacle_manager/st_graph.hpp"
+#include "end_condition_sampler.hpp"
+#include "planning_config.hpp"
 
 namespace planning {
 class PolynomialTrajectoryEvaluator {
@@ -28,7 +28,7 @@ class PolynomialTrajectoryEvaluator {
    * @param ptr_st_graph
    */
   PolynomialTrajectoryEvaluator(const std::array<double, 3> &init_s,
-                                const ManeuverInfo &maneuver_info,
+                                const PlanningTarget &planning_target,
                                 const std::vector<std::shared_ptr<common::Polynomial>> &lon_trajectory_vec,
                                 const std::vector<std::shared_ptr<common::Polynomial>> &lat_trajectory_vec,
                                 std::shared_ptr<ReferenceLine> ptr_ref_line,
@@ -50,12 +50,12 @@ class PolynomialTrajectoryEvaluator {
                               const std::shared_ptr<common::Polynomial> &lon_trajectory);
   static double LonJerkCost(const std::shared_ptr<common::Polynomial> &lon_trajectory);
   static double LonTargetCost(const std::shared_ptr<common::Polynomial> &lon_trajectory,
-                              const ManeuverInfo &maneuver_info);
+                              const PlanningTarget &planning_target);
   double LonCollisionCost(const std::shared_ptr<common::Polynomial> &lon_trajectory) const;
 
   static bool IsValidLongitudinalTrajectory(const common::Polynomial &lon_traj);
 
-  double Evaluate(const ManeuverInfo &maneuver_info, const std::shared_ptr<common::Polynomial> &lon_traj,
+  double Evaluate(const PlanningTarget &planning_target, const std::shared_ptr<common::Polynomial> &lon_traj,
                   const std::shared_ptr<common::Polynomial> &lat_traj);
 
   // comparator for priority queue

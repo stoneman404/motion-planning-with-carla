@@ -153,8 +153,6 @@ Obstacle::Obstacle(const carla_msgs::CarlaTrafficLightInfo &traffic_light_info,
     : id_(traffic_light_info.id), acc_(0.0), centripental_acc_(0.0),
       kappa_(0.0), is_static_(true), is_virtual_(true), trajectory_(planning_msgs::Trajectory()),
       speed_(0.0), angular_speed_(0.0) {
-  heading_ = {};
-  center_ = {};
   is_valid_obstacle_ = false;
   if (traffic_light_status.state == carla_msgs::CarlaTrafficLightStatus::RED
       || traffic_light_status.state == carla_msgs::CarlaTrafficLightStatus::YELLOW) {
@@ -166,6 +164,9 @@ Obstacle::Obstacle(const carla_msgs::CarlaTrafficLightInfo &traffic_light_info,
       traffic_light_info.transform.position.y + traffic_light_info.trigger_volume.center.y;
   heading_ = tf::getYaw(traffic_light_info.transform.orientation);
   bounding_box_ = common::Box2d(center_, heading_, box_length, box_width);
+}
+void Obstacle::SetTrajectory(const planning_msgs::Trajectory &trajectory) {
+  this->trajectory_ = trajectory;
 }
 
 }

@@ -6,18 +6,24 @@
 
 namespace planning {
 enum class LateralBehaviour : uint8_t {
-  kUndefined = 0u,
-  kLaneKeeping = 1u,
-  kLaneChangeLeft = 2u,
-  kLaneChangeRight = 3u
+  UNDEFINED = 0u,
+  LANE_KEEPING = 1u,
+  LANE_CHANGE_LEFT = 2u,
+  LANE_CHANGE_RIGHT = 3u
 };
 enum class LongitudinalBehaviour : uint8_t {
-  kMaintain = 1u,
-  kAccelate = 2u,
-  kDecelate = 3u,
-  kStopping = 4u
+  MAINTAIN = 1u,
+  ACCELERATE = 2u,
+  DECELERATE = 3u,
+  STOPPING = 4u
 };
 
+struct EnumClassHash {
+  template<class T>
+  size_t operator()(T t) const {
+    return static_cast<size_t>(t);
+  }
+};
 struct ProbDistributeOfLatBehaviour {
   void SetEntry(const LateralBehaviour &behaviour, double prob) {
     probs[behaviour] = prob;
@@ -36,15 +42,16 @@ struct ProbDistributeOfLatBehaviour {
     return true;
   }
 
-  std::unordered_map<LateralBehaviour, double> probs{
-      {LateralBehaviour::kLaneKeeping, 0.0},
-      {LateralBehaviour::kLaneChangeLeft, 0.0},
-      {LateralBehaviour::kLaneChangeRight, 0.0}};
+  std::unordered_map<LateralBehaviour, double, EnumClassHash> probs{
+      {LateralBehaviour::LANE_KEEPING, 0.0},
+      {LateralBehaviour::LANE_CHANGE_LEFT, 0.0},
+      {LateralBehaviour::LANE_CHANGE_RIGHT, 0.0},
+      {LateralBehaviour::UNDEFINED, 0.0}};
 
 };
 
 struct Behaviour {
-  std::vector<std::pair<LateralBehaviour,std::shared_ptr<ReferenceLine>>> forward_behaviours;
+  std::vector<std::pair<LateralBehaviour, std::shared_ptr<ReferenceLine>>> forward_behaviours;
   std::vector<planning_msgs::Trajectory> forward_trajs;
   LateralBehaviour lateral_behaviour;
   LongitudinalBehaviour longitudinal_behaviour;
