@@ -29,7 +29,6 @@ void MotionPlanner::Launch() {
 
   ros::Rate loop_rate(PlanningConfig::Instance().loop_rate());
   while (ros::ok()) {
-    std::cout << "loop rate: " << PlanningConfig::Instance().loop_rate() << std::endl;
     this->RunOnce();
     ros::spinOnce();
     loop_rate.sleep();
@@ -50,7 +49,7 @@ void MotionPlanner::RunOnce() {
   auto init_trajectory_point =
       this->GetStitchingTrajectory(current_time_stamp,
                                    1.0 / PlanningConfig::Instance().loop_rate(),
-                                   5).front();
+                                   15).front();
   PlanningConfig::Instance().set_vehicle_params(vehicle_state_->vehicle_params());
   std::vector<PlanningTarget> planning_targets;
   planning_msgs::Trajectory optimal_trajectory;
@@ -196,13 +195,6 @@ void MotionPlanner::VisualizeOptimalTrajectory(const planning_msgs::Trajectory &
 
 }
 
-std::vector<planning_msgs::TrajectoryPoint> MotionPlanner::GetStitchingTrajectory(const ros::Time &current_time_stamp,
-                                                                                  double planning_cycle_time,
-                                                                                  size_t preserve_points_num) {
-  return behaviour_.forward_trajectories.begin()->trajectory_points;
-
-}
-
 void MotionPlanner::VisualizeTrafficLightBox() {
   visualization_msgs::MarkerArray traffic_light_boxes_markers;
   for (const auto &traffic_light : traffic_lights_info_list_) {
@@ -314,7 +306,7 @@ bool MotionPlanner::GetPlanningTargetFromBehaviour(const planning_msgs::Behaviou
   return true;
 }
 void MotionPlanner::GenerateEmergencyStopTrajectory(const planning_msgs::TrajectoryPoint &init_trajectory_point,
-                                                    planning_msgs::Trajectory &emergency_stop_trajectory) const {
+                                                    planning_msgs::Trajectory &emergency_stop_trajectory) {
   const double kMaxTrajectoryTime = PlanningConfig::Instance().max_lookahead_time();
   const double kTimeGap = PlanningConfig::Instance().delta_t();
   emergency_stop_trajectory.trajectory_points.clear();
@@ -357,7 +349,7 @@ void MotionPlanner::GenerateEmergencyStopTrajectory(const planning_msgs::Traject
   }
 }
 
-bool MotionPlanner::GetLocalGoal(PlanningTarget &planning_target) const {
+bool MotionPlanner::GetLocalGoal(PlanningTarget &planning_target) {
   auto trajectory = planning_target.behaviour_trajectory;
   double t = PlanningConfig::Instance().max_lookahead_time();
   planning_msgs::TrajectoryPoint goal_trajectory_point;
@@ -397,6 +389,127 @@ bool MotionPlanner::GetLocalGoal(PlanningTarget &planning_target) const {
   double max_ref_v = std::sqrt(PlanningConfig::Instance().max_lat_acc() * ref_point.kappa());
   planning_target.desired_vel = std::min(ref_v, max_ref_v);
   return true;
+}
+
+std::vector<planning_msgs::TrajectoryPoint> MotionPlanner::GetStitchingTrajectory(const ros::Time &current_time_stamp,
+                                                                                  double planning_cycle_time,
+                                                                                  size_t preserve_points_num) {
+  auto state = vehicle_state_->GetKinoDynamicVehicleState();
+  if (!has_history_trajectory_) {
+    return MotionPlanner::ComputeReinitStitchingTrajectory(planning_cycle_time, state);
+  }
+  if (history_trajectory_.trajectory_points.empty()) {
+    return MotionPlanner::ComputeReinitStitchingTrajectory(planning_cycle_time, state);
+  }
+  double relative_time = (current_time_stamp - history_trajectory_.header.stamp).toSec();
+  auto time_matched_index = GetTimeMatchIndex(relative_time, 1.0e-5, history_trajectory_.trajectory_points);
+
+  // current time smaller than prev first trajectory point's relative time.
+  if (time_matched_index == 0 && relative_time < history_trajectory_.trajectory_points.front().relative_time) {
+    return MotionPlanner::ComputeReinitStitchingTrajectory(planning_cycle_time, state);
+  }
+  // current time exceeds the prev last trajectory point's relative time
+  if (time_matched_index >= history_trajectory_.trajectory_points.size() - 1) {
+    return MotionPlanner::ComputeReinitStitchingTrajectory(planning_cycle_time, state);
+  }
+  // time matched trajectory point from history trajectory
+  auto time_matched_tp = history_trajectory_.trajectory_points[time_matched_index];
+  size_t position_matched_index = GetPositionMatchedIndex({state.x_, state.y_}, history_trajectory_.trajectory_points);
+  // position matched trajectory point from history trajectory
+  auto position_matched_tp = history_trajectory_.trajectory_points[position_matched_index];
+  auto sd = GetLatAndLonDistFromRefPoint(state.x_, state.y_, position_matched_tp.path_point);
+  double lon_diff = time_matched_tp.path_point.s - sd.first;
+  double lat_diff = sd.second;
+  if (std::abs(lat_diff) > PlanningConfig::Instance().max_replan_lat_distance_threshold()) {
+    return MotionPlanner::ComputeReinitStitchingTrajectory(planning_cycle_time, state);
+  }
+  if (std::abs(lon_diff) > PlanningConfig::Instance().max_replan_lon_distance_threshold()) {
+    return MotionPlanner::ComputeReinitStitchingTrajectory(planning_cycle_time, state);
+  }
+  double forward_rel_time = relative_time + planning_cycle_time;
+  size_t forward_rel_matched_index = GetTimeMatchIndex(forward_rel_time, 1.0e-5, history_trajectory_.trajectory_points);
+
+  auto matched_index = std::min(position_matched_index, time_matched_index);
+  std::vector<planning_msgs::TrajectoryPoint> stitching_trajectory;
+  stitching_trajectory.assign(history_trajectory_.trajectory_points.begin()
+                                  + std::max(0, static_cast<int>(matched_index - preserve_points_num)),
+                              history_trajectory_.trajectory_points.begin() + forward_rel_matched_index + 1);
+  const double zero_s = stitching_trajectory.back().path_point.s;
+  for (auto &tp : stitching_trajectory) {
+    tp.relative_time = tp.relative_time + (history_trajectory_.header.stamp - current_time_stamp).toSec();
+    tp.path_point.s = tp.path_point.s - zero_s;
+  }
+  return stitching_trajectory;
+}
+
+planning_msgs::TrajectoryPoint MotionPlanner::ComputeTrajectoryPointFromVehicleState(double planning_cycle_time,
+                                                                                     const vehicle_state::KinoDynamicState &kinodynamic_state) {
+  planning_msgs::TrajectoryPoint point;
+  point.relative_time = planning_cycle_time;
+  point.path_point.x = kinodynamic_state.x_;
+  point.path_point.y = kinodynamic_state.y_;
+  point.path_point.s = 0.0;
+  point.path_point.theta = kinodynamic_state.theta_;
+  point.path_point.kappa = kinodynamic_state.kappa_;
+  point.vel = kinodynamic_state.v_;
+  point.acc = kinodynamic_state.a_;
+  point.jerk = 0.0;
+  return point;
+}
+std::vector<planning_msgs::TrajectoryPoint> MotionPlanner::ComputeReinitStitchingTrajectory(double planning_cycle_time,
+                                                                                            const vehicle_state::KinoDynamicState &kino_dynamic_state) {
+  constexpr double kEpsilon_v = 0.1;
+  constexpr double kEpsilon_a = 0.4;
+  planning_msgs::TrajectoryPoint reinit_point;
+  if (std::fabs(kino_dynamic_state.a_) < kEpsilon_a && std::fabs(kino_dynamic_state.v_) < kEpsilon_v) {
+    reinit_point = ComputeTrajectoryPointFromVehicleState(planning_cycle_time, kino_dynamic_state);
+  } else {
+    reinit_point = ComputeTrajectoryPointFromVehicleState(planning_cycle_time,
+                                                          kino_dynamic_state.GetNextStateAfterTime(planning_cycle_time));
+  }
+  return std::vector<planning_msgs::TrajectoryPoint>(1, reinit_point);
+}
+
+size_t MotionPlanner::GetPositionMatchedIndex(const std::pair<double, double> &xy,
+                                              const std::vector<planning_msgs::TrajectoryPoint> &trajectory) {
+  ROS_ASSERT(!trajectory.empty());
+  double min_dist_sqr = std::numeric_limits<double>::max();
+  size_t min_index = 0;
+  constexpr double kEps = 1.0e-5;
+  for (size_t i = 0; i < trajectory.size(); ++i) {
+    double dist_sqr = (trajectory[i].path_point.x - xy.first) * (trajectory[i].path_point.x - xy.first) +
+        (trajectory[i].path_point.y - xy.second) * (trajectory[i].path_point.y - xy.second);
+    if (dist_sqr < min_dist_sqr + kEps) {
+      min_dist_sqr = dist_sqr;
+      min_index = i;
+    }
+  }
+  return min_index;
+}
+
+size_t MotionPlanner::GetTimeMatchIndex(double relative,
+                                        double eps,
+                                        const std::vector<planning_msgs::TrajectoryPoint> &trajectory) {
+  ROS_ASSERT(!trajectory.empty());
+  if (relative > trajectory.back().relative_time) {
+    return trajectory.size() - 1;
+  }
+  auto cmp = [&eps](const planning_msgs::TrajectoryPoint &tp, double relative_time) -> bool {
+    return tp.relative_time + eps < relative_time;
+  };
+  auto iter = std::lower_bound(trajectory.begin(), trajectory.end(), relative, cmp);
+  return std::distance(trajectory.begin(), iter);
+
+}
+std::pair<double, double> MotionPlanner::GetLatAndLonDistFromRefPoint(double x,
+                                                                      double y,
+                                                                      const planning_msgs::PathPoint &point) {
+  std::pair<double, double> sd;
+  Eigen::Vector2d v{x - point.x, y - point.y};
+  Eigen::Vector2d n{std::cos(point.theta), std::sin(point.theta)};
+  sd.first = v.x() * n.x() + n.y() + v.y() + point.s;
+  sd.second = v.x() * n.y() - v.y() * n.x();
+  return sd;
 }
 
 }

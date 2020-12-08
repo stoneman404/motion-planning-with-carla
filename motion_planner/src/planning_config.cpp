@@ -39,7 +39,7 @@ void PlanningConfig::UpdateParams(const ros::NodeHandle &nh) {
   nh.param<double>("/motion_planner/min_lat_acc", min_lat_acc_, -0.8);
   nh.param<double>("/motion_planner/max_lat_acc", max_lat_acc_, 0.8);
   nh.param<double>("/motion_planner/target_speed", target_speed_, 8.333);
-  nh.param<double>("/motion_planner/motion_planning/min_lookahead_distance", min_lookahead_distance_, 1.0);
+  nh.param<double>("/motion_planner/min_lookahead_distance", min_lookahead_distance_, 1.0);
   nh.param<double>("/motion_planner/lattice_planner/lattice_weight_opposite_side_offset",
                    lattice_weight_opposite_side_offset_,
                    10.0);
@@ -55,6 +55,8 @@ void PlanningConfig::UpdateParams(const ros::NodeHandle &nh) {
   nh.param<double>("/motion_planner/lattice_planner/lattice_weight_lon_target", lattice_weight_lon_target_, 20.0);
   nh.param<double>("/motion_planner/lattice_planner/lattice_weight_lat_offset", lattice_weight_lat_offset_, 20.0);
   nh.param<double>("/motion_planner/lattice_planner/lattice_weight_lat_jerk", lattice_weight_lat_jerk_, 30);
+  nh.param<double>("/motion_planner/max_replan_lat_distance_threshold", max_replan_lat_distance_threshold_, 0.2);
+  nh.param<double>("/motion_planner/max_replan_lon_distance_threshold", max_replan_lon_distance_threshold_, 0.4);
 
 }
 const std::string &PlanningConfig::planner_type() const { return planner_type_; }
@@ -122,5 +124,11 @@ const vehicle_state::VehicleParams &PlanningConfig::vehicle_params() const {
 }
 void PlanningConfig::set_vehicle_params(const vehicle_state::VehicleParams &vehicle_params) {
   this->vehicle_params_ = vehicle_params;
+}
+double PlanningConfig::max_replan_lat_distance_threshold() const {
+  return max_replan_lat_distance_threshold_;
+}
+double PlanningConfig::max_replan_lon_distance_threshold() const {
+  return max_replan_lon_distance_threshold_;
 }
 }

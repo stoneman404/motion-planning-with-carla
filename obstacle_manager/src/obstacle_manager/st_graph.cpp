@@ -24,7 +24,7 @@ STGraph::STGraph(const std::vector<std::shared_ptr<Obstacle>> &obstacles,
 void STGraph::SetUp(const std::vector<std::shared_ptr<Obstacle>> &obstacles,
                     std::shared_ptr<ReferenceLine> ref_line) {
   for (const auto &obstacle : obstacles) {
-    if (!obstacle->HasTrajectory()) {
+    if (!obstacle->IsStatic()) {
       SetUpStaticObstacle(obstacle, ref_line);
     } else {
       SetUpDynamicObstacle(obstacle, ref_line);
@@ -80,7 +80,7 @@ void STGraph::SetUpDynamicObstacle(const std::shared_ptr<Obstacle> &obstacle,
     Box2d box = obstacle->GetBoundingBoxAtPoint(point);
     SLBoundary sl_boundary;
     if (!ref_line->GetSLBoundary(box, &sl_boundary)) {
-      ROS_DEBUG("[STGraph::SetUpDynamicObstacle]: failed to get sl_boundary");
+      ROS_FATAL("[STGraph::SetUpDynamicObstacle]: failed to get sl_boundary");
       return;
     }
     double left_width;

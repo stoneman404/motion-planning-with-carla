@@ -23,10 +23,7 @@
 #include "trajectory_planner.hpp"
 #include "frenet_lattice_planner/frenet_lattice_planner.hpp"
 
-
-// motion planner
 namespace planning {
-
 
 class MotionPlanner {
  public:
@@ -40,20 +37,43 @@ class MotionPlanner {
   void InitPublisher();
   void InitSubscriber();
   void InitServiceClient();
-  void GenerateEmergencyStopTrajectory(const planning_msgs::TrajectoryPoint &init_trajectory_point,
-                                       planning_msgs::Trajectory &emergency_stop_trajectory) const;
+  static void GenerateEmergencyStopTrajectory(const planning_msgs::TrajectoryPoint &init_trajectory_point,
+                                              planning_msgs::Trajectory &emergency_stop_trajectory);
   bool GetPlanningTargetFromBehaviour(const planning_msgs::Behaviour &behaviour,
                                       std::vector<PlanningTarget> &planning_targets);
   std::vector<planning_msgs::TrajectoryPoint> GetStitchingTrajectory(const ros::Time &current_time_stamp,
                                                                      double planning_cycle_time,
                                                                      size_t preserve_points_num);
 
+  static planning_msgs::TrajectoryPoint ComputeTrajectoryPointFromVehicleState(double planning_cycle_time,
+                                                                               const vehicle_state::KinoDynamicState &kinodynamic_state);
+
+  static std::vector<planning_msgs::TrajectoryPoint> ComputeReinitStitchingTrajectory(double planning_cycle_time,
+                                                                                      const vehicle_state::KinoDynamicState &kino_dynamic_state);
+
+  static size_t GetTimeMatchIndex(double relative,
+                                  double eps,
+                                  const std::vector<planning_msgs::TrajectoryPoint> &trajectory);
+
+  static size_t GetPositionMatchedIndex(const std::pair<double, double> &xy,
+                                        const std::vector<planning_msgs::TrajectoryPoint> &trajectory);
+
+  /**
+   * @brief get lateral and longitudinal distance from reference path point.
+   * @param x:
+   * @param y:
+   * @param point: the ref point
+   * @return pair.first: longitudinal distance + refpoint.s , pair.second: lateral distance
+   */
+  static std::pair<double, double> GetLatAndLonDistFromRefPoint(double x,
+                                                                double y,
+                                                                const planning_msgs::PathPoint &point);
+
   void VisualizeValidTrajectories(const std::vector<planning_msgs::Trajectory> &valid_trajectories) const;
   void VisualizeOptimalTrajectory(const planning_msgs::Trajectory &optimal_trajectory) const;
   void VisualizeTrafficLightBox();
   void VisualizeReferenceLine(std::vector<std::shared_ptr<ReferenceLine>> &ref_lines);
-  void VisualizeObstacleTrajectories();
-  bool GetLocalGoal(PlanningTarget &planning_target) const;
+  static bool GetLocalGoal(PlanningTarget &planning_target);
 
  private:
   bool has_history_trajectory_ = false;

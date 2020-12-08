@@ -75,9 +75,9 @@ Agent::Agent(const vehicle_state::VehicleState &vehicle_state) : id_(vehicle_sta
 Agent::Agent() : id_(-1),
                  is_host_(false),
                  is_valid_(false),
+                 bounding_box_(common::Box2d()),
                  length_(0.0),
                  width_(0.0),
-                 bounding_box_(common::Box2d()),
                  state_(vehicle_state::KinoDynamicState()),
                  max_lat_behaviour_(LateralBehaviour::UNDEFINED),
                  current_ref_lane_(nullptr),
@@ -215,6 +215,7 @@ bool Agent::UpdateAgent(planning_msgs::TrajectoryPoint &trajectory_point) {
   state_.centripental_acc_ = state_.v_ * state_.v_ * state_.kappa_;
   Eigen::Vector2d center{state_.x_, state_.y_};
   bounding_box_ = common::Box2d(center, state_.theta_, length_, width_);
+  return true;
 }
 
 }

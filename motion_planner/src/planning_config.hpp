@@ -63,7 +63,8 @@ class PlanningConfig {
   double max_kappa() const;
   double min_lat_acc() const;
   double max_lat_acc() const;
-
+  double max_replan_lon_distance_threshold() const;
+  double max_replan_lat_distance_threshold() const;
  private:
   vehicle_state::VehicleParams vehicle_params_{};
   std::string planner_type_;
@@ -104,6 +105,8 @@ class PlanningConfig {
   double lattice_weight_lon_target_{};
   double lattice_weight_lat_jerk_{};
   double lattice_weight_lat_offset_{};
+  double max_replan_lat_distance_threshold_{};
+  double max_replan_lon_distance_threshold_{};
 
  private:
   PlanningConfig() = default;
