@@ -30,7 +30,7 @@ class PlanningConfig {
   static PlanningConfig &Instance();
   void UpdateParams(const ros::NodeHandle &nh);
   const std::string &planner_type() const;
-  int loop_rate() const;
+  double loop_rate() const;
   double delta_t() const;
   void set_vehicle_params(const vehicle_state::VehicleParams &vehicle_params);
   const vehicle_state::VehicleParams &vehicle_params() const;
@@ -65,12 +65,14 @@ class PlanningConfig {
   double max_lat_acc() const;
   double max_replan_lon_distance_threshold() const;
   double max_replan_lat_distance_threshold() const;
+  int preserve_history_trajectory_point_num() const;
+
+
+
  private:
   vehicle_state::VehicleParams vehicle_params_{};
   std::string planner_type_;
-  int planning_loop_rate_{};
-  double obstacle_trajectory_prediction_horizon_ = 1.0;
-  double obstacle_trajectory_prediction_step_ = 0.25;
+  double planning_loop_rate_{};
   double delta_t_{}; // the trajectory delta time
   double max_lookahead_distance_{}; // the max lookahead distance for ego vehicle
   double min_lookahead_distance_{};
@@ -107,6 +109,7 @@ class PlanningConfig {
   double lattice_weight_lat_offset_{};
   double max_replan_lat_distance_threshold_{};
   double max_replan_lon_distance_threshold_{};
+  int preserve_history_trajectory_point_num_{};
 
  private:
   PlanningConfig() = default;

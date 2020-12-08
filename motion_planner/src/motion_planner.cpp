@@ -46,10 +46,11 @@ void MotionPlanner::RunOnce() {
   }
   ego_object_ = objects_map_[ego_vehicle_id_];
   vehicle_state_->Update(ego_vehicle_status_, ego_vehicle_info_, ego_object_);
-  auto init_trajectory_point =
+  auto stitching_trajectory =
       this->GetStitchingTrajectory(current_time_stamp,
-                                   1.0 / PlanningConfig::Instance().loop_rate(),
-                                   15).front();
+                                   1.0 / static_cast<double>(PlanningConfig::Instance().loop_rate()),
+                                   PlanningConfig::Instance().preserve_history_trajectory_point_num());
+  auto init_trajectory_point = stitching_trajectory.back();
   PlanningConfig::Instance().set_vehicle_params(vehicle_state_->vehicle_params());
   std::vector<PlanningTarget> planning_targets;
   planning_msgs::Trajectory optimal_trajectory;
@@ -57,19 +58,35 @@ void MotionPlanner::RunOnce() {
   if (!this->GetPlanningTargetFromBehaviour(behaviour_, planning_targets)) {
     ROS_FATAL("[MotionPlanner::RunOnce], Failed to Get the PlanningTargetFromBehaviours");
     GenerateEmergencyStopTrajectory(init_trajectory_point, optimal_trajectory);
+    has_history_trajectory_ = false;
+    optimal_trajectory.header.stamp = current_time_stamp;
     trajectory_publisher_.publish(optimal_trajectory);
     return;
   }
+
   if (!trajectory_planner_->Process(init_trajectory_point, planning_targets, optimal_trajectory, nullptr)) {
     GenerateEmergencyStopTrajectory(init_trajectory_point, optimal_trajectory);
+    has_history_trajectory_ = false;
+    optimal_trajectory.header.stamp = current_time_stamp;
     trajectory_publisher_.publish(optimal_trajectory);
     return;
   }
+
+  // because the first point of original optimal_trajectory is init_trajectory_point: the back of stitching_trajectory;
+  optimal_trajectory.trajectory_points.insert(optimal_trajectory.trajectory_points.begin(),
+                                              stitching_trajectory.begin(),
+                                              stitching_trajectory.end() - 1);
+  history_trajectory_ = optimal_trajectory;
+  has_history_trajectory_ = true;
+  optimal_trajectory.header.stamp = current_time_stamp;
+  trajectory_publisher_.publish(optimal_trajectory);
+  // for visualization
   VisualizeOptimalTrajectory(optimal_trajectory);
   std::vector<std::shared_ptr<ReferenceLine>> ref_lines;
   for (const auto &target : planning_targets) {
     ref_lines.emplace_back(target.ref_lane);
   }
+  VisualizeTrafficLightBox();
   VisualizeReferenceLine(ref_lines);
 }
 
@@ -288,7 +305,7 @@ bool MotionPlanner::GetPlanningTargetFromBehaviour(const planning_msgs::Behaviou
   }
 
   for (size_t i = 0; i < behaviour.forward_behaviours.size(); ++i) {
-    this->GetLocalGoal(planning_targets[i]);
+    MotionPlanner::GetLocalGoal(planning_targets[i]);
     for (size_t j = 0; j < behaviour.surroud_trajectories[i].trajectories.size(); ++i) {
       int agent_id = behaviour.surroud_trajectories[i].trajectories[j].id;
       if (objects_map_.find(agent_id) != objects_map_.end()) {

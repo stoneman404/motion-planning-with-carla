@@ -10,11 +10,7 @@ PlanningConfig &PlanningConfig::Instance() {
 
 void PlanningConfig::UpdateParams(const ros::NodeHandle &nh) {
   nh.param<std::string>("/motion_planner/planner_type", planner_type_, "frenet_lattice");
-  nh.param<double>("/motion_planner/obstacle_trajectory_prediction_horizon",
-                   obstacle_trajectory_prediction_horizon_,
-                   10.0);
-  nh.param<double>("/motion_planner/obstacle_trajectory_prediction_step", obstacle_trajectory_prediction_step_, 0.25);
-  nh.param<int>("/motion_planner/loop_rate", planning_loop_rate_, 10);
+  nh.param<double>("/motion_planner/loop_rate", planning_loop_rate_, 10.0);
   nh.param<double>("/motion_planner/delta_t", delta_t_, 0.1);
   nh.param<double>("/motion_planner/reference_smoother_deviation_weight", reference_smoother_deviation_weight_, 5.0);
   nh.param<double>("/motion_planner/reference_smoother_curvature_weight", reference_smoother_curvature_weight_, 20.0);
@@ -57,6 +53,7 @@ void PlanningConfig::UpdateParams(const ros::NodeHandle &nh) {
   nh.param<double>("/motion_planner/lattice_planner/lattice_weight_lat_jerk", lattice_weight_lat_jerk_, 30);
   nh.param<double>("/motion_planner/max_replan_lat_distance_threshold", max_replan_lat_distance_threshold_, 0.2);
   nh.param<double>("/motion_planner/max_replan_lon_distance_threshold", max_replan_lon_distance_threshold_, 0.4);
+  nh.param<int>("/motion_planner/preserve_history_trajectory_point_num", preserve_history_trajectory_point_num_, 15);
 
 }
 const std::string &PlanningConfig::planner_type() const { return planner_type_; }
@@ -113,7 +110,7 @@ double PlanningConfig::max_kappa() const {
 }
 double PlanningConfig::min_lat_acc() const { return min_lat_acc_; }
 double PlanningConfig::max_lat_acc() const { return max_lat_acc_; }
-int PlanningConfig::loop_rate() const { return planning_loop_rate_; }
+double PlanningConfig::loop_rate() const { return planning_loop_rate_; }
 double PlanningConfig::delta_t() const { return delta_t_; }
 double PlanningConfig::min_lon_acc() const { return min_lon_jerk_; }
 double PlanningConfig::min_lon_velocity() const { return min_lon_velocity_; }
@@ -131,4 +128,5 @@ double PlanningConfig::max_replan_lat_distance_threshold() const {
 double PlanningConfig::max_replan_lon_distance_threshold() const {
   return max_replan_lon_distance_threshold_;
 }
+int PlanningConfig::preserve_history_trajectory_point_num() const { return preserve_history_trajectory_point_num_; }
 }

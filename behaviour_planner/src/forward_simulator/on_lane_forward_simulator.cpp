@@ -126,12 +126,17 @@ void OnLaneForwardSimulator::AgentMotionModel(const std::array<double, 3> &s_con
   next_s_conditions[0] = s_conditions[0] + s_conditions[1] * delta_t + 0.5 * delta_t * delta_t * lon_acc;
   next_s_conditions[1] = s_conditions[1] + delta_t * lon_acc;
   next_s_conditions[2] = lon_acc;
-  next_d_conditions[0] = d_conditions[0] * lateral_approach_ratio;
+  if (std::fabs(s_conditions[1]) < 0.1){
+    next_d_conditions[0] = d_conditions[0];
+  }else{
+    next_d_conditions[0] = d_conditions[0] * lateral_approach_ratio;
+  }
   const double ds = s_conditions[1] * delta_t + 0.5 * delta_t * delta_t * lon_acc;
   if (std::fabs(ds) < 1e-3) {
     next_d_conditions[1] = 0.0;
     next_d_conditions[2] = 0.0;
   } else {
+    //todo : interpolate the d, and calculate d''.
     next_d_conditions[1] = (next_d_conditions[0] - d_conditions[0]) / ds;
     next_d_conditions[2] = (next_d_conditions[1] - d_conditions[1]) / ds;
   }
