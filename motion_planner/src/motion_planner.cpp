@@ -60,6 +60,7 @@ void MotionPlanner::RunOnce() {
     GenerateEmergencyStopTrajectory(init_trajectory_point, optimal_trajectory);
     has_history_trajectory_ = false;
     optimal_trajectory.header.stamp = current_time_stamp;
+    optimal_trajectory.status = planning_msgs::Trajectory::EMERGENCYSTOP;
     trajectory_publisher_.publish(optimal_trajectory);
     return;
   }
@@ -68,6 +69,7 @@ void MotionPlanner::RunOnce() {
     GenerateEmergencyStopTrajectory(init_trajectory_point, optimal_trajectory);
     has_history_trajectory_ = false;
     optimal_trajectory.header.stamp = current_time_stamp;
+    optimal_trajectory.status = planning_msgs::Trajectory::EMERGENCYSTOP;
     trajectory_publisher_.publish(optimal_trajectory);
     return;
   }
@@ -76,6 +78,10 @@ void MotionPlanner::RunOnce() {
   optimal_trajectory.trajectory_points.insert(optimal_trajectory.trajectory_points.begin(),
                                               stitching_trajectory.begin(),
                                               stitching_trajectory.end() - 1);
+  if(optimal_trajectory.trajectory_points.empty()){
+    optimal_trajectory.status = planning_msgs::Trajectory::EMPTY;
+  }
+  optimal_trajectory.status = planning_msgs::Trajectory::NORMAL;
   history_trajectory_ = optimal_trajectory;
   has_history_trajectory_ = true;
   optimal_trajectory.header.stamp = current_time_stamp;

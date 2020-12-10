@@ -24,6 +24,7 @@ class BehaviourPlanner {
   ~BehaviourPlanner() = default;
   explicit BehaviourPlanner(const ros::NodeHandle &nh);
   void RunOnce();
+
  private:
   /**
    * @brief: make agent set from objects and traffic light infos.
@@ -43,6 +44,8 @@ class BehaviourPlanner {
    * @param behaviour: best behaviours
    */
   void VisualizeBehaviourTrajectories(const Behaviour &behaviour);
+
+  void VisualizeAgentTrajectories(const Behaviour& behaviour);
 
   /**
    * @brief: convert the behaviour to ros msgs.
@@ -74,6 +77,7 @@ class BehaviourPlanner {
 
   /////////////////////Publisher///////////////////////
   ros::Publisher behaviour_publisher_;
+  ros::Publisher visualized_agent_trajectories_publisher_;
   ros::Publisher visualized_behaviour_trajectories_publisher_;
 
   carla_msgs::CarlaEgoVehicleInfo ego_vehicle_info_;

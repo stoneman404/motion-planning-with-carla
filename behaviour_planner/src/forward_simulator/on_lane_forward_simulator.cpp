@@ -9,11 +9,9 @@ bool OnLaneForwardSimulator::ForwardOneStep(const Agent &agent,
                                             double sim_time_step,
                                             planning_msgs::TrajectoryPoint &point) {
   params_ = params;
-//  common::SLPoint sl_point;
   if (!agent.is_valid()) {
     return false;
   }
-//  double lat_vel = 0.0;
   std::array<double, 3> s_conditions{0, 0, 0};
   std::array<double, 3> d_conditions{0, 0, 0};
   if (!GetAgentFrenetState(agent, reference_line, s_conditions, d_conditions)) {
@@ -63,7 +61,6 @@ bool OnLaneForwardSimulator::GetIDMLonAcc(const std::array<double, 3> &ego_s_con
     const double delta_v = ego_lon_v - leading_vel;
     const double s0 = params_.idm_params.s0;
     const double s1 = params_.idm_params.s1;
-
     const double T = params_.idm_params.safe_time_headway;
     const double a = params_.idm_params.max_acc;
     const double b = params_.idm_params.max_decel;
@@ -78,7 +75,8 @@ bool OnLaneForwardSimulator::GetIDMLonAcc(const std::array<double, 3> &ego_s_con
   return true;
 }
 
-planning_msgs::PathPoint OnLaneForwardSimulator::AgentStateToPathPoint(const vehicle_state::KinoDynamicState &kino_dynamic_state) {
+planning_msgs::PathPoint OnLaneForwardSimulator::AgentStateToPathPoint(
+    const vehicle_state::KinoDynamicState &kino_dynamic_state) {
   planning_msgs::PathPoint path_point;
   path_point.x = kino_dynamic_state.x_;
   path_point.y = kino_dynamic_state.y_;
@@ -126,17 +124,13 @@ void OnLaneForwardSimulator::AgentMotionModel(const std::array<double, 3> &s_con
   next_s_conditions[0] = s_conditions[0] + s_conditions[1] * delta_t + 0.5 * delta_t * delta_t * lon_acc;
   next_s_conditions[1] = s_conditions[1] + delta_t * lon_acc;
   next_s_conditions[2] = lon_acc;
-  if (std::fabs(s_conditions[1]) < 0.1){
-    next_d_conditions[0] = d_conditions[0];
-  }else{
-    next_d_conditions[0] = d_conditions[0] * lateral_approach_ratio;
-  }
   const double ds = s_conditions[1] * delta_t + 0.5 * delta_t * delta_t * lon_acc;
   if (std::fabs(ds) < 1e-3) {
+    next_d_conditions[0] = d_conditions[0];
     next_d_conditions[1] = 0.0;
     next_d_conditions[2] = 0.0;
   } else {
-    //todo : interpolate the d, and calculate d''.
+    next_d_conditions[0] = d_conditions[0] * lateral_approach_ratio;
     next_d_conditions[1] = (next_d_conditions[0] - d_conditions[0]) / ds;
     next_d_conditions[2] = (next_d_conditions[1] - d_conditions[1]) / ds;
   }

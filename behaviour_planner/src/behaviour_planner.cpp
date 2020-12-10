@@ -74,6 +74,8 @@ BehaviourPlanner::BehaviourPlanner(const ros::NodeHandle &nh) : nh_(nh) {
   this->behaviour_publisher_ = nh_.advertise<planning_msgs::Behaviour>(common::topic::kBehaviourName, 10);
   this->visualized_behaviour_trajectories_publisher_ =
       nh_.advertise<visualization_msgs::MarkerArray>(common::topic::kVisualizedBehaviourTrajectoryName, 10);
+  this->visualized_agent_trajectories_publisher_ = nh_.advertise<visualization_msgs::MarkerArray>(
+      common::topic::kVisualizedObstacleTrajectoriesName, 10);
 }
 
 void BehaviourPlanner::RunOnce() {
@@ -99,9 +101,9 @@ void BehaviourPlanner::RunOnce() {
   if (!BehaviourPlanner::ConvertBehaviourToRosMsg(behaviour, publishable_behaviour)) {
     return;
   }
-  this->VisualizeBehaviourTrajectories(behaviour);
   behaviour_publisher_.publish(publishable_behaviour);
-
+  this->VisualizeBehaviourTrajectories(behaviour);
+  VisualizeAgentTrajectories(behaviour);
 }
 
 bool BehaviourPlanner::ConvertBehaviourToRosMsg(const Behaviour &behaviour,
@@ -255,6 +257,41 @@ bool BehaviourPlanner::MakeAgentSet() {
 
   }
   return true;
+}
+void BehaviourPlanner::VisualizeAgentTrajectories(const Behaviour &behaviour) {
+  auto best_behaviour = behaviour.lateral_behaviour ;
+  size_t best_index = 0;
+  for (size_t i = 0; i < behaviour.forward_behaviours.size(); ++i){
+    if (behaviour.forward_behaviours[i].first == best_behaviour){
+      best_index = i;
+    }
+  }
+  auto best_agent_trajectories = behaviour.surrounding_trajs[best_index];
+  visualization_msgs::MarkerArray marker_array;
+
+  for(const auto& agent_trajectory : best_agent_trajectories){
+    visualization_msgs::Marker marker;
+    marker.type = visualization_msgs::Marker::POINTS;
+    marker.header.frame_id = "/map";
+    marker.id = agent_trajectory.first;
+    marker.action = visualization_msgs::Marker::ADD;
+    marker.color.a = 1.0;
+    marker.color.b = 0.6;
+    marker.color.g = 0.8;
+    marker.color.r = 0.4;
+    marker.scale.x = 0.2;
+    marker.scale.y = 0.2;
+    marker.scale.z = 0.2;
+    for(const auto& tp : agent_trajectory.second.trajectory_points){
+      geometry_msgs::Point point;
+      point.x = tp.path_point.x;
+      point.y = tp.path_point.y;
+      point.z = 2.0;
+      marker.points.push_back(point);
+    }
+    marker_array.markers.push_back(marker);
+  }
+  this->visualized_agent_trajectories_publisher_.publish(marker_array);
 }
 
 }

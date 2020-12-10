@@ -6,7 +6,8 @@ namespace topic {
 const std::string kEgoVehicleStatusName = "/carla/ego_vehicle/vehicle_status";                                 //NOLINT
 const std::string
     kTrafficLigthsStatusName = "/carla/traffic_lights";                                                //NOLINT
-const std::string kCarlaActorListName = "/carla/actor_list";                                                   //NOLINT
+const std::string kCarlaActorListName = "/carla/actor_list";//NOLINT
+const std::string kEgoVehicleControlName = "/carla/ego_vehicle/vehicle_control_cmd"; //NOLINT
 const std::string kObjectsName = "/carla/objects";                                                             //NOLINT
 const std::string kPublishedTrajectoryName = "/motion_planner/published_trajectory";                           //NOLINT
 const std::string kEgoVehicleInfoName = "/carla/ego_vehicle/vehicle_info";                                     //NOLINT
