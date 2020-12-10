@@ -30,7 +30,7 @@ class PIDController : public ControlStrategy {
                                  const planning_msgs::Trajectory &trajectory,
                                  planning_msgs::TrajectoryPoint &matched_tp);
 
-  static inline bool GetMatchedPointByAbsoluteTime(const ros::Time &time_stamp, const planning_msgs::Trajectory& trajectory,
+  static inline bool GetMatchedPointByAbsoluteTime(double &time_stamp, const planning_msgs::Trajectory& trajectory,
                                                    planning_msgs::TrajectoryPoint& matched_tp);
 
   static inline bool GetMatchedPointByRelativeTime(double relative_time, const planning_msgs::Trajectory& trajectory,

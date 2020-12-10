@@ -7,7 +7,7 @@ namespace control {
 
 Controller::Controller(ros::NodeHandle &nh) : nh_(nh), vehicle_state_(std::make_unique<vehicle_state::VehicleState>()) {
   nh_.param<std::string>("control/controller_type", controller_type_, "pid");
-  nh_.param<double>("control/pid_lookahead_distance", pid_configs_.pid_lookahead_distance, 10.0);
+  nh_.param<double>("control/pid_lookahead_distance", pid_configs_.lookahead_time, 1.0);
   nh_.param<double>("control/lateral_pid_kp", pid_configs_.lat_configs.lat_kp, 1.95);
   nh_.param<double>("control/lateral_pid_kd", pid_configs_.lat_configs.lat_kd, 0.01);
   nh_.param<double>("control/lateral_pid_ki", pid_configs_.lat_configs.lat_ki, 1.4);
@@ -68,6 +68,12 @@ void Controller::RunOnce() {
     carla_control_publisher_.publish(control);
     return;
   }
+  if (trajectory_.status != planning_msgs::Trajectory::NORMAL){
+    Controller::EmergencyStopControl(control);
+    carla_control_publisher_.publish(control);
+    return;
+  }
+
   vehicle_state_->Update(ego_vehicle_status_, ego_vehicle_info_, objects_map_[ego_vehicle_id_]);
   if (!control_strategy_->Execute(current_time_stamp.toSec(), *vehicle_state_, trajectory_, control)) {
     Controller::EmergencyStopControl(control);
@@ -77,6 +83,7 @@ void Controller::RunOnce() {
   carla_control_publisher_.publish(control);
 
 }
+
 void Controller::EmergencyStopControl(carla_msgs::CarlaEgoVehicleControl &control) {
   control.brake = 1.0;
   control.steer = 0.0;
@@ -84,6 +91,7 @@ void Controller::EmergencyStopControl(carla_msgs::CarlaEgoVehicleControl &contro
   control.manual_gear_shift = false;
   control.throttle = 0.0;
 }
+
 void Controller::Launch() {
   ros::WallRate loop_rate(loop_rate_);
   while (ros::ok()){

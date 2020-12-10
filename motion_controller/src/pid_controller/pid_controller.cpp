@@ -13,19 +13,57 @@ bool PIDController::Execute(double current_time_stamp,
                             const vehicle_state::VehicleState &vehicle_state,
                             const planning_msgs::Trajectory &trajectory,
                             carla_msgs::CarlaEgoVehicleControl &control) {
+  planning_msgs::TrajectoryPoint cur_tp, target_tp;
+  auto kinodynamic_state = vehicle_state.GetKinoDynamicVehicleState();
+  if (!GetMatchedPointByPosition(kinodynamic_state.x_, kinodynamic_state.y_, trajectory, cur_tp)) {
+    return false;
+  }
+  double preview_time = current_time_stamp + pid_configs_.lookahead_time;
+  if (!GetMatchedPointByAbsoluteTime(preview_time, trajectory, target_tp)) {
+    return false;
+  }
+  const double delta_theta = kinodynamic_state.theta_ - cur_tp.path_point.theta;
+  const double cos_delta_theta = std::cos(delta_theta);
+  const double cur_lon_s_dot = kinodynamic_state.v_ * cos_delta_theta;
+  const double target_lon_s_dot = target_tp.vel;
+  double throttle = 0.0;
+  double steer = 0.0;
 
+  if (!LongitudinalControl(cur_lon_s_dot, target_lon_s_dot, 1. / loop_rate_, &throttle)) {
+    return false;
+  }
+
+  if (!LateralControl({kinodynamic_state.x_, kinodynamic_state.y_, kinodynamic_state.theta_},
+                      {target_tp.path_point.x, target_tp.path_point.y, target_tp
+                          .path_point.theta},
+                      1.0 / loop_rate_,
+                      &steer)) {
+    return false;
+  }
+  control.steer = steer;
+  control.throttle = throttle;
+  control.brake = 0.0;
+  control.hand_brake = false;
+  control.manual_gear_shift = false;
   return true;
 }
 
 bool PIDController::LongitudinalControl(double current_speed, double target_speed,
                                         double delta_t, double *throttle) {
-
   double speed_error = target_speed - current_speed;
   this->lon_error_buffer_.push_back(speed_error);
-  if ()
-
+  double speed_error_rate = 0.0;
+  double speed_error_intergal = 0.0;
+  if (lon_error_buffer_.size() >= 2) {
+    speed_error_rate = (lon_error_buffer_.back() - *(lon_error_buffer_.end() - 2)) / delta_t;
+    speed_error_intergal = std::accumulate(lon_error_buffer_.begin(), lon_error_buffer_.end(), 0.0) * delta_t;
+  }
+  *throttle = Clamp<double>(
+      pid_configs_.lon_configs.lon_kp * speed_error + pid_configs_.lon_configs.lon_kd * speed_error_rate / delta_t
+          + pid_configs_.lon_configs.lon_ki * speed_error_intergal * delta_t, 0.0, 1.0);
   return true;
 }
+
 bool PIDController::LateralControl(const Eigen::Vector3d &current_pose,
                                    const Eigen::Vector3d &target_pose,
                                    double delta_t,
@@ -46,7 +84,7 @@ bool PIDController::LateralControl(const Eigen::Vector3d &current_pose,
   double differential_angle_error = 0.0;
   double intergal_angle_error = 0.0;
   if (lat_error_buffer_.size() >= 2) {
-    differential_angle_error = (lat_error_buffer_.back() - *(lat_error_buffer_.end() - 1)) / delta_t;
+    differential_angle_error = (lat_error_buffer_.back() - *(lat_error_buffer_.end() - 2)) / delta_t;
     intergal_angle_error = std::accumulate(lat_error_buffer_.begin(), lat_error_buffer_.end(), 0.0) * delta_t;
   } else {
     differential_angle_error = 0.0;
@@ -90,11 +128,11 @@ bool PIDController::GetMatchedPointByPosition(double x,
   return true;
 }
 
-bool PIDController::GetMatchedPointByAbsoluteTime(const ros::Time &time_stamp,
+bool PIDController::GetMatchedPointByAbsoluteTime(double &time_stamp,
                                                   const planning_msgs::Trajectory &trajectory,
                                                   planning_msgs::TrajectoryPoint &matched_tp) {
   auto trajectory_time_stamp = trajectory.header.stamp;
-  double relative_time = (time_stamp - trajectory_time_stamp).toSec();
+  double relative_time = time_stamp - trajectory_time_stamp.toSec();
   return PIDController::GetMatchedPointByRelativeTime(relative_time, trajectory, matched_tp);
 }
 
@@ -109,18 +147,18 @@ bool PIDController::GetMatchedPointByRelativeTime(double relative_time,
                        [](const planning_msgs::TrajectoryPoint &tp, double relative_time) -> bool {
                          return tp.relative_time < relative_time;
                        });
-  if (it_low == trajectory.trajectory_points.begin()){
+  if (it_low == trajectory.trajectory_points.begin()) {
     matched_tp = *it_low;
     return true;
   }
-  if (it_low == trajectory.trajectory_points.end()){
+  if (it_low == trajectory.trajectory_points.end()) {
     matched_tp = trajectory.trajectory_points.back();
     return true;
   }
   auto it_lower = it_low - 1;
-  if (relative_time - it_lower->relative_time <  it_low->relative_time - relative_time){
+  if (relative_time - it_lower->relative_time < it_low->relative_time - relative_time) {
     matched_tp = *it_lower;
-  }else{
+  } else {
     matched_tp = *it_low;
   }
   return true;

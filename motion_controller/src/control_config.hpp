@@ -15,7 +15,7 @@ struct LatPIDConfigs{
 };
 
 struct PIDConfigs{
-  double pid_lookahead_distance{};
+  double lookahead_time{};
   LonPIDConfigs lon_configs;
   LatPIDConfigs lat_configs;
 };
