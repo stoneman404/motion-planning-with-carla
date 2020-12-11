@@ -396,7 +396,6 @@ double ReferenceLine::GetDrivingWidth(const SLBoundary &sl_boundary) const {
   double lane_left_width = 0.0;
   double lane_right_width = 0.0;
   GetLaneWidth(sl_boundary.start_s, &lane_left_width, &lane_right_width);
-
   double driving_width = std::max(lane_left_width - sl_boundary.end_l,
                                   lane_right_width + sl_boundary.start_l);
   driving_width = std::min(lane_left_width + lane_right_width, driving_width);
@@ -422,7 +421,6 @@ planning_msgs::WayPoint ReferenceLine::NearestWayPoint(double s) const {
   auto reference_point = GetReferencePoint(s);
   size_t index;
   return NearestWayPoint(reference_point.x(), reference_point.y(), &index);
-
 }
 
 bool ReferenceLine::GetMatchedPoint(double x, double y, ReferencePoint *matched_ref_point, double *matched_s) const {
@@ -482,6 +480,19 @@ bool ReferenceLine::CanChangeRight(double s) const {
     return true;
   }
   return false;
+}
+
+bool ReferenceLine::IsBlockedByBox(const Box2d &box, double ego_width, double buffer) const {
+  common::SLBoundary sl_boundary;
+  if (!this->GetSLBoundary(box, &sl_boundary)) {
+    return true;
+  }
+  if (!IsOnLane(sl_boundary)) {
+    return false;
+  }
+  double drive_width = GetDrivingWidth(sl_boundary);
+  return ego_width + buffer > drive_width;
+
 }
 
 }

@@ -16,8 +16,9 @@ Agent::Agent(const derived_object_msgs::Object &object)
       max_lat_behaviour_(LateralBehaviour::UNDEFINED),
       current_ref_lane_(nullptr),
       target_ref_lane_(nullptr),
-      has_trajectory_(false),
       trajectory_(planning_msgs::Trajectory()) {
+
+//  speed_buffer_.set_capacity(30);
   double x = bounding_box_.center_x();
   double y = bounding_box_.center_y();
   double z = object.pose.position.z;
@@ -25,10 +26,11 @@ Agent::Agent(const derived_object_msgs::Object &object)
   double v = std::hypot(object.twist.linear.x, object.twist.linear.y);
   double a = object.accel.linear.x * std::cos(theta) + object.accel.linear.y * std::sin(theta);
   double centripental_acc = object.accel.linear.y * std::cos(theta) - object.accel.linear.x * std::sin(theta);
+  if (std::fabs(a) < 0.4 && std::fabs(v) < 0.1) {
+    is_static_ = true;
+  }
   double kappa = 0.0;
-  if (v < 1e-3) {
-    kappa = 0.0;
-  } else {
+  if (v > 1e-3) {
     kappa = centripental_acc / (v * v);
   }
   state_ = vehicle_state::KinoDynamicState(x, y, z, theta, kappa, v, a, centripental_acc);
@@ -43,7 +45,7 @@ Agent::Agent(const carla_msgs::CarlaTrafficLightStatus &traffic_light_status,
       max_lat_behaviour_(LateralBehaviour::UNDEFINED),
       current_ref_lane_(nullptr),
       target_ref_lane_(nullptr),
-      has_trajectory_(false),
+      is_static_(true),
       trajectory_(planning_msgs::Trajectory()),
       agent_type_(AgentType::TRAFFIC_LIGHT) {
   double box_length = traffic_light_info.trigger_volume.size.x;
@@ -66,9 +68,11 @@ Agent::Agent(const vehicle_state::VehicleState &vehicle_state) : id_(vehicle_sta
                                                                  max_lat_behaviour_(LateralBehaviour::UNDEFINED),
                                                                  current_ref_lane_(nullptr),
                                                                  target_ref_lane_(nullptr),
-                                                                 has_trajectory_(false),
                                                                  trajectory_(planning_msgs::Trajectory()),
                                                                  agent_type_(AgentType::VEHICLE) {
+  if (std::fabs(state_.v_) < 0.1 && std::fabs(state_.a_) < 0.4) {
+    is_static_ = true;
+  }
 
 }
 
@@ -82,9 +86,10 @@ Agent::Agent() : id_(-1),
                  max_lat_behaviour_(LateralBehaviour::UNDEFINED),
                  current_ref_lane_(nullptr),
                  target_ref_lane_(nullptr),
-                 has_trajectory_(false),
+                 is_static_(false),
                  trajectory_(planning_msgs::Trajectory()),
-                 agent_type_(AgentType::UNKNOWN) {}
+                 agent_type_(AgentType::UNKNOWN) {
+}
 
 void Agent::RetriveAgentType(const derived_object_msgs::Object &object) {
   switch (object.classification) {
@@ -204,7 +209,8 @@ void Agent::StateToPathPoint(const vehicle_state::KinoDynamicState &state, plann
 const AgentType &Agent::agent_type() const {
   return agent_type_;
 }
-bool Agent::UpdateAgent(planning_msgs::TrajectoryPoint &trajectory_point) {
+
+bool Agent::UpdateAgentStateUsingTrajectoryPoint(planning_msgs::TrajectoryPoint &trajectory_point) {
   state_.x_ = trajectory_point.path_point.x;
   state_.y_ = trajectory_point.path_point.y;
   state_.z_ = 0.0;
@@ -216,6 +222,10 @@ bool Agent::UpdateAgent(planning_msgs::TrajectoryPoint &trajectory_point) {
   Eigen::Vector2d center{state_.x_, state_.y_};
   bounding_box_ = common::Box2d(center, state_.theta_, length_, width_);
   return true;
+}
+
+bool Agent::is_static() const {
+  return is_static_;
 }
 
 }

@@ -86,9 +86,10 @@ class PolicyDecider {
    * @param agent_id : -1, no leading vehicle, otherwise , it is the id of leading agent.
    * @return true if normal,
    */
-  bool GetLeadingAgentOnRefLane(const Agent &agent,
-                                const std::shared_ptr<ReferenceLine> &ref_lane,
-                                int &agent_id) const;
+  static bool GetLeadingAgentOnRefLane(const Agent &agent,
+                                       const std::unordered_map<int, SimulateAgent> &simulate_agents,
+                                       const std::shared_ptr<ReferenceLine> &ref_lane,
+                                       int &agent_id);
 
   bool EvaluateMultiPolicyTrajectories(const std::vector<Policy> &valid_policy,
                                        const std::vector<planning_msgs::Trajectory> &valid_forward_trajectory,

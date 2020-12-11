@@ -10,6 +10,8 @@
 #include "behaviour.hpp"
 #include "vehicle_state/kinodynamic_state.hpp"
 #include <derived_object_msgs/Object.h>
+#include <boost/circular_buffer.hpp>
+
 namespace planning {
 
 enum class AgentType : uint32_t {
@@ -34,14 +36,14 @@ class Agent {
   explicit Agent(const vehicle_state::VehicleState &vehicle_state);
   Agent(const carla_msgs::CarlaTrafficLightStatus &traffic_light_status,
         const carla_msgs::CarlaTrafficLightInfo &traffic_light_info);
-
-  bool UpdateAgent(planning_msgs::TrajectoryPoint &trajectory_point);
+  bool UpdateAgentStateUsingTrajectoryPoint(planning_msgs::TrajectoryPoint &trajectory_point);
   ~Agent() = default;
   int id() const;;
   const common::Box2d &bounding_box() const;
   const vehicle_state::KinoDynamicState &state() const;
   bool is_valid() const;
   bool is_host() const;
+  bool is_static() const;
   const AgentType &agent_type() const;
   const std::shared_ptr<ReferenceLine> &current_ref_lane() const;
   const std::shared_ptr<ReferenceLine> &target_ref_lane() const;
@@ -52,7 +54,6 @@ class Agent {
   void set_trajectory(const planning_msgs::Trajectory &trajectory);
   void set_most_likely_behaviour(const LateralBehaviour &lateral_behaviour);
   bool PredictAgentBehaviour();
-
  protected:
   void RetriveAgentType(const derived_object_msgs::Object &object);
   static void StateToPathPoint(const vehicle_state::KinoDynamicState &state, planning_msgs::PathPoint &path_point);
@@ -61,7 +62,6 @@ class Agent {
   int id_{}; // the agent id
   bool is_host_{true};
   bool is_valid_{false};
-
   // the bounding box of the agent
   common::Box2d bounding_box_{};
   double length_{};
@@ -71,7 +71,7 @@ class Agent {
   ProbDistributeOfLatBehaviour probs_lat_behaviour_;
   std::shared_ptr<ReferenceLine> current_ref_lane_;
   std::shared_ptr<ReferenceLine> target_ref_lane_;
-  bool has_trajectory_{false};
+  bool is_static_{false};
   planning_msgs::Trajectory trajectory_;
   AgentType agent_type_;
 

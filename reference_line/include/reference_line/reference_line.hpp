@@ -135,8 +135,9 @@ class ReferenceLine {
 
   bool IsOnLane(const common::SLPoint &sl_point) const;
 
-  double GetDrivingWidth(const common::SLBoundary &sl_boudary) const;
+  double GetDrivingWidth(const common::SLBoundary &sl_boundary) const;
 
+  bool IsBlockedByBox(const common::Box2d &box, double ego_width, double buffer) const;
   /**
    * @brief : build object sl boundary
    * @param box : the object's bounding box
