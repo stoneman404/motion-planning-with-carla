@@ -12,16 +12,6 @@ namespace planning {
 
 typedef planning_msgs::CarlaRoadOption RoadOption;
 
-struct SpeedLimit {
-  SpeedLimit() = default;
-  SpeedLimit(double _start_s, double _end_s, double _speed_limit)
-      : start_s(_start_s), end_s(_end_s), speed_limit(_speed_limit) {}
-  double start_s = 0.0;
-  double end_s = 0.0;
-  double speed_limit = 0.0;
-};
-
-
 class ReferenceLine {
  public:
   ReferenceLine() = default;
@@ -178,27 +168,9 @@ class ReferenceLine {
 
   std::vector<planning_msgs::WayPoint> way_points() const { return way_points_; }
 
-  bool CanChangeLeft(double s) const {
-    auto waypoint = NearestWayPoint(s);
-    if (waypoint.lane_change.type == planning_msgs::LaneChangeType::LEFT) {
-      return true;
-    }
-    if (waypoint.lane_change.type == planning_msgs::LaneChangeType::BOTH) {
-      return true;
-    }
-    return false;
-  }
+  bool CanChangeLeft(double s) const;
 
-  bool CanChangeRight(double s) const {
-    auto waypoint = NearestWayPoint(s);
-    if (waypoint.lane_change.type == planning_msgs::LaneChangeType::RIGHT) {
-      return true;
-    }
-    if (waypoint.lane_change.type == planning_msgs::LaneChangeType::BOTH) {
-      return true;
-    }
-    return false;
-  }
+  bool CanChangeRight(double s) const;
 
  private:
   planning_msgs::WayPoint NearestWayPoint(double x, double y, size_t *min_index) const;

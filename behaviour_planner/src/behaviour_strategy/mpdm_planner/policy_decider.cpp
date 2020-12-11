@@ -162,7 +162,7 @@ bool PolicyDecider::CloseLoopSimulate(const Policy &policy,
           return false;
         }
       } else {
-        auto leading_agent = agent_set_[leading_agent_id];
+        auto leading_agent = simulate_agent_tmp[leading_agent_id].agent;
         // has leading agent but is overlapped with cur agent
         if (agent.second.agent.bounding_box().HasOverlapWithBox2d(leading_agent.bounding_box())) {
           return false;

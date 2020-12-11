@@ -23,7 +23,7 @@ class Spline2d {
    * @param y
    * @return
    */
-  bool Evaluate(double s, double *const x, double *const y) const;
+  bool Evaluate(double s, double *x, double *y) const;
 
   /**
    * @brief: evaluate first derivative

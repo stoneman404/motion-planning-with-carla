@@ -17,18 +17,17 @@ class ReferenceLineSmoothIpoptInterface {
   void set_length_weight(double weight) { this->length_weight_ = weight; }
   void set_heading_weight(double weight) { this->heading_weight_ = weight; }
 
-
  private:
   std::vector<ReferencePoint> ref_points_;
   size_t number_of_points_;
   size_t number_of_variables_;
   size_t number_of_curvature_constraints_;
   size_t number_of_constraints_;
-  double ref_deviation_weight_;
-  double curvature_weight_;
-  double length_weight_;
-  double heading_weight_;
-  double max_curvature_;
+  double ref_deviation_weight_{};
+  double curvature_weight_{};
+  double length_weight_{};
+  double heading_weight_{};
+  double max_curvature_{};
 
 };
 

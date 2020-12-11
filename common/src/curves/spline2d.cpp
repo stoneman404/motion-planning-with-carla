@@ -29,9 +29,7 @@ Spline2d::Spline2d(const std::vector<double> &xs,
   CalcArcLength();
 }
 
-bool Spline2d::Evaluate(double s,
-                        double *const x,
-                        double *const y) const {
+bool Spline2d::Evaluate(double s, double *x, double *y) const {
 
   if (s < 1e-3) {
     *x = x_spline_(0.0);
