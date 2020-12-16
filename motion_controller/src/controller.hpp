@@ -2,14 +2,12 @@
 #define CATKIN_WS_SRC_MOTION_PLANNING_WITH_CARLA_MOTION_CONTROLLER_SRC_CONTROLLER_HPP_
 
 #include <ros/ros.h>
-
+#include <unordered_map>
 #include <carla_msgs/CarlaEgoVehicleControl.h>
 #include <planning_msgs/Trajectory.h>
 #include <carla_msgs/CarlaEgoVehicleInfo.h>
 #include <carla_msgs/CarlaEgoVehicleStatus.h>
 #include <carla_msgs/CarlaEgoVehicleControl.h>
-#include <unordered_map>
-
 #include "control_config.hpp"
 #include "control_strategy.hpp"
 #include "vehicle_state/vehicle_state.hpp"
@@ -29,6 +27,7 @@ class Controller {
   ros::Subscriber vehicle_info_subscriber_;
   ros::Subscriber vehicle_status_subscriber_;
   ros::Subscriber trajectory_subscriber_;
+  ros::Subscriber ref_lane_subscriber_;
   ros::Subscriber objects_subscriber_;
   std::string controller_type_{"pid"};
   PIDConfigs pid_configs_;

@@ -64,7 +64,7 @@ bool MPDMPlanner::GetReferenceLane(const geometry_msgs::Pose &current_pose,
   geometry_msgs::Pose end_pose;
   planning_srvs::RoutePlanServiceResponse response;
   if (!GetRoute(current_pose, end_pose, lateral_behaviour, response)) {
-    ROS_FATAL("[Failed to GetRoute]");
+    ROS_FATAL("[MPDMPlanner::GetReferenceLane]: Failed to GetRoute");
     return false;
   }
   ref_line = std::make_shared<ReferenceLine>(response.route);

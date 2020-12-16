@@ -20,6 +20,14 @@ PolynomialTrajectoryEvaluator::PolynomialTrajectoryEvaluator(const std::array<do
     stop_point = planning_target.stop_s;
   }
   for (const auto &lon_traj : lon_trajectory_vec) {
+#if 0
+    std::cout << "lon_trajectory_vec size: " << lon_trajectory_vec.size() << std::endl;
+    std::cout << "====== the lon trajectory to evaluated is =========" << std::endl;
+    for (double t = 0; t < PlanningConfig::Instance().max_lookahead_time(); t += 0.2) {
+      std::cout << "s : " << lon_traj->Evaluate(0, t) << ", dot_s: " << lon_traj->Evaluate(1, t) << ", ddot_s: "
+                << lon_traj->Evaluate(2, t) << std::endl;
+    }
+#endif
     double lon_end_s = lon_traj->Evaluate(0, end_time);
     if (init_s[0] < stop_point && lon_end_s +
         PlanningConfig::Instance().lon_safety_buffer() > stop_point) {
@@ -28,12 +36,20 @@ PolynomialTrajectoryEvaluator::PolynomialTrajectoryEvaluator(const std::array<do
     if (!IsValidLongitudinalTrajectory(*lon_traj)) {
       continue;
     }
+
     for (const auto &lat_traj : lat_trajectory_vec) {
+#if 0
+      std::cout << "====== the lat trajectory to evaluated is =========" << std::endl;
+      for (double s = 0; s < lon_end_s; s += 0.1) {
+        std::cout << "l : " << lat_traj->Evaluate(0, s) << ", l_prime: " << lat_traj->Evaluate(1, s) << ", l_prime_prime: "
+                  << lat_traj->Evaluate(2, s) << std::endl;
+      }
+#endif
       double cost = Evaluate(planning_target, lon_traj, lat_traj);
       cost_queue_.emplace(TrajectoryPair(lon_traj, lat_traj), cost);
     }
   }
-  ROS_DEBUG("[PolynomialTrajectoryEvaluator], the numeber of trajectory pairs: %zu", cost_queue_.size());
+  ROS_INFO("[PolynomialTrajectoryEvaluator], the numeber of trajectory pairs: %zu", cost_queue_.size());
 }
 
 bool PolynomialTrajectoryEvaluator::IsValidLongitudinalTrajectory(const common::Polynomial &lon_traj) {
@@ -43,23 +59,33 @@ bool PolynomialTrajectoryEvaluator::IsValidLongitudinalTrajectory(const common::
     double v = lon_traj.Evaluate(1, t);
     if (!ConstraintChecker::WithInRange(v, PlanningConfig::Instance().min_lon_velocity(),
                                         PlanningConfig::Instance().max_lon_velocity())) {
+
+//      ROS_FATAL("[PolynomialTrajectoryEvaluator], the lon_traj is not valid, because **LON_VEL** exceeds the  vel range. vel: %lf", v);
       return false;
     }
     double a = lon_traj.Evaluate(2, t);
     if (!ConstraintChecker::WithInRange(a,
                                         PlanningConfig::Instance().min_lon_acc(),
                                         PlanningConfig::Instance().max_lon_acc())) {
+//      ROS_FATAL("[PolynomialTrajectoryEvaluator], the lon_traj is not valid, because **LON_ACC** exceeds the  acc range. a: %lf", a);
       return false;
     }
     double j = lon_traj.Evaluate(3, t);
     if (!ConstraintChecker::WithInRange(j,
                                         PlanningConfig::Instance().min_lon_jerk(),
                                         PlanningConfig::Instance().max_lon_jerk())) {
+//      ROS_FATAL("[PolynomialTrajectoryEvaluator], the lon_traj is not valid, because **LON_JERK** exceeds the  jerk range. jerk: %lf", j);
       return false;
     }
     t += PlanningConfig::Instance().delta_t();
   }
   return true;
+}
+
+bool PolynomialTrajectoryEvaluator::IsValidLateralTrajectory(const common::Polynomial &lat_traj) {
+  double s = 0;
+
+  return false;
 }
 
 double PolynomialTrajectoryEvaluator::Evaluate(const PlanningTarget &planning_target,
@@ -70,11 +96,13 @@ double PolynomialTrajectoryEvaluator::Evaluate(const PlanningTarget &planning_ta
   double lon_collision_cost = this->LonCollisionCost(lon_traj);
   double lat_offset_cost = PolynomialTrajectoryEvaluator::LatOffsetCost(lat_traj, lon_traj);
   double lat_jerk_cost = this->LatJerkCost(lat_traj, lon_traj);
+  double centripental_cost = this->CentripetalAccelerationCost(lon_traj);
   return lon_collision_cost * PlanningConfig::Instance().lattice_weight_collision() +
       lon_jerk_cost * PlanningConfig::Instance().lattice_weight_lon_jerk() +
       lon_target_cost * PlanningConfig::Instance().lattice_weight_lon_target() +
       lat_jerk_cost * PlanningConfig::Instance().lattice_weight_lat_jerk() +
-      lat_offset_cost * PlanningConfig::Instance().lattice_weight_lat_offset();
+      lat_offset_cost * PlanningConfig::Instance().lattice_weight_lat_offset() +
+      centripental_cost * PlanningConfig::Instance().lattice_weight_centripetal_acc() ;
 }
 
 size_t PolynomialTrajectoryEvaluator::num_of_trajectory_pairs() const {
@@ -87,24 +115,26 @@ bool PolynomialTrajectoryEvaluator::has_more_trajectory_pairs() const {
 double PolynomialTrajectoryEvaluator::LatJerkCost(const std::shared_ptr<common::Polynomial> &lat_trajectory,
                                                   const std::shared_ptr<common::Polynomial> &lon_trajectory) const {
 
-  double cost = 0.0;
+  double max_cost = 0.0;
   for (double t = 0.0; t < PlanningConfig::Instance().max_lookahead_time();
        t += PlanningConfig::Instance().delta_t()) {
     double s = lon_trajectory->Evaluate(0, t);
-    double s_d = lon_trajectory->Evaluate(1, t);
-    double s_dd = lon_trajectory->Evaluate(2, t);
+    double s_dot = lon_trajectory->Evaluate(1, t);
+    double s_dotdot = lon_trajectory->Evaluate(2, t);
+
     double relative_s = s - init_s_[0];
     double l_prime = lat_trajectory->Evaluate(1, relative_s);
-    double l_prime_prime = lat_trajectory->Evaluate(2, relative_s);
-    cost += std::pow(l_prime_prime * s_d * s_d + l_prime * s_dd, 2);
+    double l_primeprime = lat_trajectory->Evaluate(2, relative_s);
+    double cost = l_primeprime * s_dot * s_dot + l_prime * s_dotdot;
+    max_cost = std::max(max_cost, std::fabs(cost));
   }
-  return cost;
+  return max_cost;
 }
 
 double PolynomialTrajectoryEvaluator::LatOffsetCost(const std::shared_ptr<common::Polynomial> &lat_trajectory,
                                                     const std::shared_ptr<common::Polynomial> &lon_trajectory) {
   const double param_length = lon_trajectory->ParamLength();
-  double evaluation_horizon = std::min(PlanningConfig::Instance().max_lookback_distance(),
+  double evaluation_horizon = std::min(PlanningConfig::Instance().max_lookahead_distance(),
                                        lon_trajectory->Evaluate(0, param_length));
   std::vector<double> s_values;
   for (double s = 0.0; s < evaluation_horizon; s += 0.1) {
@@ -115,7 +145,7 @@ double PolynomialTrajectoryEvaluator::LatOffsetCost(const std::shared_ptr<common
   double cost_abs_sum = 0.0;
   for (const auto &s : s_values) {
     double lat_offset = lat_trajectory->Evaluate(0, s);
-    double cost = lat_offset / 100;
+    double cost = lat_offset / 3.0;
     if (lat_offset * lat_offset_start < 0.0) {
       cost_sqr_sum += cost * cost * PlanningConfig::Instance().lattice_weight_opposite_side_offset();
       cost_abs_sum += std::fabs(cost) * PlanningConfig::Instance().lattice_weight_opposite_side_offset();
@@ -124,20 +154,20 @@ double PolynomialTrajectoryEvaluator::LatOffsetCost(const std::shared_ptr<common
       cost_abs_sum += std::fabs(cost) * PlanningConfig::Instance().lattice_weight_same_side_offset();
     }
   }
-  return cost_sqr_sum / (cost_abs_sum + 1e-3);
+  return cost_sqr_sum / (cost_abs_sum + 1e-5);
 }
 
 double PolynomialTrajectoryEvaluator::LonJerkCost(const std::shared_ptr<common::Polynomial> &lon_trajectory) {
-  double cost = 0.0;
   double cost_sqr_sum = 0.0;
   double cost_abs_sum = 0.0;
   for (double t = 0.0; t < PlanningConfig::Instance().max_lookahead_time();
        t += PlanningConfig::Instance().delta_t()) {
     double jerk = lon_trajectory->Evaluate(3, t);
-    cost_sqr_sum += std::pow(jerk / PlanningConfig::Instance().max_lon_jerk(), 2);
-    cost_abs_sum += std::fabs(jerk / PlanningConfig::Instance().max_lon_jerk());
+    double cost = jerk / PlanningConfig::Instance().max_lon_jerk();
+    cost_sqr_sum += cost * cost;
+    cost_abs_sum += std::fabs(cost);
   }
-  return cost_sqr_sum / (cost_abs_sum + 1e-3);
+  return cost_sqr_sum / (cost_abs_sum + 1.0e-5);
 }
 
 double PolynomialTrajectoryEvaluator::LonTargetCost(const std::shared_ptr<common::Polynomial> &lon_trajectory,
@@ -147,13 +177,14 @@ double PolynomialTrajectoryEvaluator::LonTargetCost(const std::shared_ptr<common
   double dist_s = lon_trajectory->Evaluate(0, t_max) - lon_trajectory->Evaluate(0, 0.0);
   double speed_cost_sqr_sum = 0.0;
   double speed_cost_weight_sum = 0.0;
+//  ROS_INFO("LonTargetCost: the desired vel is %f", planning_target.desired_vel);
   double target_speed = planning_target.has_stop_point ? 0.0 : planning_target.desired_vel;
   for (double t = 0; t <= t_max; t += PlanningConfig::Instance().delta_t()) {
     double cost = target_speed - lon_trajectory->Evaluate(1, t);
     speed_cost_sqr_sum += t * t * std::fabs(cost);
     speed_cost_weight_sum += t * t;
   }
-  double speed_cost = speed_cost_sqr_sum / (speed_cost_weight_sum + 1e-3);
+  double speed_cost = speed_cost_sqr_sum / (speed_cost_weight_sum + 1e-5);
   double dist_travelled_cost = 1.0 / (1.0 + dist_s);
   return speed_cost * PlanningConfig::Instance().lattice_weight_target_speed() +
       dist_travelled_cost * PlanningConfig::Instance().lattice_weight_dist_travelled();
@@ -185,7 +216,25 @@ double PolynomialTrajectoryEvaluator::LonCollisionCost(const std::shared_ptr<com
       cost_abs_sum += cost;
     }
   }
-  return cost_sqr_sum / (cost_abs_sum + 1e-3);
+  return cost_sqr_sum / (cost_abs_sum + 1e-5);
+}
+
+double PolynomialTrajectoryEvaluator::CentripetalAccelerationCost(const std::shared_ptr<common::Polynomial> &lon_trajectory) const {
+  // Assumes the vehicle is not obviously deviate from the reference line.
+  double centripetal_acc_sum = 0.0;
+  double centripetal_acc_sqr_sum = 0.0;
+  for (double t = 0.0; t < PlanningConfig::Instance().max_lookahead_time();
+       t += PlanningConfig::Instance().delta_t()) {
+    double s = lon_trajectory->Evaluate(0, t);
+    double v = lon_trajectory->Evaluate(1, t);
+    auto ref_point = ptr_ref_line_->GetReferencePoint(s);
+    double centripetal_acc = v * v * ref_point.kappa();
+    centripetal_acc_sum += std::fabs(centripetal_acc);
+    centripetal_acc_sqr_sum += centripetal_acc * centripetal_acc;
+  }
+
+  return centripetal_acc_sqr_sum /
+      (centripetal_acc_sum + 1e-5);
 }
 
 }

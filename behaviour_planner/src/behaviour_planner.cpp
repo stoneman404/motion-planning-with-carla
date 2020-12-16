@@ -22,7 +22,9 @@ BehaviourPlanner::BehaviourPlanner(const ros::NodeHandle &nh) : nh_(nh) {
   nh_.param<double>("/behaviour_planner/acc_exponet", simulate_config_.acc_exponet, 4.0);
   nh_.param<double>("/behaviour_planner/s0", simulate_config_.s0, 2.0);
   nh_.param<double>("/behaviour_planner/s1", simulate_config_.s1, 0.0);
-  nh_.param<double>("/behaviour_planner/lateral_approach_ratio", simulate_config_.default_lat_approach_ratio, 0.995);
+  nh_.param<double>("/behaviour_planner/default_lateral_approach_ratio",
+                    simulate_config_.default_lat_approach_ratio,
+                    0.995);
   nh_.param<double>("/behaviour_planner/cutting_in_lateral_approach_ratio",
                     simulate_config_.cutting_in_lateral_approach_ratio,
                     0.95);
@@ -95,6 +97,7 @@ void BehaviourPlanner::RunOnce() {
   behaviour_strategy_->SetAgentSet(key_agent_set_);
   Behaviour behaviour;
   if (!behaviour_strategy_->Execute(behaviour)) {
+    ROS_FATAL("[BehaviourPlanner::RunOnce], failed tor excute.");
     return;
   }
   planning_msgs::Behaviour publishable_behaviour;
@@ -102,7 +105,7 @@ void BehaviourPlanner::RunOnce() {
     return;
   }
   behaviour_publisher_.publish(publishable_behaviour);
-  this->VisualizeBehaviourTrajectories(behaviour);
+//  this->VisualizeBehaviourTrajectories(behaviour);
   VisualizeAgentTrajectories(behaviour);
 }
 
@@ -151,7 +154,7 @@ bool BehaviourPlanner::ConvertBehaviourToRosMsg(const Behaviour &behaviour,
   behaviour_msg.forward_behaviours.resize(behaviour_size);
   behaviour_msg.forward_trajectories.resize(behaviour_size);
   behaviour_msg.surroud_trajectories.resize(behaviour_size);
-  behaviour_msg.reference_lane.reserve(behaviour_size);
+  behaviour_msg.reference_lane.resize(behaviour_size);
   for (size_t i = 0; i < behaviour_size; ++i) {
     switch (behaviour.forward_behaviours[i].first) {
 
@@ -168,7 +171,11 @@ bool BehaviourPlanner::ConvertBehaviourToRosMsg(const Behaviour &behaviour,
       default:behaviour_msg.forward_behaviours[i].behaviour = planning_msgs::LateralBehaviour::UNDEFINED;
         break;
     }
-    behaviour_msg.reference_lane[i].way_points = behaviour.forward_behaviours[i].second->way_points();
+//    behaviour_msg.reference_lanes(behaviour.forward_behaviours[i].second->way_points());
+    planning_msgs::Lane lane;
+    lane.way_points = behaviour.forward_behaviours[i].second->way_points();
+    behaviour_msg.reference_lane[i] = lane;
+
     behaviour_msg.forward_trajectories[i] = behaviour.forward_trajs[i];
     // for each agent
     behaviour_msg.surroud_trajectories[i].trajectories.reserve(behaviour.surrounding_trajs[i].size());
@@ -183,9 +190,11 @@ bool BehaviourPlanner::ConvertBehaviourToRosMsg(const Behaviour &behaviour,
 }
 
 bool BehaviourPlanner::GetKeyAgents() {
+  key_agent_set_.clear();
   if (!has_ego_vehicle_) {
     return false;
   }
+
   if (agent_set_.find(ego_vehicle_id_) == agent_set_.end()) {
     return false;
   }
@@ -194,7 +203,7 @@ bool BehaviourPlanner::GetKeyAgents() {
       std::max(simulate_config_.desired_vel * simulate_config_.sim_horizon_, sample_min_lon_threshold_);
   const double back_distance = front_distance / 2.0;
   Eigen::Vector2d ego_heading{std::cos(ego_agent.state().theta_), std::sin(ego_agent.state().theta_)};
-  key_agent_set_.insert({ego_vehicle_id_, agent_set_[ego_vehicle_id_]});
+  key_agent_set_.emplace(ego_vehicle_id_, ego_agent);
   key_agent_set_[ego_vehicle_id_].set_is_host(true);
 
   for (const auto &agent : agent_set_) {
@@ -218,26 +227,29 @@ bool BehaviourPlanner::GetKeyAgents() {
 
 void BehaviourPlanner::VisualizeBehaviourTrajectories(const Behaviour &behaviour) {
   visualization_msgs::MarkerArray marker_array;
-  auto forward_trajectories = behaviour.forward_trajs;
   int i = 0;
-  for (const auto &traj : forward_trajectories) {
-    visualization_msgs::Marker points;
-    points.type = visualization_msgs::Marker::POINTS;
-    points.id = i;
-    points.header.frame_id = "/map";
-    points.action = visualization_msgs::Marker::ADD;
-    points.scale.x = 0.2;
-    points.scale.y = 0.2;
-    points.color.a = 1.0;
-    points.color.b = 0.5;
-    points.color.r = 0.4;
+  for (const auto &traj :  behaviour.forward_trajs) {
+    visualization_msgs::Marker trajectory_marker;
+    trajectory_marker.type = visualization_msgs::Marker::LINE_STRIP;
+    trajectory_marker.id = i;
+    trajectory_marker.header.frame_id = "/map";
+    trajectory_marker.action = visualization_msgs::Marker::ADD;
+    trajectory_marker.scale.x = 0.2;
+    trajectory_marker.scale.y = 0.2;
+    trajectory_marker.color.a = 1.0;
+    trajectory_marker.color.b = 0.5;
+    trajectory_marker.color.r = 0.4;
+    trajectory_marker.pose.orientation.w = 1.0;
+    trajectory_marker.header.stamp = ros::Time::now();
+
     for (const auto &tp : traj.trajectory_points) {
       geometry_msgs::Point point;
       point.x = tp.path_point.x;
       point.y = tp.path_point.y;
       point.z = 2.0;
-      points.points.push_back(point);
+      trajectory_marker.points.emplace_back(point);
     }
+    marker_array.markers.push_back(trajectory_marker);
     i++;
   }
   visualized_behaviour_trajectories_publisher_.publish(marker_array);
@@ -248,28 +260,28 @@ bool BehaviourPlanner::MakeAgentSet() {
   for (const auto &object : objects_list_.objects) {
     agent_set_.emplace(object.id, object);
   }
-  for (size_t i = 0; i < traffic_light_info_list_.traffic_lights.size(); ++i) {
-    if (traffic_light_status_list_.traffic_lights[i].state == carla_msgs::CarlaTrafficLightStatus::RED) {
-      agent_set_.emplace(traffic_light_info_list_.traffic_lights[i].id,
-                         Agent({traffic_light_status_list_.traffic_lights[i],
-                                traffic_light_info_list_.traffic_lights[i]}));
-    }
+//  for (size_t i = 0; i < traffic_light_info_list_.traffic_lights.size(); ++i) {
+//    if (traffic_light_status_list_.traffic_lights[i].state == carla_msgs::CarlaTrafficLightStatus::RED) {
+//      agent_set_.emplace(traffic_light_info_list_.traffic_lights[i].id,
+//                         Agent({traffic_light_status_list_.traffic_lights[i],
+//                                traffic_light_info_list_.traffic_lights[i]}));
+//    }
 
-  }
+//  }
   return true;
 }
 void BehaviourPlanner::VisualizeAgentTrajectories(const Behaviour &behaviour) {
-  auto best_behaviour = behaviour.lateral_behaviour ;
+  auto best_behaviour = behaviour.lateral_behaviour;
   size_t best_index = 0;
-  for (size_t i = 0; i < behaviour.forward_behaviours.size(); ++i){
-    if (behaviour.forward_behaviours[i].first == best_behaviour){
+  for (size_t i = 0; i < behaviour.forward_behaviours.size(); ++i) {
+    if (behaviour.forward_behaviours[i].first == best_behaviour) {
       best_index = i;
     }
   }
   auto best_agent_trajectories = behaviour.surrounding_trajs[best_index];
   visualization_msgs::MarkerArray marker_array;
 
-  for(const auto& agent_trajectory : best_agent_trajectories){
+  for (const auto &agent_trajectory : best_agent_trajectories) {
     visualization_msgs::Marker marker;
     marker.type = visualization_msgs::Marker::POINTS;
     marker.header.frame_id = "/map";
@@ -282,7 +294,7 @@ void BehaviourPlanner::VisualizeAgentTrajectories(const Behaviour &behaviour) {
     marker.scale.x = 0.2;
     marker.scale.y = 0.2;
     marker.scale.z = 0.2;
-    for(const auto& tp : agent_trajectory.second.trajectory_points){
+    for (const auto &tp : agent_trajectory.second.trajectory_points) {
       geometry_msgs::Point point;
       point.x = tp.path_point.x;
       point.y = tp.path_point.y;

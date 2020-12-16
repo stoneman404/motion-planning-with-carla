@@ -12,7 +12,7 @@ from carla_msgs.msg import CarlaWorldInfo
 from carla_waypoint_types.srv import GetActorWaypointResponse, GetActorWaypoint
 from carla_waypoint_types.srv import GetWaypointResponse, GetWaypoint
 from planning_msgs.msg import WayPoint, LaneType, CarlaRoadOption, LaneChangeType
-from planning_srvs.srv import Route, RouteResponse
+from planning_srvs.srv import RoutePlanService, RoutePlanServiceResponse
 from tf.transformations import euler_from_quaternion
 
 
@@ -42,7 +42,7 @@ class ClinetInterface(object):
             '/carla_waypoint_publisher/{}/get_actor_waypoint'.format(self.role_name),
             GetActorWaypoint, self.get_actor_waypoint)
         self.getRouteService = rospy.Service('/carla_client_interface/{}/get_route'.format(self.role_name),
-                                             Route, self.get_route)
+                                             RoutePlanService, self.get_route)
         # self.route_publisher = rospy.Publisher(
         #     '/carla/{}/route_list'.format(self.role_name),RouteList, queue_size=1, latch=True)
         self._update_lock = threading.Lock()
@@ -133,10 +133,10 @@ class ClinetInterface(object):
         _, _, start_yaw = euler_from_quaternion(start_quaternion)
         carla_start.rotation.yaw = -math.degrees(start_yaw)
 
-        rospy.loginfo("Calculating route to x={}, y={}, z={}".format(
-            carla_goal.location.x,
-            carla_goal.location.y,
-            carla_goal.location.z))
+        rospy.loginfo("Calculating route from x={}, y={}, z={}".format(
+            carla_start.location.x,
+            carla_start.location.y,
+            carla_start.location.z))
         # dao = GlobalRoutePlannerDAO(self.world.get_map(), sampling_resolution=1)
         # grp = GlobalRoutePlanner(dao)
         # grp.setup()
@@ -165,16 +165,16 @@ class ClinetInterface(object):
         waypoints = []
         last_way_point = carl_start_waypoint
         s = 0.0
-        while s < 50:
-            index = np.random.randint(0, len(last_way_point.previous(2.0)))
-            waypoint = last_way_point.previous(2.0)[index]
+        while s < 10:
+            waypoint = last_way_point.previous(2.0)[-1]
             last_way_point = waypoint
             waypoints.append(waypoint)
             s += 2.0
+        waypoints.reverse()
 
         s = 0.0
         last_way_point = carl_start_waypoint
-        while s < 400:
+        while s < 300:
             index = np.random.randint(0, len(last_way_point.next(2.0)))
 
             waypoint = last_way_point.next(2.0)[index]
@@ -189,7 +189,7 @@ class ClinetInterface(object):
 
         # waypoint = route[0][0].previous(distance=2.0)[-1]
         # route.insert(0, [waypoint, option])
-        response = RouteResponse()
+        response = RoutePlanServiceResponse()
         # waypoint
         last_x = float("inf")
         last_y = float("inf")

@@ -26,10 +26,11 @@ bool PIDController::Execute(double current_time_stamp,
   const double cos_delta_theta = std::cos(delta_theta);
   const double cur_lon_s_dot = kinodynamic_state.v_ * cos_delta_theta;
   const double target_lon_s_dot = target_tp.vel;
+//  const double target_lon_s_dot = 8.333;
   double throttle = 0.0;
   double steer = 0.0;
 
-  if (!LongitudinalControl(cur_lon_s_dot, target_lon_s_dot, 1. / loop_rate_, &throttle)) {
+  if (!LongitudinalControl(cur_lon_s_dot, target_lon_s_dot, 1.0 / loop_rate_, &throttle)) {
     return false;
   }
 
@@ -50,7 +51,7 @@ bool PIDController::Execute(double current_time_stamp,
 
 bool PIDController::LongitudinalControl(double current_speed, double target_speed,
                                         double delta_t, double *throttle) {
-  double speed_error = target_speed - current_speed;
+  double speed_error = (target_speed - current_speed) / 3.6;
   this->lon_error_buffer_.push_back(speed_error);
   double speed_error_rate = 0.0;
   double speed_error_intergal = 0.0;

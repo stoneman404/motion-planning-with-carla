@@ -6,15 +6,15 @@
 namespace control {
 
 Controller::Controller(ros::NodeHandle &nh) : nh_(nh), vehicle_state_(std::make_unique<vehicle_state::VehicleState>()) {
-  nh_.param<std::string>("control/controller_type", controller_type_, "pid");
-  nh_.param<double>("control/pid_lookahead_distance", pid_configs_.lookahead_time, 1.0);
-  nh_.param<double>("control/lateral_pid_kp", pid_configs_.lat_configs.lat_kp, 1.95);
-  nh_.param<double>("control/lateral_pid_kd", pid_configs_.lat_configs.lat_kd, 0.01);
-  nh_.param<double>("control/lateral_pid_ki", pid_configs_.lat_configs.lat_ki, 1.4);
-  nh_.param<double>("control/longitudinal_pid_kp", pid_configs_.lon_configs.lon_kp, 0.2);
-  nh_.param<double>("control/longitudinal_pid_kd", pid_configs_.lon_configs.lon_kd, 0.05);
-  nh_.param<double>("control/longitudinal_pid_ki", pid_configs_.lon_configs.lon_ki, 0.1);
-  nh_.param<double>("control/loop_rate", loop_rate_, 100.0);
+  nh_.param<std::string>("/motion_control/controller_type", controller_type_, "pid");
+  nh_.param<double>("/motion_control/pid_lookahead_time", pid_configs_.lookahead_time, 1.0);
+  nh_.param<double>("/motion_control/lateral_pid_kp", pid_configs_.lat_configs.lat_kp, 1.95);
+  nh_.param<double>("/motion_control/lateral_pid_kd", pid_configs_.lat_configs.lat_kd, 0.01);
+  nh_.param<double>("/motion_control/lateral_pid_ki", pid_configs_.lat_configs.lat_ki, 1.4);
+  nh_.param<double>("/motion_control/longitudinal_pid_kp", pid_configs_.lon_configs.lon_kp, 0.72);
+  nh_.param<double>("/motion_control/longitudinal_pid_kd", pid_configs_.lon_configs.lon_kd, 0.2);
+  nh_.param<double>("/motion_control/longitudinal_pid_ki", pid_configs_.lon_configs.lon_ki, 0.36);
+  nh_.param<double>("/motion_control/loop_rate", loop_rate_, 50.0);
   if (controller_type_ == "pid") {
     control_strategy_ = std::make_unique<PIDController>(pid_configs_, loop_rate_);
   } else {
@@ -80,6 +80,7 @@ void Controller::RunOnce() {
     carla_control_publisher_.publish(control);
     return;
   }
+  control.steer *= -1.0;
   carla_control_publisher_.publish(control);
 
 }

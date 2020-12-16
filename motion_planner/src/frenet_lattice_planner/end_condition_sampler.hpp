@@ -45,7 +45,7 @@ class EndConditionSampler {
    *
    * @return
    */
-  static std::vector<std::pair<std::array<double, 3>, double>> SampleLatEndCondition();
+  std::vector<std::pair<std::array<double, 3>, double>> SampleLatEndCondition() const;
 
  private:
 

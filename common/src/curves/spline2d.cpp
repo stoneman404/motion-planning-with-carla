@@ -58,8 +58,8 @@ bool Spline2d::EvaluateFirstDerivative(double s,
     *dy = y_spline_.deriv(1, arc_length_);
     return true;
   } else {
-    *dx = x_spline_.deriv(1, arc_length_);
-    *dy = y_spline_.deriv(1, arc_length_);
+    *dx = x_spline_.deriv(1, s);
+    *dy = y_spline_.deriv(1, s);
     return true;
   }
 }

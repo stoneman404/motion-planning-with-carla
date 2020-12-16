@@ -79,7 +79,6 @@ bool PolicyDecider::SimulateEgoAgentPolicy(const Policy &policy,
     init_trajectory_point.relative_time = 0.0;
     SimulateAgent simulate_agent;
     simulate_agent.agent = agent.second;
-    sim_agents.insert({agent.first, simulate_agent});
     if (agent.second.is_host()) {
       simulate_agent.reference_line = policy.second;
       ego_traj.header.frame_id = "/map";
@@ -99,6 +98,8 @@ bool PolicyDecider::SimulateEgoAgentPolicy(const Policy &policy,
         surrounding_trajs.insert({agent.first, traj});
       }
     }
+    sim_agents.insert({agent.first, simulate_agent});
+
   }
   if (!CloseLoopSimulate(policy, sim_agents, ego_traj, surrounding_trajs)) {
 //    if (!OpenLoopSimForward(policy, sim_agents, ego_traj, surrounding_trajs)) {
@@ -194,7 +195,7 @@ bool PolicyDecider::CloseLoopSimulate(const Policy &policy,
 double PolicyDecider::GetDesiredSpeed(const std::pair<double, double> &xy, const ReferenceLine &ref_lane) const {
   auto ref_point = ref_lane.GetReferencePoint(xy);
   double kappa = ref_point.kappa();
-  return std::min(config_.max_lat_acc * kappa, config_.desired_vel);
+  return std::min(config_.max_lat_acc /(kappa + 1e-5), config_.desired_vel);
 }
 
 bool PolicyDecider::GetLeadingAgentOnRefLane(const Agent &agent,
@@ -242,6 +243,7 @@ bool PolicyDecider::SimulateOneStepForAgent(double desired_vel,
     simulation_params.idm_params.desired_velocity = desired_vel;
     //other params now is default;
     simulation_params.idm_params.acc_exponet = config_.acc_exponet;
+    simulation_params.idm_params.max_acc = config_.max_acc;
     simulation_params.idm_params.max_decel = config_.max_decel;
     simulation_params.idm_params.safe_time_headway = config_.max_decel;
     simulation_params.idm_params.s0 = config_.s0;
@@ -321,7 +323,7 @@ bool PolicyDecider::EvaluateMultiPolicyTrajectories(const std::vector<Policy> &v
   winner_forward_trajectory = trajectory;
   winner_policy = policy;
   winner_score = min_score;
-  return false;
+  return true;
 }
 
 void PolicyDecider::EvaluateSinglePolicyTrajectory(const Policy &policy,

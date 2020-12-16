@@ -47,7 +47,8 @@ double QuarticPolynomial::Evaluate(size_t order, double p) const {
     case 4: {
       return 24.0 * coef_[4];
     }
-    default:return 0.0;
+    default:
+      return 0.0;
   }
 }
 
@@ -69,10 +70,13 @@ void QuarticPolynomial::SetUpPolynomial(double x0, double dx0, double ddx0, doub
   coef_[0] = x0;
   coef_[1] = dx0;
   coef_[2] = 0.5 * ddx0;
+
   double b0 = dx1 - ddx0 * param - dx0;
   double b1 = ddx1 - ddx0;
+
   double p2 = param * param;
   double p3 = p2 * param;
+
   coef_[3] = (3 * b0 - b1 * param) / (3 * p2);
   coef_[4] = (-2 * b0 + b1 * param) / (4 * p3);
 }

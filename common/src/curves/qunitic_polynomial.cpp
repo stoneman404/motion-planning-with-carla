@@ -39,13 +39,21 @@ QuinticPolynomial::QuinticPolynomial(const QuinticPolynomial &other) {
 double QuinticPolynomial::Evaluate(size_t order, double p) const {
   switch (order) {
     case 0: {
-      return ((((coef_[5] * p + coef_[4]) * p + coef_[3]) * p + coef_[2]) * p + coef_[1]) * p + coef_[0];
+      return ((((coef_[5] * p + coef_[4]) * p + coef_[3]) * p + coef_[2]) * p +
+          coef_[1]) *
+          p +
+          coef_[0];
     }
     case 1: {
-      return (((5.0 * coef_[5] * p + 4.0 * coef_[4]) * p + 3.0 * coef_[3]) * p + 2.0 * coef_[2]) * p + coef_[1];
+      return (((5.0 * coef_[5] * p + 4.0 * coef_[4]) * p + 3.0 * coef_[3]) * p +
+          2.0 * coef_[2]) *
+          p +
+          coef_[1];
     }
     case 2: {
-      return (((20.0 * coef_[5] * p + 12.0 * coef_[4]) * p) + 6.0 * coef_[3]) * p + 2.0 * coef_[2];
+      return (((20.0 * coef_[5] * p + 12.0 * coef_[4]) * p) + 6.0 * coef_[3]) *
+          p +
+          2.0 * coef_[2];
     }
     case 3: {
       return (60.0 * coef_[5] * p + 24.0 * coef_[4]) * p + 6.0 * coef_[3];
@@ -56,7 +64,8 @@ double QuinticPolynomial::Evaluate(size_t order, double p) const {
     case 5: {
       return 120.0 * coef_[5];
     }
-    default: return 0.0;
+    default:
+      return 0.0;
   }
 }
 

@@ -67,15 +67,13 @@ class PlanningConfig {
   double max_replan_lat_distance_threshold() const;
   int preserve_history_trajectory_point_num() const;
 
-
-
+  double lattice_weight_centripetal_acc() const;
  private:
   vehicle_state::VehicleParams vehicle_params_{};
   std::string planner_type_;
   double planning_loop_rate_{};
   double delta_t_{}; // the trajectory delta time
   double max_lookahead_distance_{}; // the max lookahead distance for ego vehicle
-  double min_lookahead_distance_{};
   double max_lookahead_time_ = 8.0; // max lookahead time
   double min_lookahead_time_ = 1.0;
   double lon_safety_buffer_ = 4.0; // lon_safety_buffer_
@@ -107,6 +105,7 @@ class PlanningConfig {
   double lattice_weight_lon_target_{};
   double lattice_weight_lat_jerk_{};
   double lattice_weight_lat_offset_{};
+  double lattice_weight_centripetal_acc_{};
   double max_replan_lat_distance_threshold_{};
   double max_replan_lon_distance_threshold_{};
   int preserve_history_trajectory_point_num_{};

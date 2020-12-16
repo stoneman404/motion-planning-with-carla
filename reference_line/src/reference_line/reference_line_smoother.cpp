@@ -93,7 +93,7 @@ void ReferenceLineSmoother::SetUpOptions() {
   options_ += "Sparse  true        forward\n";
   options_ += "Sparse  true        reverse\n";
 //  options_ += "Numeric max_cpu_time  0.05\n";
-  options_ += "Integer max_iter    12\n";
+  options_ += "Integer max_iter    15\n";
 }
 
 void ReferenceLineSmoother::SetUpInitValue() {

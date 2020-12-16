@@ -1,0 +1,8 @@
+<!-- -->
+<launch>
+
+    <node pkg="behaviour_planner" type="behaviour_planning_node" name="behaviour_planning_node" output="screen">
+        <rosparam command="load" file="$(find behaviour_planner)/param/behaviour_planner_params.yaml"/>
+    </node>
+
+</launch>

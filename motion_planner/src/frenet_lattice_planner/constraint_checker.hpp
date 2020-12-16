@@ -18,7 +18,7 @@ class ConstraintChecker {
   ConstraintChecker() = default;
   ~ConstraintChecker() = default;
 
-  static bool WithInRange(double value, double lower, double upper, double eps = 1e-4);
+  static bool WithInRange(double value, double lower, double upper, double eps = 1e-2);
   static Result ValidTrajectory(const planning_msgs::Trajectory &trajectory);
 };
 

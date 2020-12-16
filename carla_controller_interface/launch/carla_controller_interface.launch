@@ -1,0 +1,6 @@
+<!-- -->
+<launch>
+  <node pkg="carla_controller_interface" type="carla_controller_node.py" name="carla_controller_node" output="screen">
+  </node>
+</launch>
+

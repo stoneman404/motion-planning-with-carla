@@ -39,7 +39,7 @@
         <arg name='fixed_delta_seconds' value='$(arg fixed_delta_seconds)'/>
     </include>
 
-    <!-- the ego vehicle, that will be controlled by the carla_ad_agent -->
+    <!-- the ego vehicle, that will be controlled by the carla_controller_interface -->
     <include file="$(find carla_ego_vehicle)/launch/carla_example_ego_vehicle.launch">
         <arg name='host' value='$(arg host)'/>
         <arg name='port' value='$(arg port)'/>
@@ -63,8 +63,13 @@
         <arg name='role_name' value='$(arg role_name)'/>
     </include>
 
-    <include file="$(find motion_planning)/launch/motion_planning.launch">
+    <include file="$(find motion_planner)/launch/motion_planner.launch">
+    </include>
 
+    <include file="$(find behaviour_planner)/launch/behaviour_planner.launch">
+    </include>
+
+    <include file="$(find motion_controller)/launch/motion_controller.launch">
     </include>
 
     <!-- To be able to maneuver with rviz, this node converts twist to vehicle control commands -->

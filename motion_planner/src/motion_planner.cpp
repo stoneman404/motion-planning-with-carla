@@ -29,7 +29,10 @@ void MotionPlanner::Launch() {
 
   ros::Rate loop_rate(PlanningConfig::Instance().loop_rate());
   while (ros::ok()) {
+    auto begin = ros::Time::now();
     this->RunOnce();
+    auto end = ros::Time::now();
+    ROS_INFO("[MotionPlanner::Launch], the RunOnce Elapsed Time: %lf s", (end - begin).toSec());
     ros::spinOnce();
     loop_rate.sleep();
   }
@@ -78,13 +81,13 @@ void MotionPlanner::RunOnce() {
   optimal_trajectory.trajectory_points.insert(optimal_trajectory.trajectory_points.begin(),
                                               stitching_trajectory.begin(),
                                               stitching_trajectory.end() - 1);
-  if(optimal_trajectory.trajectory_points.empty()){
+  if (optimal_trajectory.trajectory_points.empty()) {
     optimal_trajectory.status = planning_msgs::Trajectory::EMPTY;
   }
   optimal_trajectory.status = planning_msgs::Trajectory::NORMAL;
+  optimal_trajectory.header.stamp = current_time_stamp;
   history_trajectory_ = optimal_trajectory;
   has_history_trajectory_ = true;
-  optimal_trajectory.header.stamp = current_time_stamp;
   trajectory_publisher_.publish(optimal_trajectory);
   // for visualization
   VisualizeOptimalTrajectory(optimal_trajectory);
@@ -227,11 +230,16 @@ void MotionPlanner::VisualizeTrafficLightBox() {
     traffic_light_marker.action = visualization_msgs::Marker::ADD;
     traffic_light_marker.header.frame_id = "map";
     traffic_light_marker.color.a = 1.0;
-    traffic_light_marker.color.r = 0.5;
+    traffic_light_marker.color.r = 0.8;
     traffic_light_marker.color.g = 0.2;
-    traffic_light_marker.color.b = 0.6;
+    traffic_light_marker.color.b = 1.0;
     traffic_light_marker.scale = traffic_light.second.trigger_volume.size;
-    traffic_light_marker.pose.position = traffic_light.second.transform.position;
+    traffic_light_marker.pose.position.x =
+        traffic_light.second.transform.position.x + traffic_light.second.trigger_volume.center.x;
+    traffic_light_marker.pose.position.y =
+        traffic_light.second.transform.position.y + traffic_light.second.trigger_volume.center.y;
+    traffic_light_marker.pose.position.z =
+        traffic_light.second.transform.position.z + traffic_light.second.trigger_volume.center.z;
     traffic_light_marker.pose.orientation = traffic_light.second.transform.orientation;
     traffic_light_marker.id = traffic_light.first;
     traffic_light_boxes_markers.markers.push_back(traffic_light_marker);
@@ -241,7 +249,7 @@ void MotionPlanner::VisualizeTrafficLightBox() {
 
 void MotionPlanner::VisualizeReferenceLine(std::vector<std::shared_ptr<ReferenceLine>> &ref_lines) {
   visualization_msgs::MarkerArray marker_array;
-  int i = 100;
+  int i = 0;
   for (const auto &ref_line : ref_lines) {
     visualization_msgs::Marker marker;
     marker.type = visualization_msgs::Marker::LINE_STRIP;
@@ -276,41 +284,57 @@ bool MotionPlanner::GetPlanningTargetFromBehaviour(const planning_msgs::Behaviou
     return false;
   }
   planning_targets.clear();
-  planning_targets.reserve(behaviour.forward_behaviours.size());
+  planning_targets.resize(behaviour.forward_behaviours.size());
   std::vector<std::future<bool>> futures;
   const double distance_weight = PlanningConfig::Instance().reference_smoother_distance_weight();
   const double deviation_weight = PlanningConfig::Instance().reference_smoother_deviation_weight();
   const double heading_weight = PlanningConfig::Instance().reference_smoother_heading_weight();
   const double max_curvature = PlanningConfig::Instance().reference_smoother_max_curvature();
 
+//  for (size_t i = 0; i < behaviour.forward_behaviours.size(); ++i) {
+//    const auto lambda =
+//        [&i, &planning_targets, &behaviour, &distance_weight, &deviation_weight, &heading_weight, &max_curvature]() -> bool {
+//          planning_targets[i].ref_lane = std::make_shared<ReferenceLine>(behaviour.reference_lane[i].way_points);
+//          if (!planning_targets[i].ref_lane->Smooth(deviation_weight, heading_weight, distance_weight, max_curvature)) {
+//            ROS_FATAL(
+//                "[MotionPlanner::GetPlanningTargetFromBehaviour], failed to smooth reference line for lateral_behaviour: %u",
+//                behaviour.forward_behaviours[i].behaviour);
+//            return false;
+//          }
+//
+//          if (behaviour.forward_behaviours[i].behaviour == behaviour.lat_behaviour.behaviour) {
+//            planning_targets[i].is_best_behaviour = true;
+//          }
+//          planning_targets[i].lateral_behaviour = behaviour.forward_behaviours[i];
+//          planning_targets[i].behaviour_trajectory = behaviour.forward_trajectories[i];
+//          return true;
+//        };
+//    futures.push_back(thread_pool_->PushTask(lambda));
+//  }
+//
+//  for (auto &task : futures) {
+//    if (!task.get()) {
+//      return false;
+//    }
+//  }
+
   for (size_t i = 0; i < behaviour.forward_behaviours.size(); ++i) {
-    const auto lambda =
-        [&i, &planning_targets, &behaviour, &distance_weight, &deviation_weight, &heading_weight, &max_curvature]() -> bool {
-          planning_targets[i].ref_lane = std::make_shared<ReferenceLine>(behaviour.reference_lane[i].way_points);
-          if (!planning_targets[i].ref_lane->Smooth(deviation_weight, heading_weight, distance_weight, max_curvature)) {
-            ROS_FATAL(
-                "[MotionPlanner::GetPlanningTargetFromBehaviour], failed to smooth reference line for lateral_behaviour: %u",
-                behaviour.forward_behaviours[i].behaviour);
-            return false;
-          }
+    planning_targets[i].ref_lane = std::make_shared<ReferenceLine>(behaviour.reference_lane[i].way_points);
+//    auto begin = ros::Time::now();
+//    if (!planning_targets[i].ref_lane->Smooth(deviation_weight, heading_weight, distance_weight, max_curvature)) {
+//      ROS_FATAL("[MotionPlanner::GetPlanningTargetFromBehaviour], failed to smooth reference line for lateral_behaviour: %u",
+//          behaviour.forward_behaviours[i].behaviour);
+//      return false;
+//    }
+//    auto end = ros::Time::now();
+//    ROS_WARN("[GetPlanningTargetFromBehaviour], THE SMOOTH REFERENCELINE ESLAPESD TIME IS : %f s", (end - begin).toSec());
 
-          if (behaviour.forward_behaviours[i].behaviour == behaviour.lat_behaviour.behaviour) {
-            planning_targets[i].is_best_behaviour = true;
-          }
-          planning_targets[i].lateral_behaviour = behaviour.forward_behaviours[i];
-          planning_targets[i].behaviour_trajectory = behaviour.forward_trajectories[i];
-          return true;
-        };
-    futures.push_back(thread_pool_->PushTask(lambda));
-  }
-
-  for (auto &task : futures) {
-    if (!task.get()) {
-      return false;
+    if (behaviour.forward_behaviours[i].behaviour == behaviour.lat_behaviour.behaviour) {
+      planning_targets[i].is_best_behaviour = true;
     }
-  }
+    planning_targets[i].lateral_behaviour = behaviour.forward_behaviours[i];
+    planning_targets[i].behaviour_trajectory = behaviour.forward_trajectories[i];
 
-  for (size_t i = 0; i < behaviour.forward_behaviours.size(); ++i) {
     MotionPlanner::GetLocalGoal(planning_targets[i]);
     for (size_t j = 0; j < behaviour.surroud_trajectories[i].trajectories.size(); ++i) {
       int agent_id = behaviour.surroud_trajectories[i].trajectories[j].id;
@@ -397,6 +421,7 @@ bool MotionPlanner::GetLocalGoal(PlanningTarget &planning_target) {
                                  goal_trajectory_point.path_point.y,
                                  &ref_point,
                                  &matched_s)) {
+    ROS_FATAL("[MotionPlanner::GetLocalGoal]: failed to get local goal because get matched point failed");
     return false;
   }
   if (matched_s > ref_lane->Length() - 2.0) {
@@ -404,19 +429,45 @@ bool MotionPlanner::GetLocalGoal(PlanningTarget &planning_target) {
     planning_target.stop_s = std::min(ref_lane->Length(), matched_s);
   } else {
     planning_target.has_stop_point = false;
+    planning_target.stop_s = std::numeric_limits<double>::max();
   }
 
   double v_x = goal_trajectory_point.vel * std::cos(goal_trajectory_point.path_point.theta);
   double v_y = goal_trajectory_point.vel * std::sin(goal_trajectory_point.path_point.theta);
-  double ref_v = std::cos(ref_point.heading()) * v_x + std::sin(ref_point.heading()) * v_y;
-  double max_ref_v = std::sqrt(PlanningConfig::Instance().max_lat_acc() * ref_point.kappa());
-  planning_target.desired_vel = std::min(ref_v, max_ref_v);
+  double ref_v = std::cos(ref_point.theta()) * v_x + std::sin(ref_point.theta()) * v_y;
+  double max_ref_v = std::sqrt(PlanningConfig::Instance().max_lat_acc() / (ref_point.kappa() + 1e-5));
+  planning_target.desired_vel = std::min(max_ref_v, ref_v);
+
+//
+//  auto ref_lane = planning_target.ref_lane;
+//  double cur_x = planning_target.behaviour_trajectory.trajectory_points.front().path_point.x;
+//  double cur_y = planning_target.behaviour_trajectory.trajectory_points.front().path_point.y;
+//  ReferencePoint matched_ref_point;
+//  double matched_s;
+//  if (!ref_lane->GetMatchedPoint(cur_x, cur_y, &matched_ref_point, &matched_s)){
+//    return false;
+//  }
+//  double max_ref_v = std::sqrt(PlanningConfig::Instance().max_lat_acc() / (matched_ref_point.kappa() + 1e-5));
+//  if (matched_s + PlanningConfig::Instance().max_lookahead_distance() < ref_lane->Length()){
+//    planning_target.has_stop_point = true;
+//    planning_target.stop_s = ref_lane->Length();
+//  }else{
+//    planning_target.has_stop_point = false;
+//    planning_target.stop_s = std::numeric_limits<double>::max();
+//  }
+
+//  planning_target.desired_vel = std::min(max_ref_v, 10.333);
+//  ROS_INFO("[PlanningTarget], desired vel is %lf", ref_v);
+//  planning_target.desired_vel = ref_v;
   return true;
+
 }
 
 std::vector<planning_msgs::TrajectoryPoint> MotionPlanner::GetStitchingTrajectory(const ros::Time &current_time_stamp,
                                                                                   double planning_cycle_time,
                                                                                   size_t preserve_points_num) {
+//  return MotionPlanner::ComputeReinitStitchingTrajectory(planning_cycle_time, vehicle_state_->GetKinoDynamicVehicleState());
+#if 1
   auto state = vehicle_state_->GetKinoDynamicVehicleState();
   if (!has_history_trajectory_) {
     return MotionPlanner::ComputeReinitStitchingTrajectory(planning_cycle_time, state);
@@ -463,6 +514,7 @@ std::vector<planning_msgs::TrajectoryPoint> MotionPlanner::GetStitchingTrajector
     tp.path_point.s = tp.path_point.s - zero_s;
   }
   return stitching_trajectory;
+#endif
 }
 
 planning_msgs::TrajectoryPoint MotionPlanner::ComputeTrajectoryPointFromVehicleState(double planning_cycle_time,

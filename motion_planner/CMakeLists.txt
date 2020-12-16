@@ -164,7 +164,7 @@ set(planning_SRC
         src/frenet_lattice_planner/frenet_lattice_planner.cpp
         src/motion_planner.cpp
         src/planning_config.cpp
-        src/motion_planner_node.cpp)
+        src/motion_planner_node.cpp )
 add_executable(motion_planning_node ${planning_SRC})
 
 ## Rename C++ executable without prefix
@@ -236,10 +236,19 @@ install(DIRECTORY param/
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_motion_planning.cpp)
-# if(TARGET ${PROJECT_NAME}-test)
-#   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
-# endif()
+ catkin_add_gtest(lattice_trajectory_test
+         src/frenet_lattice_planner/lattice_trajectory1d.cpp
+         src/frenet_lattice_planner/lattice_trajectory_test.cpp
+         src/frenet_lattice_planner/constraint_checker.cpp
+         src/frenet_lattice_planner/end_condition_sampler.cpp
+         src/frenet_lattice_planner/polynomial_trajectory_evaluator.cpp
+         src/frenet_lattice_planner/lattice_trajectory1d.cpp
+         src/frenet_lattice_planner/frenet_lattice_planner.cpp
+         src/planning_config.cpp)
+ if(TARGET lattice_trajectory_test)
+   target_link_libraries(lattice_trajectory_test
+           ${catkin_LIBRARIES})
+ endif()
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)

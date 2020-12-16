@@ -33,14 +33,14 @@ ReferenceLine::ReferenceLine(const std::vector<planning_msgs::WayPoint> &waypoin
     }
     auto ref_point = ReferencePoint(way_point.pose.position.x, way_point.pose.position.y);
     ref_point.set_xy(way_point.pose.position.x, way_point.pose.position.y);
-    ref_point.set_heading(MathUtils::NormalizeAngle(std::atan2(heading(1), heading(0))));
+    ref_point.set_theta(MathUtils::NormalizeAngle(std::atan2(heading(1), heading(0))));
     reference_points_.push_back(ref_point);
     left_boundary_.emplace_back(
-        ref_point.x() - left_width * std::sin(ref_point.heading()),
-        ref_point.y() + left_width * std::cos(ref_point.heading()));
+        ref_point.x() - left_width * std::sin(ref_point.theta()),
+        ref_point.y() + left_width * std::cos(ref_point.theta()));
     right_boundary_.emplace_back(
-        ref_point.x() + right_width * std::sin(ref_point.heading()),
-        ref_point.y() + right_width * std::cos(ref_point.heading()));
+        ref_point.x() + right_width * std::sin(ref_point.theta()),
+        ref_point.y() + right_width * std::cos(ref_point.theta()));
   }
 
   ROS_ASSERT(reference_points_.size() == waypoints.size());
@@ -66,7 +66,7 @@ FrenetFramePoint ReferenceLine::GetFrenetFramePoint(
   const double kappa = path_point.kappa;
   const double l = frame_point.l;
   ReferencePoint ref_point = GetReferencePoint(frame_point.s);
-  const double theta_ref = ref_point.heading();
+  const double theta_ref = ref_point.theta();
   const double kappa_ref = ref_point.kappa();
   const double dkappa_ref = ref_point.dkappa();
   const double dl = CoordinateTransformer::CalcLateralDerivative(
@@ -230,7 +230,7 @@ ReferencePoint ReferenceLine::Interpolate(const ReferencePoint &p0,
                                           double s) {
   double x = MathUtils::lerp(p0.x(), s0, p1.x(), s1, s);
   double y = MathUtils::lerp(p0.y(), s0, p1.y(), s1, s);
-  double heading = MathUtils::slerp(p0.heading(), s0, p1.heading(), s1, s);
+  double heading = MathUtils::slerp(p0.theta(), s0, p1.theta(), s1, s);
   double kappa = MathUtils::lerp(p0.kappa(), s0, p1.kappa(), s1, s);
   double dkappa = MathUtils::lerp(p0.dkappa(), s0, p1.dkappa(), s1, s);
   auto ref_point = ReferencePoint(x, y, heading, kappa, dkappa);
@@ -301,7 +301,7 @@ bool ReferenceLine::SLToXY(const SLPoint &sl_point, Eigen::Vector2d *xy_point) c
     return false;
   }
   const auto matched_ref_point = GetReferencePoint(sl_point.s);
-  const auto angle = matched_ref_point.heading();
+  const auto angle = matched_ref_point.theta();
   (*xy_point)[0] = matched_ref_point.x() - std::sin(angle) * sl_point.l;
   (*xy_point)[1] = matched_ref_point.y() + std::cos(angle) * sl_point.l;
   return true;
@@ -439,7 +439,7 @@ bool ReferenceLine::GetMatchedPoint(double x, double y, ReferencePoint *matched_
   double kappa = MathUtils::CalcKappa(ref_dx, ref_dy, ref_ddx, ref_ddy);
   double dkappa = MathUtils::CalcDKappa(ref_dx, ref_dy, ref_ddx, ref_ddy, ref_dddx, ref_dddy);
   matched_ref_point->set_xy(nearest_x, nearest_y);
-  matched_ref_point->set_heading(heading);
+  matched_ref_point->set_theta(heading);
   matched_ref_point->set_kappa(kappa);
   matched_ref_point->set_dkappa(dkappa);
   *matched_s = nearest_s;

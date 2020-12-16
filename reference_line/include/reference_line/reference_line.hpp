@@ -167,7 +167,7 @@ class ReferenceLine {
                                     double s1,
                                     double s);
 
-  std::vector<planning_msgs::WayPoint> way_points() const { return way_points_; }
+  const std::vector<planning_msgs::WayPoint> & way_points() const { return way_points_; }
 
   bool CanChangeLeft(double s) const;
 

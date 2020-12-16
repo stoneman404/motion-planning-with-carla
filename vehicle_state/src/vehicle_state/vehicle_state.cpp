@@ -41,7 +41,7 @@ VehicleState::VehicleState(const carla_msgs::CarlaEgoVehicleStatus &ego_vehicle_
   kino_dynamic_state_ =
       KinoDynamicState(ego_x, ego_y, object.pose.position.z, ego_theta, ego_kappa, ego_v, ego_a, centripental_acc);
 
-  ROS_INFO("centripental_acc is %lf", centripental_acc);
+//  ROS_INFO("centripental_acc is %lf", centripental_acc);
   this->time_stamp_ = ego_vehicle_status.header.stamp;
   this->steer_percentage_ = ego_vehicle_status.control.steer;
   this->reverse_ = ego_vehicle_status.control.reverse;

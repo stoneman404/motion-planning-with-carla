@@ -213,10 +213,18 @@ target_link_libraries(${PROJECT_NAME}
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_reference_line.cpp)
-# if(TARGET ${PROJECT_NAME}-test)
-#   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
-# endif()
+ catkin_add_gtest(reference_line_test
+         src/reference_line/reference_line.cpp
+         src/reference_line/reference_point.cpp
+         src/reference_line/reference_line_smooth_ipopt_interface.cpp
+         src/reference_line/reference_line_smoother.cpp
+         src/reference_line/reference_line_smoother_test.cpp)
+ if(TARGET reference_line_test)
+   target_link_libraries(reference_line_test
+           ${catkin_LIBRARIES}
+           ${Eigen3_LIBRARIES}
+           ipopt)
+ endif()
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)

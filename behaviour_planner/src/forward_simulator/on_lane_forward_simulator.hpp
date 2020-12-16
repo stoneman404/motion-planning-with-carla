@@ -23,6 +23,13 @@ struct IDMParams {
                                      s0(jam_distance_s0),
                                      s1(jam_distance_s1),
                                      leading_vehicle_length(leading_length) {}
+
+  void PrintParams() const {
+    std::cout << "=================IDM Params=====================" << std::endl;
+    std::cout << "desired_vel : " << desired_velocity << ", safe_time_headway: " << safe_time_headway << std::endl;
+    std::cout << "max_acc : " << max_acc << ", max_decel: " << max_decel << ", acc_exponet: " << acc_exponet << std::endl;
+    std::cout << "s0 : " << s0 << ", s1: " << s1 << ", leading_vehicle_length: " << leading_vehicle_length << std::endl;
+  }
   double desired_velocity{}; // v0
   double safe_time_headway{}; // T
   double max_acc{}; // a
@@ -73,7 +80,7 @@ class OnLaneForwardSimulator {
   bool GetIDMLonAcc(const std::array<double, 3> &ego_s_conditions,
                     const ReferenceLine &reference_line,
                     const Agent &leading_agent,
-                    double *lon_acc) const;
+                    double &lon_acc) const;
 
   static planning_msgs::PathPoint AgentStateToPathPoint(
       const vehicle_state::KinoDynamicState &kino_dynamic_state);

@@ -28,29 +28,29 @@ void PlanningConfig::UpdateParams(const ros::NodeHandle &nh) {
   nh.param<double>("/motion_planner/min_lon_acc", min_lon_acc_, -1.75);
   nh.param<double>("/motion_planner/max_lon_velocity", max_lon_velocity_, 10.0);
   nh.param<double>("/motion_planner/min_lon_velocity", min_lon_velocity_, 0.0);
-  nh.param<double>("/motion_planner/max_lon_jerk", max_lon_jerk_, 5.0);
-  nh.param<double>("/motion_planner/min_lon_jerk", min_lon_jerk_, -5.0);
+  nh.param<double>("/motion_planner/max_lon_jerk", max_lon_jerk_, 20.0);
+  nh.param<double>("/motion_planner/min_lon_jerk", min_lon_jerk_, -20.0);
   nh.param<double>("/motion_planner/min_kappa", min_kappa_, -10.0);
   nh.param<double>("/motion_planner/max_kappa", max_kappa_, 10.0);
   nh.param<double>("/motion_planner/min_lat_acc", min_lat_acc_, -0.8);
   nh.param<double>("/motion_planner/max_lat_acc", max_lat_acc_, 0.8);
   nh.param<double>("/motion_planner/target_speed", target_speed_, 8.333);
-  nh.param<double>("/motion_planner/min_lookahead_distance", min_lookahead_distance_, 1.0);
-  nh.param<double>("/motion_planner/lattice_planner/lattice_weight_opposite_side_offset",
+  nh.param<double>("/motion_planner/lattice_weight_opposite_side_offset",
                    lattice_weight_opposite_side_offset_,
                    10.0);
-  nh.param<double>("/motion_planner/lattice_planner/lattice_weight_same_side_offset",
+  nh.param<double>("/motion_planner/lattice_weight_same_side_offset",
                    lattice_weight_same_side_offset_,
                    5.0);
-  nh.param<double>("/motion_planner/lattice_planner/lattice_weight_dist_travelled",
+  nh.param<double>("/motion_planner/lattice_weight_dist_travelled",
                    lattice_weight_dist_travelled_,
                    15.0);
-  nh.param<double>("/motion_planner/lattice_planner/lattice_weight_target_speed", lattice_weight_target_speed_, 12.0);
-  nh.param<double>("/motion_planner/lattice_planner/lattice_weight_collision", lattice_weight_collision_, 20);
-  nh.param<double>("/motion_planner/lattice_planner/lattice_weight_lon_jerk", lattice_weight_lon_jerk_, 10.0);
-  nh.param<double>("/motion_planner/lattice_planner/lattice_weight_lon_target", lattice_weight_lon_target_, 20.0);
-  nh.param<double>("/motion_planner/lattice_planner/lattice_weight_lat_offset", lattice_weight_lat_offset_, 20.0);
-  nh.param<double>("/motion_planner/lattice_planner/lattice_weight_lat_jerk", lattice_weight_lat_jerk_, 30);
+  nh.param<double>("/motion_planner/lattice_weight_target_speed", lattice_weight_target_speed_, 12.0);
+  nh.param<double>("/motion_planner/lattice_weight_collision", lattice_weight_collision_, 20);
+  nh.param<double>("/motion_planner/lattice_weight_lon_jerk", lattice_weight_lon_jerk_, 10.0);
+  nh.param<double>("/motion_planner/lattice_weight_lon_target", lattice_weight_lon_target_, 20.0);
+  nh.param<double>("/motion_planner/lattice_weight_lat_offset", lattice_weight_lat_offset_, 20.0);
+  nh.param<double>("/motion_planner/lattice_weight_lat_jerk", lattice_weight_lat_jerk_, 30);
+  nh.param<double>("/motion_planner/lattice_weight_centripetal_acc", lattice_weight_centripetal_acc_, 1.5);
   nh.param<double>("/motion_planner/max_replan_lat_distance_threshold", max_replan_lat_distance_threshold_, 0.2);
   nh.param<double>("/motion_planner/max_replan_lon_distance_threshold", max_replan_lon_distance_threshold_, 0.4);
   nh.param<int>("/motion_planner/preserve_history_trajectory_point_num", preserve_history_trajectory_point_num_, 15);
@@ -74,7 +74,7 @@ double PlanningConfig::lon_safety_buffer() const { return lon_safety_buffer_; }
 double PlanningConfig::lat_safety_buffer() const { return lat_safety_buffer_; }
 double PlanningConfig::max_lon_velocity() const { return max_lon_velocity_; }
 double PlanningConfig::max_lookback_distance() const { return max_lookback_distance_; }
-double PlanningConfig::min_lookahead_time() const { return min_lookahead_distance_; }
+double PlanningConfig::min_lookahead_time() const { return min_lookahead_time_; }
 double PlanningConfig::lattice_weight_opposite_side_offset() const {
   return lattice_weight_opposite_side_offset_;
 }
@@ -112,7 +112,7 @@ double PlanningConfig::min_lat_acc() const { return min_lat_acc_; }
 double PlanningConfig::max_lat_acc() const { return max_lat_acc_; }
 double PlanningConfig::loop_rate() const { return planning_loop_rate_; }
 double PlanningConfig::delta_t() const { return delta_t_; }
-double PlanningConfig::min_lon_acc() const { return min_lon_jerk_; }
+double PlanningConfig::min_lon_acc() const { return min_lon_acc_; }
 double PlanningConfig::min_lon_velocity() const { return min_lon_velocity_; }
 double PlanningConfig::min_lon_jerk() const { return min_lon_jerk_; }
 double PlanningConfig::max_lon_jerk() const { return max_lon_jerk_; }
@@ -129,4 +129,7 @@ double PlanningConfig::max_replan_lon_distance_threshold() const {
   return max_replan_lon_distance_threshold_;
 }
 int PlanningConfig::preserve_history_trajectory_point_num() const { return preserve_history_trajectory_point_num_; }
+double PlanningConfig::lattice_weight_centripetal_acc() const {
+  return lattice_weight_centripetal_acc_;
+}
 }

@@ -1,0 +1,5 @@
+<launch>
+    <node pkg="motion_controller" type="motion_controller_node" name="motion_controller_node" output="screen">
+        <rosparam command="load" file="$(find motion_controller)/param/motion_controller_params.yaml"/>
+    </node>
+</launch>

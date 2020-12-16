@@ -43,7 +43,8 @@ class PolynomialTrajectoryEvaluator {
     return top.first;
   }
  private:
-
+  double CentripetalAccelerationCost(
+      const  std::shared_ptr<common::Polynomial>& lon_trajectory) const;
   double LatJerkCost(const std::shared_ptr<common::Polynomial> &lat_trajectory,
                      const std::shared_ptr<common::Polynomial> &lon_trajectory) const;
   static double LatOffsetCost(const std::shared_ptr<common::Polynomial> &lat_trajectory,
@@ -54,6 +55,8 @@ class PolynomialTrajectoryEvaluator {
   double LonCollisionCost(const std::shared_ptr<common::Polynomial> &lon_trajectory) const;
 
   static bool IsValidLongitudinalTrajectory(const common::Polynomial &lon_traj);
+
+  static bool IsValidLateralTrajectory(const common::Polynomial& lat_traj);
 
   double Evaluate(const PlanningTarget &planning_target, const std::shared_ptr<common::Polynomial> &lon_traj,
                   const std::shared_ptr<common::Polynomial> &lat_traj);

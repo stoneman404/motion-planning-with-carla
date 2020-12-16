@@ -1,8 +1,0 @@
-<!-- -->
-<launch>
-
-    <node pkg="planning" type="planning_node" name="planning" output="screen">
-        <rosparam command="load" file="$(find planning)/param/params.yaml"/>
-    </node>
-
-</launch>
