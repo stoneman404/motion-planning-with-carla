@@ -70,7 +70,7 @@ Agent::Agent(const vehicle_state::VehicleState &vehicle_state) : id_(vehicle_sta
                                                                  target_ref_lane_(nullptr),
                                                                  trajectory_(planning_msgs::Trajectory()),
                                                                  agent_type_(AgentType::VEHICLE) {
-  if (std::fabs(state_.v_) < 0.1 && std::fabs(state_.a_) < 0.4) {
+  if (std::fabs(state_.v) < 0.1 && std::fabs(state_.a) < 0.4) {
     is_static_ = true;
   }
 
@@ -199,10 +199,10 @@ bool Agent::PredictAgentBehaviour() {
 }
 
 void Agent::StateToPathPoint(const vehicle_state::KinoDynamicState &state, planning_msgs::PathPoint &path_point) {
-  path_point.x = state.x_;
-  path_point.y = state.y_;
-  path_point.theta = state.theta_;
-  path_point.kappa = state.kappa_;
+  path_point.x = state.x;
+  path_point.y = state.y;
+  path_point.theta = state.theta;
+  path_point.kappa = state.kappa;
   path_point.dkappa = 0.0;
 }
 
@@ -211,16 +211,16 @@ const AgentType &Agent::agent_type() const {
 }
 
 bool Agent::UpdateAgentStateUsingTrajectoryPoint(planning_msgs::TrajectoryPoint &trajectory_point) {
-  state_.x_ = trajectory_point.path_point.x;
-  state_.y_ = trajectory_point.path_point.y;
-  state_.z_ = 0.0;
-  state_.theta_ = trajectory_point.path_point.theta;
-  state_.kappa_ = trajectory_point.path_point.kappa;
-  state_.v_ = trajectory_point.vel;
-  state_.a_ = trajectory_point.acc;
-  state_.centripental_acc_ = state_.v_ * state_.v_ * state_.kappa_;
-  Eigen::Vector2d center{state_.x_, state_.y_};
-  bounding_box_ = common::Box2d(center, state_.theta_, length_, width_);
+  state_.x = trajectory_point.path_point.x;
+  state_.y = trajectory_point.path_point.y;
+  state_.z = 0.0;
+  state_.theta = trajectory_point.path_point.theta;
+  state_.kappa = trajectory_point.path_point.kappa;
+  state_.v = trajectory_point.vel;
+  state_.a = trajectory_point.acc;
+  state_.centripental_acc = state_.v * state_.v * state_.kappa;
+  Eigen::Vector2d center{state_.x, state_.y};
+  bounding_box_ = common::Box2d(center, state_.theta, length_, width_);
   return true;
 }
 

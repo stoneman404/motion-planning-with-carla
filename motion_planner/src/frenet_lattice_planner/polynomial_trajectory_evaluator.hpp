@@ -9,6 +9,7 @@
 #include "obstacle_manager/st_graph.hpp"
 #include "end_condition_sampler.hpp"
 #include "planning_config.hpp"
+#include "frenet_lattice_planner.hpp"
 
 namespace planning {
 class PolynomialTrajectoryEvaluator {
@@ -32,7 +33,8 @@ class PolynomialTrajectoryEvaluator {
                                 const std::vector<std::shared_ptr<common::Polynomial>> &lon_trajectory_vec,
                                 const std::vector<std::shared_ptr<common::Polynomial>> &lat_trajectory_vec,
                                 std::shared_ptr<ReferenceLine> ptr_ref_line,
-                                std::shared_ptr<STGraph> ptr_st_graph);
+                                std::shared_ptr<STGraph> ptr_st_graph,
+                                common::ThreadPool *thread_pool);
   bool has_more_trajectory_pairs() const;
   size_t num_of_trajectory_pairs() const;
   double top_trajectory_pair_cost() const { return cost_queue_.top().second; }

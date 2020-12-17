@@ -107,10 +107,10 @@ bool MPDMPlanner::GetAgentMostLikelyPolicyAndReferenceLane(Agent &agent) {
   // 1. first get current ref lane for agent
   if (agent.agent_type() == AgentType::VEHICLE) {
     geometry_msgs::Pose current_pose;
-    current_pose.position.x = agent.state().x_;
-    current_pose.position.y = agent.state().y_;
-    current_pose.position.z = agent.state().z_;
-    current_pose.orientation = tf::createQuaternionMsgFromYaw(agent.state().theta_);
+    current_pose.position.x = agent.state().x;
+    current_pose.position.y = agent.state().y;
+    current_pose.position.z = agent.state().z;
+    current_pose.orientation = tf::createQuaternionMsgFromYaw(agent.state().theta);
     std::shared_ptr<ReferenceLine> ref_lane = std::make_shared<ReferenceLine>();
     if (!this->GetReferenceLane(current_pose, LateralBehaviour::LANE_KEEPING,
                                 false, ref_lane)) {
@@ -164,15 +164,15 @@ bool MPDMPlanner::UpdateAvailablePoliciesAndRefLanes() {
       available_policies_with_ref_lanes_.insert({LateralBehaviour::LANE_CHANGE_LEFT, ego_agent_.target_ref_lane()});
       common::SLPoint sl_point;
 
-      if (!ego_agent_.current_ref_lane()->XYToSL(ego_agent_.state().x_, ego_agent_.state().y_, &sl_point)) {
+      if (!ego_agent_.current_ref_lane()->XYToSL(ego_agent_.state().x, ego_agent_.state().y, &sl_point)) {
         break;
       }
       if (ego_agent_.current_ref_lane()->CanChangeRight(sl_point.s)) {
         geometry_msgs::Pose cur_pose;
         std::shared_ptr<ReferenceLine> ref_lane;
-        cur_pose.position.x = ego_agent_.state().x_;
-        cur_pose.position.y = ego_agent_.state().y_;
-        cur_pose.orientation = tf::createQuaternionMsgFromYaw(ego_agent_.state().theta_);
+        cur_pose.position.x = ego_agent_.state().x;
+        cur_pose.position.y = ego_agent_.state().y;
+        cur_pose.orientation = tf::createQuaternionMsgFromYaw(ego_agent_.state().theta);
         if (GetReferenceLane(cur_pose,
                              LateralBehaviour::LANE_CHANGE_RIGHT,
                              false,
@@ -185,15 +185,15 @@ bool MPDMPlanner::UpdateAvailablePoliciesAndRefLanes() {
     case LateralBehaviour::LANE_CHANGE_RIGHT: {
       available_policies_with_ref_lanes_.insert({LateralBehaviour::LANE_CHANGE_RIGHT, ego_agent_.target_ref_lane()});
       common::SLPoint sl_point;
-      if (!ego_agent_.current_ref_lane()->XYToSL(ego_agent_.state().x_, ego_agent_.state().y_, &sl_point)) {
+      if (!ego_agent_.current_ref_lane()->XYToSL(ego_agent_.state().x, ego_agent_.state().y, &sl_point)) {
         break;
       }
       if (ego_agent_.current_ref_lane()->CanChangeLeft(sl_point.s)) {
         geometry_msgs::Pose cur_pose;
         std::shared_ptr<ReferenceLine> ref_lane;
-        cur_pose.position.x = ego_agent_.state().x_;
-        cur_pose.position.y = ego_agent_.state().y_;
-        cur_pose.orientation = tf::createQuaternionMsgFromYaw(ego_agent_.state().theta_);
+        cur_pose.position.x = ego_agent_.state().x;
+        cur_pose.position.y = ego_agent_.state().y;
+        cur_pose.orientation = tf::createQuaternionMsgFromYaw(ego_agent_.state().theta);
         if (GetReferenceLane(cur_pose,
                              LateralBehaviour::LANE_CHANGE_LEFT,
                              false,

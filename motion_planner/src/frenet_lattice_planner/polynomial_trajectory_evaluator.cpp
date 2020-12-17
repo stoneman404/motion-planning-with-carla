@@ -2,6 +2,7 @@
 #include <utility>
 #include <planning_config.hpp>
 #include "frenet_lattice_planner/constraint_checker.hpp"
+#include "frenet_lattice_planner.hpp"
 
 namespace planning {
 PolynomialTrajectoryEvaluator::PolynomialTrajectoryEvaluator(const std::array<double, 3> &init_s,
@@ -9,7 +10,8 @@ PolynomialTrajectoryEvaluator::PolynomialTrajectoryEvaluator(const std::array<do
                                                              const std::vector<std::shared_ptr<common::Polynomial>> &lon_trajectory_vec,
                                                              const std::vector<std::shared_ptr<common::Polynomial>> &lat_trajectory_vec,
                                                              std::shared_ptr<ReferenceLine> ptr_ref_line,
-                                                             std::shared_ptr<STGraph> ptr_st_graph)
+                                                             std::shared_ptr<STGraph> ptr_st_graph,
+                                                             common::ThreadPool *thread_pool)
     : init_s_(init_s), ptr_st_graph_(std::move(ptr_st_graph)),
       ptr_ref_line_(std::move(ptr_ref_line)) {
   double start_time = 0.0;
@@ -19,36 +21,50 @@ PolynomialTrajectoryEvaluator::PolynomialTrajectoryEvaluator(const std::array<do
   if (planning_target.has_stop_point) {
     stop_point = planning_target.stop_s;
   }
-  for (const auto &lon_traj : lon_trajectory_vec) {
-#if 0
-    std::cout << "lon_trajectory_vec size: " << lon_trajectory_vec.size() << std::endl;
-    std::cout << "====== the lon trajectory to evaluated is =========" << std::endl;
-    for (double t = 0; t < PlanningConfig::Instance().max_lookahead_time(); t += 0.2) {
-      std::cout << "s : " << lon_traj->Evaluate(0, t) << ", dot_s: " << lon_traj->Evaluate(1, t) << ", ddot_s: "
-                << lon_traj->Evaluate(2, t) << std::endl;
-    }
-#endif
-    double lon_end_s = lon_traj->Evaluate(0, end_time);
-    if (init_s[0] < stop_point && lon_end_s +
-        PlanningConfig::Instance().lon_safety_buffer() > stop_point) {
-      continue;
-    }
-    if (!IsValidLongitudinalTrajectory(*lon_traj)) {
-      continue;
-    }
-
-    for (const auto &lat_traj : lat_trajectory_vec) {
-#if 0
-      std::cout << "====== the lat trajectory to evaluated is =========" << std::endl;
-      for (double s = 0; s < lon_end_s; s += 0.1) {
-        std::cout << "l : " << lat_traj->Evaluate(0, s) << ", l_prime: " << lat_traj->Evaluate(1, s) << ", l_prime_prime: "
-                  << lat_traj->Evaluate(2, s) << std::endl;
+  auto begin = ros::Time::now();
+  if (thread_pool != nullptr) {
+    std::vector<std::future<TrajectoryCostPair>> futures;
+    for (const auto &lon_traj : lon_trajectory_vec) {
+      double lon_end_s = lon_traj->Evaluate(0, end_time);
+      if (init_s[0] < stop_point && lon_end_s +
+          PlanningConfig::Instance().lon_safety_buffer() > stop_point) {
+        continue;
       }
-#endif
-      double cost = Evaluate(planning_target, lon_traj, lat_traj);
-      cost_queue_.emplace(TrajectoryPair(lon_traj, lat_traj), cost);
+      if (!IsValidLongitudinalTrajectory(*lon_traj)) {
+        continue;
+      }
+      for (const auto &lat_traj : lat_trajectory_vec) {
+        auto lambda = [&lon_traj, &lat_traj, &planning_target, this]() -> TrajectoryCostPair {
+          double cost = Evaluate(planning_target, lon_traj, lat_traj);
+          return TrajectoryCostPair(TrajectoryPair(lon_traj, lat_traj), cost);
+        };
+        futures.push_back(thread_pool->PushTask(lambda));
+      }
+    }
+    for (auto &task : futures) {
+      cost_queue_.emplace(task.get());
+    }
+  } else {
+    for (const auto &lon_traj : lon_trajectory_vec) {
+      double lon_end_s = lon_traj->Evaluate(0, end_time);
+      if (init_s[0] < stop_point && lon_end_s +
+          PlanningConfig::Instance().lon_safety_buffer() > stop_point) {
+        continue;
+      }
+      if (!IsValidLongitudinalTrajectory(*lon_traj)) {
+        continue;
+      }
+
+      for (const auto &lat_traj : lat_trajectory_vec) {
+        double cost = Evaluate(planning_target, lon_traj, lat_traj);
+        cost_queue_.emplace(TrajectoryPair(lon_traj, lat_traj), cost);
+      }
     }
   }
+
+  auto end = ros::Time::now();
+  ROS_WARN("[PolynomialTrajectoryEvaluator], the time elapsed by PolynomialTrajectoryEvaluator is %lf s",
+           (end - begin).toSec());
   ROS_INFO("[PolynomialTrajectoryEvaluator], the numeber of trajectory pairs: %zu", cost_queue_.size());
 }
 
@@ -83,8 +99,6 @@ bool PolynomialTrajectoryEvaluator::IsValidLongitudinalTrajectory(const common::
 }
 
 bool PolynomialTrajectoryEvaluator::IsValidLateralTrajectory(const common::Polynomial &lat_traj) {
-  double s = 0;
-
   return false;
 }
 
@@ -97,12 +111,16 @@ double PolynomialTrajectoryEvaluator::Evaluate(const PlanningTarget &planning_ta
   double lat_offset_cost = PolynomialTrajectoryEvaluator::LatOffsetCost(lat_traj, lon_traj);
   double lat_jerk_cost = this->LatJerkCost(lat_traj, lon_traj);
   double centripental_cost = this->CentripetalAccelerationCost(lon_traj);
+//  std::cout << " lon_target_cost: " << lon_target_cost << ",lon_jerk_cost: " << lon_jerk_cost
+//            << ", lon_collision_cost: " << lon_collision_cost
+//            << ", lat_offset_cost: " << lat_offset_cost << ", lat_jerk_cost: " << lat_jerk_cost
+//            << ", centripental_cost: " << centripental_cost << std::endl;
   return lon_collision_cost * PlanningConfig::Instance().lattice_weight_collision() +
       lon_jerk_cost * PlanningConfig::Instance().lattice_weight_lon_jerk() +
       lon_target_cost * PlanningConfig::Instance().lattice_weight_lon_target() +
       lat_jerk_cost * PlanningConfig::Instance().lattice_weight_lat_jerk() +
       lat_offset_cost * PlanningConfig::Instance().lattice_weight_lat_offset() +
-      centripental_cost * PlanningConfig::Instance().lattice_weight_centripetal_acc() ;
+      centripental_cost * PlanningConfig::Instance().lattice_weight_centripetal_acc();
 }
 
 size_t PolynomialTrajectoryEvaluator::num_of_trajectory_pairs() const {
@@ -175,17 +193,23 @@ double PolynomialTrajectoryEvaluator::LonTargetCost(const std::shared_ptr<common
 
   double t_max = lon_trajectory->ParamLength();
   double dist_s = lon_trajectory->Evaluate(0, t_max) - lon_trajectory->Evaluate(0, 0.0);
+//  std::cout << " ............dist_s: " << dist_s << std::endl;
   double speed_cost_sqr_sum = 0.0;
   double speed_cost_weight_sum = 0.0;
 //  ROS_INFO("LonTargetCost: the desired vel is %f", planning_target.desired_vel);
   double target_speed = planning_target.has_stop_point ? 0.0 : planning_target.desired_vel;
   for (double t = 0; t <= t_max; t += PlanningConfig::Instance().delta_t()) {
     double cost = target_speed - lon_trajectory->Evaluate(1, t);
+//    std::cout << " ============cost:=======      " << cost << ", lon_trajectory->Evaluate(1, t): "
+//              << lon_trajectory->Evaluate(1, t) << ",  target_speed: " << target_speed << std::endl;
+
     speed_cost_sqr_sum += t * t * std::fabs(cost);
     speed_cost_weight_sum += t * t;
   }
   double speed_cost = speed_cost_sqr_sum / (speed_cost_weight_sum + 1e-5);
-  double dist_travelled_cost = 1.0 / (1.0 + dist_s);
+
+  double dist_travelled_cost = 1.0 / (1.0 + std::fabs(dist_s));
+//  std::cout << " speed cost: " << speed_cost << "dist_travleed_cost: " << dist_travelled_cost << std::endl;
   return speed_cost * PlanningConfig::Instance().lattice_weight_target_speed() +
       dist_travelled_cost * PlanningConfig::Instance().lattice_weight_dist_travelled();
 }

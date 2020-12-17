@@ -1,4 +1,4 @@
-#include <ros/assert.h>
+#include <cassert>
 #include "curves/quartic_polynomial.hpp"
 
 namespace common {
@@ -61,12 +61,12 @@ size_t QuarticPolynomial::Order() const {
 }
 
 double QuarticPolynomial::Coef(size_t order) const {
-  ROS_ASSERT(order <= order_);
+  assert(order <= order_);
   return coef_[order];
 }
 
 void QuarticPolynomial::SetUpPolynomial(double x0, double dx0, double ddx0, double dx1, double ddx1, double param) {
-  ROS_ASSERT(param > 0.0);
+  assert(param > 0.0);
   coef_[0] = x0;
   coef_[1] = dx0;
   coef_[2] = 0.5 * ddx0;

@@ -116,6 +116,8 @@ class MotionPlanner {
   size_t thread_pool_size_ = 6;
   std::unique_ptr<common::ThreadPool> thread_pool_;
 
+
+  std::vector<PlanningTarget> planning_targets_;
 };
 }
 

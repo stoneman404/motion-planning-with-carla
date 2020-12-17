@@ -15,16 +15,16 @@ bool PIDController::Execute(double current_time_stamp,
                             carla_msgs::CarlaEgoVehicleControl &control) {
   planning_msgs::TrajectoryPoint cur_tp, target_tp;
   auto kinodynamic_state = vehicle_state.GetKinoDynamicVehicleState();
-  if (!GetMatchedPointByPosition(kinodynamic_state.x_, kinodynamic_state.y_, trajectory, cur_tp)) {
+  if (!GetMatchedPointByPosition(kinodynamic_state.x, kinodynamic_state.y, trajectory, cur_tp)) {
     return false;
   }
   double preview_time = current_time_stamp + pid_configs_.lookahead_time;
   if (!GetMatchedPointByAbsoluteTime(preview_time, trajectory, target_tp)) {
     return false;
   }
-  const double delta_theta = kinodynamic_state.theta_ - cur_tp.path_point.theta;
+  const double delta_theta = kinodynamic_state.theta - cur_tp.path_point.theta;
   const double cos_delta_theta = std::cos(delta_theta);
-  const double cur_lon_s_dot = kinodynamic_state.v_ * cos_delta_theta;
+  const double cur_lon_s_dot = kinodynamic_state.v * cos_delta_theta;
   const double target_lon_s_dot = target_tp.vel;
 //  const double target_lon_s_dot = 8.333;
   double throttle = 0.0;
@@ -34,7 +34,7 @@ bool PIDController::Execute(double current_time_stamp,
     return false;
   }
 
-  if (!LateralControl({kinodynamic_state.x_, kinodynamic_state.y_, kinodynamic_state.theta_},
+  if (!LateralControl({kinodynamic_state.x, kinodynamic_state.y, kinodynamic_state.theta},
                       {target_tp.path_point.x, target_tp.path_point.y, target_tp
                           .path_point.theta},
                       1.0 / loop_rate_,

@@ -19,14 +19,14 @@ struct KinoDynamicState {
   KinoDynamicState GetNextStateAfterTime(double t) const;
 
 
-  double x_;
-  double y_;
-  double z_;
-  double theta_;
-  double kappa_;
-  double v_;
-  double a_;
-  double centripental_acc_;
+  double x;
+  double y;
+  double z;
+  double theta;
+  double kappa;
+  double v;
+  double a;
+  double centripental_acc;
 };
 
 }

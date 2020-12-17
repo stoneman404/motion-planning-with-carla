@@ -23,8 +23,7 @@ bool FrenetLatticePlanner::Process(const planning_msgs::TrajectoryPoint &init_tr
   ROS_INFO("[FrenetLatticePlanner::Process], the targets size: %zu", planning_targets.size());
   constexpr double kDefaultNonBestBehaviourCost = 20.0;
   size_t index = 0;
-  size_t failed_ref_plan_num = 0;
-  planning_msgs::LateralBehaviour best_lateral_behaviour = planning_targets.front().lateral_behaviour;
+  size_t failed_ref_plan_num = 0;;
   std::vector<std::pair<planning_msgs::Trajectory, double>> optimal_trajectories;
   for (const auto &planning_target : planning_targets) {
     std::pair<planning_msgs::Trajectory, double> optimal_trajectory;
@@ -80,11 +79,13 @@ bool FrenetLatticePlanner::PlanningOnRef(const planning_msgs::TrajectoryPoint &i
   ROS_INFO("[PlanningOnRef] : the lon end conditions size is %zu, the lat end_conditions size is %zu",
            lon_traj_vec.size(),
            lat_traj_vec.size());
+
   PolynomialTrajectoryEvaluator trajectory_evaluator = PolynomialTrajectoryEvaluator(init_s,
                                                                                      planning_target,
                                                                                      lon_traj_vec,
                                                                                      lat_traj_vec,
-                                                                                     ref_line, st_graph);
+                                                                                     ref_line, st_graph,
+                                                                                     thread_pool_);
   std::unordered_map<int, std::shared_ptr<Obstacle>> obstacle_map;
   for (const auto &obstacle : planning_target.obstacles) {
     obstacle_map.emplace(obstacle->Id(), obstacle);
@@ -118,6 +119,17 @@ bool FrenetLatticePlanner::PlanningOnRef(const planning_msgs::TrajectoryPoint &i
     auto trajectory_pair = trajectory_evaluator.next_top_trajectory_pair();
     auto combined_trajectory = CombineTrajectories(ref_line, *trajectory_pair.first, *trajectory_pair.second,
                                                    init_trajectory_point.relative_time);
+//    std::cout << " ===========the lat and lon traj is : " << std::endl;
+//    for (double t = 0; t < PlanningConfig::Instance().max_lookahead_time(); t += 0.5) {
+//      double s = trajectory_pair.first->Evaluate(0, t);
+//      std::cout << "lon: t: " << t << ", s: " << s << ", s_dot: "
+//                << trajectory_pair.first->Evaluate(1, t)
+//                << ", s_ddot: " << trajectory_pair.first->Evaluate(2, t) << ", jerk: "
+//                << trajectory_pair.first->Evaluate(3, t) << " lat d(s): " << trajectory_pair.second->Evaluate(0, s)
+//                << ", d(s)': " << trajectory_pair.second->Evaluate(2, s) << ", d''(s): "
+//                << trajectory_pair.second->Evaluate(2, s) << ", d'''(s): " << trajectory_pair.second->Evaluate(3, s)
+//                << " the cost: " << trajectory_pair_cost << std::endl;
+//    }
 
     auto result = ConstraintChecker::ValidTrajectory(combined_trajectory);
     if (result != ConstraintChecker::Result::VALID) {
@@ -327,11 +339,11 @@ void FrenetLatticePlanner::GenerateLonTrajectories(const PlanningTarget &plannin
   ptr_lon_traj_vec->clear();
   auto ref_line = planning_target.ref_lane;
   auto matched_ref_point = ref_line->GetReferencePoint(init_s[0]);
-  std::cout << "=========== matched_ref_point: kappa: " << matched_ref_point.kappa() << std::endl;
+//  std::cout << "=========== matched_ref_point: kappa: " << matched_ref_point.kappa() << std::endl;
   double cruise_speed = std::min(PlanningConfig::Instance().max_lon_velocity() * 0.9,
                                  PlanningConfig::Instance().max_lat_acc()
                                      / (std::fabs(matched_ref_point.kappa()) + 1e-6));
-  std::cout << " -==========================-- cruise speed is: " << cruise_speed << "m/s==============-" << std::endl;
+//  std::cout << " -==========================-- cruise speed is: " << cruise_speed << "m/s==============-" << std::endl;
   FrenetLatticePlanner::GenerateCruisingLonTrajectories(cruise_speed, init_s,
                                                         end_condition_sampler, ptr_lon_traj_vec);
   FrenetLatticePlanner::GenerateOvertakeAndFollowingLonTrajectories(init_s, end_condition_sampler, ptr_lon_traj_vec);

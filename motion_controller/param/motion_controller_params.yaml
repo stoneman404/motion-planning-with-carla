@@ -1,6 +1,6 @@
 /motion_control/controller_type: "pid"
 /motion_control/pid_lookahead_time: 0.8
-/motion_control/lateral_pid_kp: 1.1
+/motion_control/lateral_pid_kp: 0.79
 /motion_control/lateral_pid_kd: 0.2
 /motion_control/lateral_pid_ki: 0.05
 /motion_control/longitudinal_pid_kp: 2.5

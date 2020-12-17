@@ -40,7 +40,7 @@ std::vector<EndCondition> EndConditionSampler::SampleLonEndConditionForStopping(
   return end_s_conditions;
 }
 
-std::vector<EndCondition> EndConditionSampler::SampleLatEndCondition() const{
+std::vector<EndCondition> EndConditionSampler::SampleLatEndCondition() {
   std::vector<EndCondition> end_d_conditions;
   std::array<double, 3> end_d_candidates = {0, -0.5, 0.5};
   std::array<double, 4> end_s_candidates = {5, 10, 20, 30};
@@ -66,7 +66,7 @@ std::vector<EndCondition> EndConditionSampler::SampleLonEndConditionForCruising(
   time_samples[0] = PlanningConfig::Instance().min_lookahead_time();
   std::vector<EndCondition> end_s_conditions;
   for (const auto &time : time_samples) {
-    double v_upper = std::min(VUpper(time),ref_target_vel);
+    double v_upper = std::min(VUpper(time), ref_target_vel);
     double v_lower = VLower(time);
     State lower_end_s = {0.0, v_lower, 0.0};
     end_s_conditions.emplace_back(lower_end_s, time);
@@ -79,12 +79,19 @@ std::vector<EndCondition> EndConditionSampler::SampleLonEndConditionForCruising(
                  static_cast<size_t>(vel_gap / vel_interval_step));
     if (vel_intervals_num > 0) {
       double vel_ratio = vel_gap / static_cast<double>(vel_intervals_num);
-      for (size_t i = 1; i <= vel_intervals_num; ++i) {
+      for (size_t i = 1; i < vel_intervals_num; ++i) {
         State end_s = {0.0, v_lower + vel_ratio * static_cast<double>(i), 0.0};
+
         end_s_conditions.emplace_back(end_s, time);
       }
     }
+
   }
+//  for (const auto &end_s : end_s_conditions) {
+//    std::cout << " end_conditions for cruising : s: " << end_s.first[0] << ", s_dot: " << end_s.first[1] << ", s_ddot: "
+//              << end_s.first[2] << ", time: " << end_s.second << std::endl;
+//  }
+
   return end_s_conditions;
 }
 
@@ -93,7 +100,7 @@ double EndConditionSampler::VUpper(double t) const {
 }
 
 double EndConditionSampler::VLower(double t) const {
-  double t_at_zero_speed = init_s_[1] / PlanningConfig::Instance().max_lon_acc();
+  double t_at_zero_speed = init_s_[1] / (-PlanningConfig::Instance().min_lon_acc());
   return t < t_at_zero_speed ?
          init_s_[1] + PlanningConfig::Instance().min_lon_acc() * t :
          0.0;
@@ -105,10 +112,10 @@ double EndConditionSampler::SUpper(double t) const {
 }
 
 double EndConditionSampler::SLower(double t) const {
-  const double t_at_zero_speed = init_s_[1] / PlanningConfig::Instance().max_lon_acc();
+  const double t_at_zero_speed = init_s_[1] / (-PlanningConfig::Instance().min_lon_acc());
   const double
-      s_at_zero_speed = init_s_[0] + init_s_[1] * init_s_[1] / (2.0 * PlanningConfig::Instance().max_lon_acc());
-  return t < t_at_zero_speed ? init_s_[0] + init_s_[1] * t + PlanningConfig::Instance().min_lon_acc() * t * t
+      s_at_zero_speed = init_s_[0] + init_s_[1] * init_s_[1] / (-2.0 * PlanningConfig::Instance().min_lon_acc());
+  return t < t_at_zero_speed ? init_s_[0] + init_s_[1] * t + 0.5 * PlanningConfig::Instance().min_lon_acc() * t * t
                              : s_at_zero_speed;
 }
 

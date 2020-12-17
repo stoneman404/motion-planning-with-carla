@@ -149,14 +149,14 @@ class ClinetInterface(object):
         route = list(list())
         carl_start_waypoint = self.map.get_waypoint(carla_start.location)
         if req.offset == -1:
-            if carl_start_waypoint.right_lane() is not None:
-                carl_start_waypoint = carl_start_waypoint.left_lane()
+            if carl_start_waypoint.get_right_lane():
+                carl_start_waypoint = carl_start_waypoint.get_right_lane()
             else:
                 carl_start_waypoint = carl_start_waypoint
-            carl_start_waypoint = carl_start_waypoint.right_lane()
+            # carl_start_waypoint = carl_start_waypoint.right_lane()
         elif req.offset == 1:
-            if carl_start_waypoint.left_lane() is not None:
-                carl_start_waypoint = carl_start_waypoint.left_lane()
+            if carl_start_waypoint.get_left_lane():
+                carl_start_waypoint = carl_start_waypoint.get_left_lane()
             else:
                 carl_start_waypoint = carl_start_waypoint
         else:
@@ -166,7 +166,9 @@ class ClinetInterface(object):
         last_way_point = carl_start_waypoint
         s = 0.0
         while s < 10:
-            waypoint = last_way_point.previous(2.0)[-1]
+            index = np.random.randint(0, len(last_way_point.previous(2.0)))
+
+            waypoint = last_way_point.previous(2.0)[index]
             last_way_point = waypoint
             waypoints.append(waypoint)
             s += 2.0

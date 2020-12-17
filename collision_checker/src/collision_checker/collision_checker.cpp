@@ -30,6 +30,9 @@ bool CollisionChecker::IsCollision(const planning_msgs::Trajectory &trajectory) 
   double ego_width = vehicle_params_.width;
   double ego_length = vehicle_params_.length;
   double shift_distance = vehicle_params_.back_axle_to_center_length;
+  if (predicted_obstacle_box_.empty()){
+    return true;
+  }
   if (this->thread_pool_ == nullptr) {
     for (size_t i = 0; i < trajectory.trajectory_points.size(); ++i) {
       const auto &traj_point = trajectory.trajectory_points.at(i);

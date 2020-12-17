@@ -202,7 +202,7 @@ bool BehaviourPlanner::GetKeyAgents() {
   const double front_distance =
       std::max(simulate_config_.desired_vel * simulate_config_.sim_horizon_, sample_min_lon_threshold_);
   const double back_distance = front_distance / 2.0;
-  Eigen::Vector2d ego_heading{std::cos(ego_agent.state().theta_), std::sin(ego_agent.state().theta_)};
+  Eigen::Vector2d ego_heading{std::cos(ego_agent.state().theta), std::sin(ego_agent.state().theta)};
   key_agent_set_.emplace(ego_vehicle_id_, ego_agent);
   key_agent_set_[ego_vehicle_id_].set_is_host(true);
 
@@ -210,8 +210,8 @@ bool BehaviourPlanner::GetKeyAgents() {
     if (agent.first == ego_vehicle_id_) {
       continue;
     }
-    Eigen::Vector2d agent_to_ego{agent.second.state().x_ - ego_agent.state().x_,
-                                 agent.second.state().y_ - ego_agent.state().y_};
+    Eigen::Vector2d agent_to_ego{agent.second.state().x - ego_agent.state().x,
+                                 agent.second.state().y - ego_agent.state().y};
 
     const double cross_prod = agent_to_ego.x() * ego_heading.y() - agent_to_ego.y() * ego_heading.x();
     if (std::fabs(cross_prod) > sample_key_agent_lat_threshold_) {

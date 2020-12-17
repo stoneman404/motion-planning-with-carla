@@ -66,15 +66,15 @@ bool PolicyDecider::SimulateEgoAgentPolicy(const Policy &policy,
   std::unordered_map<int, SimulateAgent> sim_agents;
   // 1. init trajectory point for each agent
   for (const auto &agent : agent_set_) {
-    init_trajectory_point.path_point.x = agent.second.state().x_;
-    init_trajectory_point.path_point.y = agent.second.state().y_;
-    init_trajectory_point.path_point.kappa = agent.second.state().kappa_;
+    init_trajectory_point.path_point.x = agent.second.state().x;
+    init_trajectory_point.path_point.y = agent.second.state().y;
+    init_trajectory_point.path_point.kappa = agent.second.state().kappa;
     init_trajectory_point.path_point.dkappa = 0.0;
-    init_trajectory_point.path_point.theta = agent.second.state().theta_;
+    init_trajectory_point.path_point.theta = agent.second.state().theta;
     init_trajectory_point.path_point.s = 0.0;
     init_trajectory_point.relative_time = 0.0;
-    init_trajectory_point.vel = agent.second.state().v_;
-    init_trajectory_point.acc = agent.second.state().a_;
+    init_trajectory_point.vel = agent.second.state().v;
+    init_trajectory_point.acc = agent.second.state().a;
     init_trajectory_point.jerk = 0.0;
     init_trajectory_point.relative_time = 0.0;
     SimulateAgent simulate_agent;
@@ -120,7 +120,7 @@ bool PolicyDecider::OpenLoopSimForward(const Policy &policy,
   for (int i = 0; i < kForwardSteps; ++i) {
 
     for (auto &agent : tmp_agent_set) {
-      double desired_velocity = this->GetDesiredSpeed({agent.second.agent.state().x_, agent.second.agent.state().y_},
+      double desired_velocity = this->GetDesiredSpeed({agent.second.agent.state().x, agent.second.agent.state().y},
                                                       *(agent.second.reference_line));
       planning_msgs::TrajectoryPoint trajectory_point;
       trajectory_point.relative_time =
@@ -149,7 +149,7 @@ bool PolicyDecider::CloseLoopSimulate(const Policy &policy,
   for (int i = 0; i < kForwardSteps; ++i) {
     for (auto &agent : simulate_agent_tmp) {
       double desired_velocity =
-          this->GetDesiredSpeed({agent.second.agent.state().x_, agent.second.agent.state().y_},
+          this->GetDesiredSpeed({agent.second.agent.state().x, agent.second.agent.state().y},
                                 *(agent.second.reference_line));
 
       planning_msgs::TrajectoryPoint trajectory_point;
@@ -204,7 +204,7 @@ bool PolicyDecider::GetLeadingAgentOnRefLane(const Agent &agent,
                                              int &agent_id) {
 
   common::SLPoint ref_sl_point;
-  if (!ref_lane->XYToSL({agent.state().x_, agent.state().y_}, &ref_sl_point)) {
+  if (!ref_lane->XYToSL({agent.state().x, agent.state().y}, &ref_sl_point)) {
     return false;
   }
   constexpr double kLatRange = 2.2;
@@ -217,7 +217,7 @@ bool PolicyDecider::GetLeadingAgentOnRefLane(const Agent &agent,
       if (entry.first == agent.id()) {
         continue;
       }
-      if (std::hypot(entry.second.agent.state().x_ - ref_point.x(), entry.second.agent.state().y_ - ref_point.y())
+      if (std::hypot(entry.second.agent.state().x - ref_point.x(), entry.second.agent.state().y - ref_point.y())
           < kLatRange) {
         if (!ref_lane->IsBlockedByBox(entry.second.agent.bounding_box(), agent.bounding_box().width(), drive_buffer)) {
           continue;
@@ -279,13 +279,13 @@ bool PolicyDecider::NaivePredictionOnStepForAgent(const SimulateAgent &agent, do
     return false;
   }
   auto next_state = agent.agent.state().GetNextStateAfterTime(sim_step);
-  trajectory_point.path_point.x = next_state.x_;
-  trajectory_point.path_point.y = next_state.y_;
-  trajectory_point.path_point.theta = next_state.theta_;
-  trajectory_point.path_point.kappa = next_state.kappa_;
+  trajectory_point.path_point.x = next_state.x;
+  trajectory_point.path_point.y = next_state.y;
+  trajectory_point.path_point.theta = next_state.theta;
+  trajectory_point.path_point.kappa = next_state.kappa;
   trajectory_point.path_point.dkappa = 0.0;
-  trajectory_point.vel = next_state.v_;
-  trajectory_point.acc = next_state.a_;
+  trajectory_point.vel = next_state.v;
+  trajectory_point.acc = next_state.a;
   trajectory_point.jerk = 0.0;
   return true;
 }

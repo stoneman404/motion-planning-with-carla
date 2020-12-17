@@ -234,11 +234,11 @@ void spline::set_points(const std::vector<double> &x,
   m_c0 = m_c[0];
 
   // for the right extrapolation coefficients
-  // f_{n-1}(x) = b*(x-x_{n-1})^2 + c*(x-x_{n-1}) + y_{n-1}
+  // f_{n-1}(x) = b*(x-x{n-1})^2 + c*(x-x{n-1}) + y{n-1}
   double h = x[n - 1] - x[n - 2];
   // m_b[n-1] is determined by the boundary condition
   m_a[n - 1] = 0.0;
-  m_c[n - 1] = 3.0 * m_a[n - 2] * h * h + 2.0 * m_b[n - 2] * h + m_c[n - 2];   // = f'_{n-2}(x_{n-1})
+  m_c[n - 1] = 3.0 * m_a[n - 2] * h * h + 2.0 * m_b[n - 2] * h + m_c[n - 2];   // = f'_{n-2}(x{n-1})
   if (m_force_linear_extrapolation)
     m_b[n - 1] = 0.0;
 }

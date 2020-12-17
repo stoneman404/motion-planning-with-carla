@@ -19,8 +19,8 @@ bool OnLaneForwardSimulator::ForwardOneStep(const Agent &agent,
     return false;
   }
 //  ROS_WARN("[OnLaneForwardSimulator::ForwardOneStep], the init ref_point is %f, %f",
-//           reference_line.GetReferencePoint(agent.state().x_, agent.state().y_).x(),
-//           reference_line.GetReferencePoint(agent.state().x_, agent.state().y_).y());
+//           reference_line.GetReferencePoint(agent.state().x, agent.state().y).x(),
+//           reference_line.GetReferencePoint(agent.state().x, agent.state().y).y());
   double lateral_approach_ratio = params.default_lateral_approach_ratio;
   if (!reference_line.IsOnLane({s_conditions[0], d_conditions[0]})) {
     lateral_approach_ratio = params.cutting_in_lateral_approach_ratio;
@@ -84,10 +84,10 @@ bool OnLaneForwardSimulator::GetIDMLonAcc(const std::array<double, 3> &ego_s_con
 planning_msgs::PathPoint OnLaneForwardSimulator::AgentStateToPathPoint(
     const vehicle_state::KinoDynamicState &kino_dynamic_state) {
   planning_msgs::PathPoint path_point;
-  path_point.x = kino_dynamic_state.x_;
-  path_point.y = kino_dynamic_state.y_;
-  path_point.theta = kino_dynamic_state.theta_;
-  path_point.kappa = kino_dynamic_state.kappa_;
+  path_point.x = kino_dynamic_state.x;
+  path_point.y = kino_dynamic_state.y;
+  path_point.theta = kino_dynamic_state.theta;
+  path_point.kappa = kino_dynamic_state.kappa;
   return path_point;
 }
 
@@ -97,7 +97,7 @@ bool OnLaneForwardSimulator::GetAgentFrenetState(const Agent &agent,
                                                  std::array<double, 3> &d_conditions) {
   double rs = 0.0;
   planning::ReferencePoint ref_point;
-  if (!reference_line.GetMatchedPoint(agent.state().x_, agent.state().y_, &ref_point, &rs)) {
+  if (!reference_line.GetMatchedPoint(agent.state().x, agent.state().y, &ref_point, &rs)) {
     return false;
   }
   double rx = ref_point.x();
@@ -105,12 +105,12 @@ bool OnLaneForwardSimulator::GetAgentFrenetState(const Agent &agent,
   double rtheta = ref_point.theta();
   double rkappa = ref_point.kappa();
   double rdkappa = ref_point.dkappa();
-  double x = agent.state().x_;
-  double y = agent.state().y_;
-  double v = agent.state().v_;
-  double a = agent.state().a_;
-  double kappa = agent.state().kappa_;
-  double theta = agent.state().theta_;
+  double x = agent.state().x;
+  double y = agent.state().y;
+  double v = agent.state().v;
+  double a = agent.state().a;
+  double kappa = agent.state().kappa;
+  double theta = agent.state().theta;
   common::CoordinateTransformer::CartesianToFrenet(rs, rx, ry, rtheta,
                                                    rkappa, rdkappa,
                                                    x, y, v, a,
