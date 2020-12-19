@@ -225,7 +225,14 @@ void MotionPlanner::VisualizeOptimalTrajectory(const planning_msgs::Trajectory &
 
 void MotionPlanner::VisualizeTrafficLightBox() {
   visualization_msgs::MarkerArray traffic_light_boxes_markers;
+
   for (const auto &traffic_light : traffic_lights_info_list_) {
+    if (traffic_light_status_list_.find(traffic_light.first) == traffic_light_status_list_.end()){
+      continue;
+    }
+    if (traffic_light_status_list_[traffic_light.first].state == carla_msgs::CarlaTrafficLightStatus::GREEN){
+      continue;
+    }
     visualization_msgs::Marker traffic_light_marker;
     traffic_light_marker.type = visualization_msgs::Marker::CUBE;
     traffic_light_marker.header.stamp = ros::Time::now();

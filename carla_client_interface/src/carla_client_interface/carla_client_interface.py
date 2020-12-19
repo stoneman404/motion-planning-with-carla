@@ -14,6 +14,7 @@ from carla_waypoint_types.srv import GetWaypointResponse, GetWaypoint
 from planning_msgs.msg import WayPoint, LaneType, CarlaRoadOption, LaneChangeType
 from planning_srvs.srv import RoutePlanService, RoutePlanServiceResponse
 from tf.transformations import euler_from_quaternion
+from planning_msgs.msg import LaneArray
 
 
 class ClinetInterface(object):
@@ -162,28 +163,39 @@ class ClinetInterface(object):
         else:
             carl_start_waypoint = carl_start_waypoint
         # waypoints = carl_start_waypoint.next_until_lane_end(2)
-        waypoints = []
+        waypoints = list()
         last_way_point = carl_start_waypoint
         s = 0.0
-        while s < 10:
-            index = np.random.randint(0, len(last_way_point.previous(2.0)))
-
-            waypoint = last_way_point.previous(2.0)[index]
-            last_way_point = waypoint
-            waypoints.append(waypoint)
-            s += 2.0
-        waypoints.reverse()
-
-        s = 0.0
-        last_way_point = carl_start_waypoint
-        while s < 300:
-            index = np.random.randint(0, len(last_way_point.next(2.0)))
-
-            waypoint = last_way_point.next(2.0)[index]
-            waypoints.append(waypoint)
-            last_way_point = waypoint
-            s += 2.0
-        rospy.loginfo("the waypoints.size is {}".format(len(waypoints)))
+        # while s < 10:
+        #     index = np.random.randint(0, len(last_way_point.previous(2.0)))
+        #
+        #     waypoint = last_way_point.previous(2.0)[index]
+        #     last_way_point = waypoint
+        #     waypoints.append(waypoint)
+        #     s += 2.0
+        # waypoints.reverse()
+        #
+        # s = 0.0
+        # last_way_point = carl_start_waypoint
+        # while s < 300:
+        #     index = np.random.randint(0, len(last_way_point.next(2.0)))
+        #
+        #     waypoint = last_way_point.next(2.0)[index]
+        #     waypoints.append(waypoint)
+        #     last_way_point = waypoint
+        #     s += 2.0
+        # rospy.loginfo("the waypoints.size is {}".format(len(waypoints)))
+        waypoints = carl_start_waypoint.previous_until_lane_start(2.0)
+        start_connect_waypoint = waypoints[0].previous(2.0)[-1]
+        previous_waypoint = start_connect_waypoint.previous_until_lane_start(2.0)
+        waypoints = previous_waypoint + waypoints
+        # waypoints.
+        waypoints = carl_start_waypoint.next_until_lane_end(2.0)
+        connect_waypoint = waypoints[-1].next(2.0)[-1]
+        waypoints.append(connect_waypoint)
+        next_waypoints = connect_waypoint.next_until_lane_end(2.0)
+        # waypoints = waypoints + next_waypoints
+        waypoints.extend(next_waypoints)
         option = RoadOption.LANEFOLLOW
         for wp in waypoints:
             route.append([wp, option])
@@ -379,6 +391,8 @@ def main():
         carlaInterface = ClinetInterface(carla_world)
 
         rospy.spin()
+
+
         carlaInterface.destroy()
         del carlaInterface
         del carla_world
