@@ -32,6 +32,11 @@ BehaviourPlanner::BehaviourPlanner(const ros::NodeHandle &nh) : nh_(nh) {
                     0.95);
   nh_.param<double>("/behaviour_planner/sample_lat_threshold", sample_key_agent_lat_threshold_, 6.0);
   nh_.param<double>("/behaviour_planner/sample_min_lon_threshold", sample_min_lon_threshold_, 20.0);
+  nh_.param<double>("/behaviour_planner/reference_smooth_max_curvature", reference_smooth_max_curvature_, 10.0);
+  nh_.param<double>("/behaviour_planner/reference_smooth_deviation_weight", reference_smooth_deviation_weight_, 10.0);
+  nh_.param<double>("/behaviour_planner/reference_smooth_heading_weight", reference_smooth_heading_weight_, 10.0);
+  nh_.param<double>("/behaviour_planner/reference_smooth_length_weight", reference_smooth_length_weight_, 10.0);
+
   thread_pool_ = std::make_unique<common::ThreadPool>(pool_size_);
   if (planner_type_ == "mpdm") {
     behaviour_strategy_ = std::make_unique<MPDMPlanner>(nh, simulate_config_, thread_pool_.get());
@@ -41,7 +46,7 @@ BehaviourPlanner::BehaviourPlanner(const ros::NodeHandle &nh) : nh_(nh) {
   }
 
   this->ego_vehicle_info_subscriber_ = nh_.subscribe<carla_msgs::CarlaEgoVehicleInfo>(
-      common::topic::kEgoVehicleInfoName, 10,
+      common::topic::kEgoVehicleInfoName, 1,
       [this](const carla_msgs::CarlaEgoVehicleInfo::ConstPtr &ego_vehicle_info) {
         ego_vehicle_info_ = *ego_vehicle_info;
         this->ego_vehicle_id_ = ego_vehicle_info_.id;
@@ -50,7 +55,7 @@ BehaviourPlanner::BehaviourPlanner(const ros::NodeHandle &nh) : nh_(nh) {
       });
   this->traffic_light_info_subscriber_ =
       nh_.subscribe<carla_msgs::CarlaTrafficLightInfoList>(
-          common::topic::kTrafficLightsInfoName, 10,
+          common::topic::kTrafficLightsInfoName, 1,
           [this](const carla_msgs::CarlaTrafficLightInfoList::ConstPtr &traffic_light_info_list) {
             this->traffic_light_info_list_ = *traffic_light_info_list;
           });
@@ -61,19 +66,42 @@ BehaviourPlanner::BehaviourPlanner(const ros::NodeHandle &nh) : nh_(nh) {
       }
   );
   this->ego_vehicle_subscriber_ = nh_.subscribe<carla_msgs::CarlaEgoVehicleStatus>(
-      common::topic::kEgoVehicleStatusName, 10,
+      common::topic::kEgoVehicleStatusName, 1,
       [this](const carla_msgs::CarlaEgoVehicleStatus::ConstPtr &ego_vehicle_status) {
         ego_vehicle_status_ = *ego_vehicle_status;
       });
 
   this->objects_subscriber_ = nh_.subscribe<derived_object_msgs::ObjectArray>(
-      common::topic::kObjectsName, 10,
+      common::topic::kObjectsName, 1,
       [this](const derived_object_msgs::ObjectArray::ConstPtr &objects) {
 //        for (const auto &object : objects->objects) {
 //          agent_set_.emplace(object.id, object);
 //        }
         this->objects_list_ = *objects;
       });
+
+  this->goal_pose_subscriber_ = nh_.subscribe<geometry_msgs::PoseStamped>(
+      common::topic::kGoalPoseName, 1, [this](const geometry_msgs::PoseStamped::ConstPtr &goal_pose) {
+        if (has_ego_vehicle_) {
+          return;
+        }
+        if (agent_set_.find(ego_vehicle_id_) == agent_set_.end()) {
+          return;
+        }
+        auto state = agent_set_[ego_vehicle_id_].state();
+        geometry_msgs::Pose start_pose;
+        start_pose.position.x = state.x;
+        start_pose.position.y = state.y;
+        start_pose.position.z = state.z;
+        start_pose.orientation = tf::createQuaternionMsgFromYaw(state.theta);
+        geometry_msgs::Pose destination = goal_pose->pose;
+        if (!GetEgoVehicleRoutes(start_pose, destination)) {
+          has_route_ = false;
+          return;
+        }
+        has_route_ = true;
+      });
+
   get_ego_vehicle_route_client_ =
       nh_.serviceClient<planning_srvs::RoutePlanService>(common::service::kRouteServiceName);
   get_agent_potential_routes_client_ =
@@ -96,16 +124,21 @@ void BehaviourPlanner::RunOnce() {
   if (!MakeAgentSet()) {
     return;
   }
+  if (!has_route_) {
+    return;
+  }
+
   if (!this->GetKeyAgents()) {
     return;
   }
-  behaviour_strategy_->SetAgentSet(key_agent_set_);
   if (!this->PredictAgentsBehaviours()) {
     return;
   }
+  behaviour_strategy_->SetAgentSet(key_agent_set_);
+
   Behaviour behaviour;
   if (!behaviour_strategy_->Execute(behaviour)) {
-    ROS_FATAL("[BehaviourPlanner::RunOnce], failed tor excute.");
+    ROS_FATAL("[BehaviourPlanner::RunOnce], failed tor execute.");
     return;
   }
   planning_msgs::Behaviour publishable_behaviour;
@@ -365,67 +398,88 @@ bool BehaviourPlanner::GetAgentPotentialRoutes(int id, std::vector<std::shared_p
   std::vector<planning_msgs::Lane> lane_arrays = srv.response.lanes;
   for (const auto &lane : lane_arrays) {
     std::shared_ptr<ReferenceLine> reference_line = std::make_shared<ReferenceLine>();
-    if (!GenerateReferenceLine(agent_set_[id].state(),
-                               lane, 60.0,
-                               10.0,
-                               false, potential_lanes)) {
+    if (!AddAgentPotentialReferenceLines(agent_set_[id].state(),
+                                         lane, 60.0,
+                                         10.0,
+                                         false, potential_lanes)) {
       continue;
     }
   }
 }
 
-bool BehaviourPlanner::GenerateReferenceLine(const vehicle_state::KinoDynamicState &state,
-                                             const planning_msgs::Lane &lane,
-                                             double lookahead_length,
-                                             double lookback_length,
-                                             bool smooth,
-                                             std::vector<std::shared_ptr<ReferenceLine>> *ptr_potential_lanes) {
+bool BehaviourPlanner::AddAgentPotentialReferenceLines(const vehicle_state::KinoDynamicState &state,
+                                                       const planning_msgs::Lane &lane,
+                                                       double lookahead_length,
+                                                       double lookback_length,
+                                                       bool smooth,
+                                                       std::vector<std::shared_ptr<ReferenceLine>> *ptr_potential_lanes) {
 
   if (ptr_potential_lanes == nullptr || lane.way_points.empty()) {
     return false;
   }
-  auto dist_sqr = [](const planning_msgs::WayPoint &way_point, Eigen::Vector2d &xy) -> double {
-    return (way_point.pose.position.x - xy.x()) * (way_point.pose.position.x - xy.x())
-        + (way_point.pose.position.y - xy.y()) * (way_point.pose.position.y - xy.y());
-  };
-  size_t index_min = 0;
-  Eigen::Vector2d xy{state.x, state.y};
-  double d_min = dist_sqr(lane.way_points.front(), xy);
-  for (size_t i = 1; i < lane.way_points.size(); ++i) {
-    double d = dist_sqr(lane.way_points[i], xy);
-    if (d < d_min) {
-      d_min = d;
-      index_min = i;
-    }
-  }
-  std::vector<planning_msgs::WayPoint> sampled_way_points;
-  double s = 0;
-  size_t index = index_min == 0 ? index_min : index_min - 1;;
-  while (index > 0 || s > lookback_length - std::numeric_limits<double>::epsilon()) {
-    sampled_way_points.push_back(lane.way_points[index]);
-    Eigen::Vector2d xy_last{lane.way_points[index].pose.position.x, lane.way_points[index].pose.position.y};
-    s += std::sqrt(dist_sqr(lane.way_points[--index], xy_last));
-  }
-  if (!sampled_way_points.empty()) {
-    std::reverse(sampled_way_points.begin(), sampled_way_points.end());
-  }
-  index = index_min;
-  s = 0;
-  while (index < lane.way_points.size() || s > lookahead_length - std::numeric_limits<double>::epsilon()) {
-    sampled_way_points.push_back(lane.way_points[index]);
-    Eigen::Vector2d xy_last{lane.way_points[index].pose.position.x, lane.way_points[index].pose.position.y};
-    s += std::sqrt(dist_sqr(lane.way_points[++index], xy_last));
-  }
-  if (sampled_way_points.size() < 3) {
+
+  auto ref_lane = std::make_shared<ReferenceLine>();
+  if (!ReferenceInfo::RetriveReferenceLineFromRoute(ref_lane,
+                                                    state,
+                                                    lane.way_points,
+                                                    lookahead_length,
+                                                    lookback_length)) {
     return false;
   }
-  ptr_potential_lanes->emplace_back(std::make_shared<ReferenceLine>(sampled_way_points));
+  ptr_potential_lanes->emplace_back(ref_lane);
   return true;
 }
 
 bool BehaviourPlanner::GetEgoVehicleRoutes(const geometry_msgs::Pose &start_pose,
                                            const geometry_msgs::Pose &destination_pose) {
-  return false;
+  planning_srvs::RoutePlanService srv;
+  srv.request.start_pose = start_pose;
+  srv.request.end_pose = destination_pose;
+  if (!get_ego_vehicle_route_client_.call(srv)) {
+    return false;
+  }
+  auto raw_ref_lane = srv.response.route;
+  auto raw_left_lane = srv.response.left_lane;
+  auto raw_right_lane = srv.response.right_lane;
+  std::vector<std::vector<planning_msgs::WayPoint>> splited_left_lanes;
+  std::vector<std::vector<planning_msgs::WayPoint>> left_lanes = SplitRawLane(raw_left_lane);
+  std::vector<std::vector<planning_msgs::WayPoint>> right_lanes = SplitRawLane(raw_right_lane);
+  reference_info_ = std::make_unique<ReferenceInfo>(reference_smooth_max_curvature_,
+                                                    reference_smooth_heading_weight_,
+                                                    reference_smooth_heading_weight_,
+                                                    reference_smooth_length_weight_,
+                                                    raw_ref_lane.way_points,
+                                                    left_lanes,
+                                                    right_lanes);
+  return true;
+}
+
+std::vector<std::vector<planning_msgs::WayPoint>> BehaviourPlanner::SplitRawLane(const planning_msgs::Lane &raw_lane) {
+  std::vector<std::vector<planning_msgs::WayPoint>> split_lanes;
+  std::vector<std::vector<planning_msgs::WayPoint>> lanes;
+  auto dist = [](const planning_msgs::WayPoint &p1, const planning_msgs::WayPoint &p2) -> double {
+    return std::hypot(p1.pose.position.x - p2.pose.position.x, p1.pose.position.y - p2.pose.position.y);
+  };
+  constexpr double kMaxDistanceGap = 3.0;
+  if (raw_lane.way_points.size() > 3) {
+    split_lanes.emplace_back();
+    auto last_waypoint = raw_lane.way_points[0];
+    split_lanes.back().emplace_back(last_waypoint);
+    for (size_t i = 1; i < raw_lane.way_points.size(); ++i) {
+      auto cur_waypoint = raw_lane.way_points[i];
+      if (dist(cur_waypoint, last_waypoint) > kMaxDistanceGap) {
+        split_lanes.emplace_back();
+      }
+      split_lanes.back().emplace_back(raw_lane.way_points[i]);
+      last_waypoint = cur_waypoint;
+    }
+    for (const auto &lane : split_lanes) {
+      if (lane.size() > 3) {
+        lanes.emplace_back(lane);
+      }
+    }
+  }
+  return lanes;
 }
 
 }

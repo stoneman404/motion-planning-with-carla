@@ -72,14 +72,22 @@ class BehaviourPlanner {
    * @param[in,out] ptr_potential_lanes: push the ref lane into this vector
    * @return: true if the procedure is successful
    */
-  static bool GenerateReferenceLine(const vehicle_state::KinoDynamicState &state,
-                                    const planning_msgs::Lane &lane,
-                                    double lookahead_length,
-                                    double lookback_length,
-                                    bool smooth,
-                                    std::vector<std::shared_ptr<ReferenceLine>> *ptr_potential_lanes);
+  static bool AddAgentPotentialReferenceLines(const vehicle_state::KinoDynamicState &state,
+                                              const planning_msgs::Lane &lane,
+                                              double lookahead_length,
+                                              double lookback_length,
+                                              bool smooth,
+                                              std::vector<std::shared_ptr<ReferenceLine>> *ptr_potential_lanes);
 
+  /**
+   * @brief: get the route list from start pose to destination pose, with changeable lanes.
+   * @param[in] start_pose: the start pose of route request
+   * @param[in] destination_pose: the destination pose of route request.
+   * @return: true if the the procedure is successful.
+   */
   bool GetEgoVehicleRoutes(const geometry_msgs::Pose &start_pose, const geometry_msgs::Pose &destination_pose);
+
+  static std::vector<std::vector<planning_msgs::WayPoint>> SplitRawLane(const planning_msgs::Lane &raw_lane);
 
  private:
   ros::NodeHandle nh_;
@@ -89,7 +97,12 @@ class BehaviourPlanner {
   std::string planner_type_;
   int ego_vehicle_id_ = -1;
   bool has_ego_vehicle_ = false;
+  bool has_route_ = false;
   PolicySimulateConfig simulate_config_;
+  double reference_smooth_max_curvature_;
+  double reference_smooth_deviation_weight_;
+  double reference_smooth_heading_weight_;
+  double reference_smooth_length_weight_;
 
   ////////////////// ServiceClinet //////////////////////
   ros::ServiceClient get_waypoint_client_;
@@ -102,6 +115,7 @@ class BehaviourPlanner {
   ros::Subscriber ego_vehicle_info_subscriber_;
   ros::Subscriber traffic_light_info_subscriber_;
   ros::Subscriber traffic_light_status_subscriber_;
+  ros::Subscriber goal_pose_subscriber_;
 
   /////////////////////Publisher///////////////////////
   ros::Publisher behaviour_publisher_;
@@ -117,6 +131,7 @@ class BehaviourPlanner {
   std::unordered_map<int, Agent> key_agent_set_;
   std::unique_ptr<BehaviourStrategy> behaviour_strategy_;
   std::unique_ptr<common::ThreadPool> thread_pool_;
+  std::unique_ptr<ReferenceInfo> reference_info_;
 
 };
 }
