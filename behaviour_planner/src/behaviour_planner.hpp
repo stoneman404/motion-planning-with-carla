@@ -1,4 +1,3 @@
-
 #ifndef CATKIN_WS_SRC_MOTION_PLANNING_WITH_CARLA_BEHAVIOUR_PLANNER_INCLUDE_BEHAVIOUR_PLANNER_HPP_
 #define CATKIN_WS_SRC_MOTION_PLANNING_WITH_CARLA_BEHAVIOUR_PLANNER_INCLUDE_BEHAVIOUR_PLANNER_HPP_
 #include <string>
@@ -32,20 +31,20 @@ class BehaviourPlanner {
    * @return: true if successful
    */
   bool MakeAgentSet();
-
   /**
    * @brief: get the key agents according to the lateral and longitudinal distance from ego agent.
    * @return
    */
   bool GetKeyAgents();
 
+  bool PredictAgentsBehaviours();
   /**
    * @brief: for visualization.
    * @param behaviour: best behaviours
    */
   void VisualizeBehaviourTrajectories(const Behaviour &behaviour);
 
-  void VisualizeAgentTrajectories(const Behaviour& behaviour);
+  void VisualizeAgentTrajectories(const Behaviour &behaviour);
 
   /**
    * @brief: convert the behaviour to ros msgs.
@@ -54,6 +53,33 @@ class BehaviourPlanner {
    * @return
    */
   static bool ConvertBehaviourToRosMsg(const Behaviour &behaviour, planning_msgs::Behaviour &behaviour_msg);
+
+  /**
+   * @brief: get agent potential routes
+   * @param id : agent id
+   * @param[out] potential_lane: the potential lanes
+   * @return: true if this procedure is successful
+   */
+  bool GetAgentPotentialRoutes(int id, std::vector<std::shared_ptr<ReferenceLine>> *potential_lane);
+
+  /**
+   * @brief: generate lane from the lane and current state of agent
+   * @param[in] state: current state of agent
+   * @param[in] lane: lane data
+   * @param[in] lookahead_length: the look ahead distance from current state
+   * @param[in] lookback_length: the look back distacne from current state
+   * @param[in] smooth: smooth this ref lane or not ?
+   * @param[in,out] ptr_potential_lanes: push the ref lane into this vector
+   * @return: true if the procedure is successful
+   */
+  static bool GenerateReferenceLine(const vehicle_state::KinoDynamicState &state,
+                                    const planning_msgs::Lane &lane,
+                                    double lookahead_length,
+                                    double lookback_length,
+                                    bool smooth,
+                                    std::vector<std::shared_ptr<ReferenceLine>> *ptr_potential_lanes);
+
+  bool GetEgoVehicleRoutes(const geometry_msgs::Pose &start_pose, const geometry_msgs::Pose &destination_pose);
 
  private:
   ros::NodeHandle nh_;
@@ -67,6 +93,8 @@ class BehaviourPlanner {
 
   ////////////////// ServiceClinet //////////////////////
   ros::ServiceClient get_waypoint_client_;
+  ros::ServiceClient get_agent_potential_routes_client_;
+  ros::ServiceClient get_ego_vehicle_route_client_;
 
   ////////////////////// Subscriber /////////////////////
   ros::Subscriber ego_vehicle_subscriber_;
@@ -88,8 +116,8 @@ class BehaviourPlanner {
   std::unordered_map<int, Agent> agent_set_;
   std::unordered_map<int, Agent> key_agent_set_;
   std::unique_ptr<BehaviourStrategy> behaviour_strategy_;
-
   std::unique_ptr<common::ThreadPool> thread_pool_;
+
 };
 }
 #endif //CATKIN_WS_SRC_MOTION_PLANNING_WITH_CARLA_BEHAVIOUR_PLANNER_INCLUDE_BEHAVIOUR_PLANNER_HPP_

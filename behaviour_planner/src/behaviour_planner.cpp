@@ -1,10 +1,12 @@
-#include "behaviour_planner.hpp"
-#include "behaviour_strategy/mpdm_planner/mpdm_planner.hpp"
 #include <memory>
+#include <ros/ros.h>
 #include <visualization_msgs/MarkerArray.h>
 #include <carla_msgs/CarlaTrafficLightInfoList.h>
 #include "name/string_name.hpp"
 #include "planning_msgs/Behaviour.h"
+#include "planning_srvs/AgentRouteService.h"
+#include "behaviour_planner.hpp"
+#include "behaviour_strategy/mpdm_planner/mpdm_planner.hpp"
 
 namespace planning {
 
@@ -72,7 +74,10 @@ BehaviourPlanner::BehaviourPlanner(const ros::NodeHandle &nh) : nh_(nh) {
 //        }
         this->objects_list_ = *objects;
       });
-
+  get_ego_vehicle_route_client_ =
+      nh_.serviceClient<planning_srvs::RoutePlanService>(common::service::kRouteServiceName);
+  get_agent_potential_routes_client_ =
+      nh_.serviceClient<planning_srvs::AgentRouteService>(common::service::kGetAgentPotentialRouteServiceName);
   this->behaviour_publisher_ = nh_.advertise<planning_msgs::Behaviour>(common::topic::kBehaviourName, 10);
   this->visualized_behaviour_trajectories_publisher_ =
       nh_.advertise<visualization_msgs::MarkerArray>(common::topic::kVisualizedBehaviourTrajectoryName, 10);
@@ -95,6 +100,9 @@ void BehaviourPlanner::RunOnce() {
     return;
   }
   behaviour_strategy_->SetAgentSet(key_agent_set_);
+  if (!this->PredictAgentsBehaviours()) {
+    return;
+  }
   Behaviour behaviour;
   if (!behaviour_strategy_->Execute(behaviour)) {
     ROS_FATAL("[BehaviourPlanner::RunOnce], failed tor excute.");
@@ -306,5 +314,118 @@ void BehaviourPlanner::VisualizeAgentTrajectories(const Behaviour &behaviour) {
   this->visualized_agent_trajectories_publisher_.publish(marker_array);
 }
 
+bool BehaviourPlanner::PredictAgentsBehaviours() {
+  if (key_agent_set_.empty()) {
+    ROS_WARN("The key agent set is empty");
+    return false;
+  }
+  for (auto &agent: key_agent_set_) {
+    // if the agent is host, we dont assign probability.
+    if (agent.second.is_host()) {
+      continue;
+    }
+    if (agent.second.agent_type() != AgentType::VEHICLE) {
+      agent.second.PredictAgentBehaviour(std::vector<std::shared_ptr<ReferenceLine>>(),
+                                         simulate_config_.max_acc,
+                                         -simulate_config_.max_decel,
+                                         simulate_config_.sim_step_,
+                                         simulate_config_.max_lat_acc,
+                                         simulate_config_.desired_vel);
+    } else {
+      std::vector<std::shared_ptr<ReferenceLine>> agent_potential_lanes;
+      if (!GetAgentPotentialRoutes(agent.first, &agent_potential_lanes)) {
+        agent.second.PredictAgentBehaviour(std::vector<std::shared_ptr<ReferenceLine>>(),
+                                           simulate_config_.max_acc,
+                                           -simulate_config_.max_decel,
+                                           simulate_config_.sim_step_,
+                                           simulate_config_.max_lat_acc,
+                                           simulate_config_.desired_vel);
+      } else {
+        agent.second.PredictAgentBehaviour(agent_potential_lanes,
+                                           simulate_config_.max_acc,
+                                           -simulate_config_.max_decel,
+                                           simulate_config_.sim_step_,
+                                           simulate_config_.max_lat_acc,
+                                           simulate_config_.desired_vel);
+      }
+    }
+  }
+  return true;
 }
 
+bool BehaviourPlanner::GetAgentPotentialRoutes(int id, std::vector<std::shared_ptr<ReferenceLine>> *potential_lanes) {
+  if (potential_lanes == nullptr) {
+    return false;
+  }
+  planning_srvs::AgentRouteService srv;
+  srv.request.actor_id = id;
+  if (!get_agent_potential_routes_client_.call(srv)) {
+    return false;
+  }
+  std::vector<planning_msgs::Lane> lane_arrays = srv.response.lanes;
+  for (const auto &lane : lane_arrays) {
+    std::shared_ptr<ReferenceLine> reference_line = std::make_shared<ReferenceLine>();
+    if (!GenerateReferenceLine(agent_set_[id].state(),
+                               lane, 60.0,
+                               10.0,
+                               false, potential_lanes)) {
+      continue;
+    }
+  }
+}
+
+bool BehaviourPlanner::GenerateReferenceLine(const vehicle_state::KinoDynamicState &state,
+                                             const planning_msgs::Lane &lane,
+                                             double lookahead_length,
+                                             double lookback_length,
+                                             bool smooth,
+                                             std::vector<std::shared_ptr<ReferenceLine>> *ptr_potential_lanes) {
+
+  if (ptr_potential_lanes == nullptr || lane.way_points.empty()) {
+    return false;
+  }
+  auto dist_sqr = [](const planning_msgs::WayPoint &way_point, Eigen::Vector2d &xy) -> double {
+    return (way_point.pose.position.x - xy.x()) * (way_point.pose.position.x - xy.x())
+        + (way_point.pose.position.y - xy.y()) * (way_point.pose.position.y - xy.y());
+  };
+  size_t index_min = 0;
+  Eigen::Vector2d xy{state.x, state.y};
+  double d_min = dist_sqr(lane.way_points.front(), xy);
+  for (size_t i = 1; i < lane.way_points.size(); ++i) {
+    double d = dist_sqr(lane.way_points[i], xy);
+    if (d < d_min) {
+      d_min = d;
+      index_min = i;
+    }
+  }
+  std::vector<planning_msgs::WayPoint> sampled_way_points;
+  double s = 0;
+  size_t index = index_min == 0 ? index_min : index_min - 1;;
+  while (index > 0 || s > lookback_length - std::numeric_limits<double>::epsilon()) {
+    sampled_way_points.push_back(lane.way_points[index]);
+    Eigen::Vector2d xy_last{lane.way_points[index].pose.position.x, lane.way_points[index].pose.position.y};
+    s += std::sqrt(dist_sqr(lane.way_points[--index], xy_last));
+  }
+  if (!sampled_way_points.empty()) {
+    std::reverse(sampled_way_points.begin(), sampled_way_points.end());
+  }
+  index = index_min;
+  s = 0;
+  while (index < lane.way_points.size() || s > lookahead_length - std::numeric_limits<double>::epsilon()) {
+    sampled_way_points.push_back(lane.way_points[index]);
+    Eigen::Vector2d xy_last{lane.way_points[index].pose.position.x, lane.way_points[index].pose.position.y};
+    s += std::sqrt(dist_sqr(lane.way_points[++index], xy_last));
+  }
+  if (sampled_way_points.size() < 3) {
+    return false;
+  }
+  ptr_potential_lanes->emplace_back(std::make_shared<ReferenceLine>(sampled_way_points));
+  return true;
+}
+
+bool BehaviourPlanner::GetEgoVehicleRoutes(const geometry_msgs::Pose &start_pose,
+                                           const geometry_msgs::Pose &destination_pose) {
+  return false;
+}
+
+}

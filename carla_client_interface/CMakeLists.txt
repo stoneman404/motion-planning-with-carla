@@ -17,6 +17,7 @@ catkin_package(CATKIN_DEPENDS rospy)
 catkin_install_python(
         PROGRAMS
         src/carla_client_interface/carla_client_interface.py
+        src/carla_client_interface/route_planner.py
         DESTINATION
         ${CATKIN_PACKAGE_BIN_DESTINATION})
 

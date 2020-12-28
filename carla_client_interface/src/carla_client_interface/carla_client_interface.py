@@ -2,62 +2,77 @@
 import math
 import sys
 import threading
+import glob
+import os
+
+try:
+    sys.path.append(glob.glob('../carla/dist/carla-*%d.%d-%s.egg' % (
+        sys.version_info.major,
+        sys.version_info.minor,
+        'win-amd64' if os.name == 'nt' else 'linux-x86_64'))[0])
+except IndexError:
+    pass
 
 import carla
-import numpy as np
 import rospy
-import tf
 from agents.navigation.local_planner import RoadOption
+from agents.navigation.global_route_planner_dao import GlobalRoutePlannerDAO
 from carla_msgs.msg import CarlaWorldInfo
 from carla_waypoint_types.srv import GetActorWaypointResponse, GetActorWaypoint
 from carla_waypoint_types.srv import GetWaypointResponse, GetWaypoint
 from planning_msgs.msg import WayPoint, LaneType, CarlaRoadOption, LaneChangeType
-from planning_srvs.srv import RoutePlanService, RoutePlanServiceResponse
-from tf.transformations import euler_from_quaternion
-from planning_msgs.msg import LaneArray
+from planning_srvs.srv import RoutePlanService, RoutePlanServiceResponse, AgentRouteService, AgentRouteServiceResponse
+from tf.transformations import euler_from_quaternion, quaternion_from_euler
+from planning_msgs.msg import LaneArray, Lane
+from route_planner import RandomRoutePlanner
+
+WAYPOINT_DISTANCE = 2.0
 
 
 class ClinetInterface(object):
-    WAYPOINT_DISTANCE = 2.0
 
     def __init__(self, carla_world):
         """
         Constructor
         """
-        self.world = carla_world
-        self.map = carla_world.get_map()
-        self.ego_vehicle = None
-        self.ego_vehicle_location = None
+        self._world = carla_world
+        self._map = carla_world.get_map()
+        self._ego_vehicle = None
+        self._ego_vehicle_location = None
         # self.current_route_list = RouteList()
-        self.on_tick = None
-        self.goal = None
-        self.role_name = rospy.get_param("~role_name", 'ego_vehicle')
-        # self.waypoint_publisher = rospy.Publisher(
-        #     '/carla/{}/waypoints'.format(self.role_name), Path, queue_size=1, latch=True)
+        self._on_tick = None
+        self._goal = None
+        self._role_name = rospy.get_param("~role_name", 'ego_vehicle')
+        self._dao = GlobalRoutePlannerDAO(self._map, sampling_resolution=WAYPOINT_DISTANCE)
+        self._random_route_planner = RandomRoutePlanner(self._dao)
+        self._random_route_planner.setup()
 
-        # initialize ros services
-        self.getWaypointService = rospy.Service(
-            '/carla_waypoint_publisher/{}/get_waypoint'.format(self.role_name),
-            GetWaypoint, self.get_waypoint)
-        self.getActorWaypointService = rospy.Service(
-            '/carla_waypoint_publisher/{}/get_actor_waypoint'.format(self.role_name),
-            GetActorWaypoint, self.get_actor_waypoint)
-        self.getRouteService = rospy.Service('/carla_client_interface/{}/get_route'.format(self.role_name),
-                                             RoutePlanService, self.get_route)
-        # self.route_publisher = rospy.Publisher(
-        #     '/carla/{}/route_list'.format(self.role_name),RouteList, queue_size=1, latch=True)
+        self._getWaypointService = rospy.Service(
+            '/carla_waypoint_publisher/{}/get_waypoint'.format(self._role_name),
+            GetWaypoint, self._get_waypoint)
+        self._getActorWaypointService = rospy.Service(
+            '/carla_waypoint_publisher/{}/get_actor_waypoint'.format(self._role_name),
+            GetActorWaypoint, self._get_actor_waypoint)
+        self._getRouteService = rospy.Service('/carla_client_interface/{}/get_route'.format(self._role_name),
+                                              RoutePlanService, self._get_route)
+        self._getAgentPotentialRoutesService = rospy.Service(
+            '/carla_client_interface/{}/agent_potential_routes'.format(self._role_name),
+            RoutePlanService, self._get_agent_potential_route_service)
         self._update_lock = threading.Lock()
 
+        rospy.loginfo("Waiting for ego vehicle .....")
+
+    #     self.on_tick = self.world.on_tick(self.find_ego_vehicle_actor)
 
     def destroy(self):
         """
         Destructor
         """
-        self.ego_vehicle = None
-        if self.on_tick:
-            self.world.remove_on_tick(self.on_tick)
+        self._ego_vehicle = None
+        if self._on_tick:
+            self._world.remove_on_tick(self._on_tick)
 
-    def get_waypoint(self, req):
+    def _get_waypoint(self, req):
         """
         Get the waypoint for a location
         """
@@ -66,7 +81,7 @@ class ClinetInterface(object):
         carla_position.y = -req.location.y
         carla_position.z = req.location.z
 
-        carla_waypoint = self.map.get_waypoint(carla_position)
+        carla_waypoint = self._map.get_waypoint(carla_position)
 
         response = GetWaypointResponse()
 
@@ -80,16 +95,46 @@ class ClinetInterface(object):
         rospy.logwarn("Get waypoint {}".format(response.waypoint.pose.position))
         return response
 
-    def get_actor_waypoint(self, req):
+    def _get_agent_potential_route_service(self, req):
+
+        actor = self._world.get_actors().find(req.actor_id)
+        response = AgentRouteServiceResponse()
+        if actor:
+            waypoint = self._map.get_waypoint(actor.get_location())
+            lane_array = self._random_route_planner.get_potential_paths(waypoint.transform.location)
+
+            if waypoint.lane_change == carla.LaneChange.Both or waypoint.lane_change == carla.LaneChange.Right:
+                right_waypoint = waypoint.get_right_lane()
+                if right_waypoint:
+                    right_lane_array = self._random_route_planner.get_potential_paths(right_waypoint.transform.location)
+                    lane_array = lane_array + right_lane_array
+
+            if waypoint.lane_change == carla.LaneChange.Both or waypoint.lane_change == carla.LaneChange.Left:
+                left_waypoint = waypoint.get_left_lane()
+                if left_waypoint:
+                    left_lane_array = self._random_route_planner.get_potential_paths(left_waypoint.transform.location)
+                    lane_array = lane_array + left_lane_array
+            response = AgentRouteServiceResponse()
+            for lane in lane_array:
+                route = []
+                for waypoint in lane:
+                    route.append([waypoint, RoadOption.LANEFOLLOW])
+                response.lanes.append(self.route_to_planning_waypoint(lane))
+
+        else:
+            rospy.logwarn("get_actor_waypoint(): Actor {} not valid.".format(req.id))
+        return response
+
+    def _get_actor_waypoint(self, req):
         """
         Convenience method to get the waypoint for an actor
         """
         rospy.loginfo("get_actor_waypoint(): Get waypoint of actor {}".format(req.id))
-        actor = self.world.get_actors().find(req.id)
+        actor = self._world.get_actors().find(req.id)
 
         response = GetActorWaypointResponse()
         if actor:
-            carla_waypoint = self.map.get_waypoint(actor.get_location())
+            carla_waypoint = self._map.get_waypoint(actor.get_location())
             response.waypoint.pose.position.x = carla_waypoint.transform.location.x
             response.waypoint.pose.position.y = -carla_waypoint.transform.location.y
             response.waypoint.pose.position.z = carla_waypoint.transform.location.z
@@ -101,8 +146,77 @@ class ClinetInterface(object):
             rospy.logwarn("get_actor_waypoint(): Actor {} not valid.".format(req.id))
         return response
 
+    def route_to_planning_waypoint(self, route):
 
-    def get_route(self, req):
+        lane = Lane()
+        for wp in route:
+            last_x = wp[0].transform.location.x
+            last_y = wp[0].transform.location.y
+            waypoint = WayPoint()
+            waypoint.pose.position.x = wp[0].transform.location.x
+            waypoint.pose.position.y = -wp[0].transform.location.y
+            waypoint.pose.position.z = wp[0].transform.location.z
+            quaternion = quaternion_from_euler(
+                0, 0, -math.radians(wp[0].transform.rotation.yaw))
+            waypoint.pose.orientation.x = quaternion[0]
+            waypoint.pose.orientation.y = quaternion[1]
+            waypoint.pose.orientation.z = quaternion[2]
+            waypoint.pose.orientation.w = quaternion[3]
+            waypoint.road_id = wp[0].lane_id
+            waypoint.section_id = wp[0].section_id
+            waypoint.lane_id = wp[0].lane_id
+            waypoint.is_junction = wp[0].is_junction
+            waypoint.has_value = True
+            left_lane = wp[0].get_left_lane()
+            right_lane = wp[0].get_right_lane()
+            if left_lane is None:
+                waypoint.left_lane_width = -1.0
+                waypoint.has_left_lane = False
+            else:
+                waypoint.has_left_lane = True
+                waypoint.left_lane_width = wp[0].get_left_lane().lane_width
+            if right_lane is None:
+                waypoint.right_lane_width = -1.0
+                waypoint.has_right_lane = False
+            else:
+                waypoint.right_lane_width = wp[0].get_right_lane().lane_width
+                waypoint.has_right_lane = True
+            waypoint.lane_width = wp[0].lane_width
+            waypoint.lane_type.type = self.set_lane_type(wp[0])
+
+            lane_change_type = wp[0].lane_change
+            if lane_change_type == carla.LaneChange.NONE:
+                waypoint.lane_change.type = LaneChangeType.FORWARD
+            elif lane_change_type == carla.LaneChange.Both:
+                waypoint.lane_change.type = LaneChangeType.BOTH
+            elif lane_change_type == carla.LaneChange.Left:
+                waypoint.lane_change.type = LaneChangeType.LEFT
+            elif lane_change_type == carla.LaneChange.Right:
+                waypoint.lane_change.type = LaneChangeType.RIGHT
+
+            waypoint.road_option.option = self.set_road_option(wp)
+            if waypoint.is_junction:
+                junction = wp[0].get_junction()
+                waypoint.junction.id = junction.id
+                waypoint.junction.bounding_box.location.x = junction.bounding_box.location.x
+                waypoint.junction.bounding_box.location.y = -junction.bounding_box.location.y
+                waypoint.junction.bounding_box.location.z = junction.bounding_box.location.z
+                waypoint.junction.bounding_box.extent.x = junction.bounding_box.extent.x
+                waypoint.junction.bounding_box.extent.y = junction.bounding_box.extent.y
+                waypoint.junction.bounding_box.extent.z = junction.bounding_box.extent.z
+
+            waypoint.s = wp[0].s
+            lane.way_points.append(waypoint)
+            # response.route.append(waypoint)
+
+        if len(lane.way_points) == 0:
+            rospy.logerr("the lane.way_points is empty")
+        else:
+            rospy.loginfo(
+                "update the response, success, the waypoints in response.route is {}".format(len(lane.way_points)))
+        return lane
+
+    def _get_route(self, req):
         """
         :return:
         """
@@ -138,154 +252,32 @@ class ClinetInterface(object):
             carla_start.location.x,
             carla_start.location.y,
             carla_start.location.z))
-        # dao = GlobalRoutePlannerDAO(self.world.get_map(), sampling_resolution=1)
-        # grp = GlobalRoutePlanner(dao)
-        # grp.setup()
-        # route = grp.trace_route(carla.Location(carla_start.location.x,
-        #                                        carla_start.location.y,
-        #                                        carla_start.location.y),
-        #                         carla.Location(carla_goal.location.x,
-        #                                        carla_goal.location.y,
-        #                                        carla_goal.location.z))
-        route = list(list())
-        carl_start_waypoint = self.map.get_waypoint(carla_start.location)
-        if req.offset == -1:
-            if carl_start_waypoint.get_right_lane():
-                carl_start_waypoint = carl_start_waypoint.get_right_lane()
-            else:
-                carl_start_waypoint = carl_start_waypoint
-            # carl_start_waypoint = carl_start_waypoint.right_lane()
-        elif req.offset == 1:
-            if carl_start_waypoint.get_left_lane():
-                carl_start_waypoint = carl_start_waypoint.get_left_lane()
-            else:
-                carl_start_waypoint = carl_start_waypoint
-        else:
-            carl_start_waypoint = carl_start_waypoint
-        # waypoints = carl_start_waypoint.next_until_lane_end(2)
-        waypoints = list()
-        last_way_point = carl_start_waypoint
-        s = 0.0
-        # while s < 10:
-        #     index = np.random.randint(0, len(last_way_point.previous(2.0)))
-        #
-        #     waypoint = last_way_point.previous(2.0)[index]
-        #     last_way_point = waypoint
-        #     waypoints.append(waypoint)
-        #     s += 2.0
-        # waypoints.reverse()
-        #
-        # s = 0.0
-        # last_way_point = carl_start_waypoint
-        # while s < 300:
-        #     index = np.random.randint(0, len(last_way_point.next(2.0)))
-        #
-        #     waypoint = last_way_point.next(2.0)[index]
-        #     waypoints.append(waypoint)
-        #     last_way_point = waypoint
-        #     s += 2.0
-        # rospy.loginfo("the waypoints.size is {}".format(len(waypoints)))
+
+        carl_start_waypoint = self._map.get_waypoint(carla_start.location)
+        route = self._random_route_planner.trace_route(carla_start, carla_goal)
+
+        extend_route = [[]]
         waypoints = carl_start_waypoint.previous_until_lane_start(2.0)
-        start_connect_waypoint = waypoints[0].previous(2.0)[-1]
-        previous_waypoint = start_connect_waypoint.previous_until_lane_start(2.0)
-        waypoints = previous_waypoint + waypoints
-        # waypoints.
-        waypoints = carl_start_waypoint.next_until_lane_end(2.0)
-        connect_waypoint = waypoints[-1].next(2.0)[-1]
-        waypoints.append(connect_waypoint)
-        next_waypoints = connect_waypoint.next_until_lane_end(2.0)
-        # waypoints = waypoints + next_waypoints
-        waypoints.extend(next_waypoints)
         option = RoadOption.LANEFOLLOW
         for wp in waypoints:
-            route.append([wp, option])
-        # get prev waypoint as start
+            extend_route.append([wp, option])
 
-        # waypoint = route[0][0].previous(distance=2.0)[-1]
-        # route.insert(0, [waypoint, option])
-        response = RoutePlanServiceResponse()
-        # waypoint
-        last_x = float("inf")
-        last_y = float("inf")
+        route = extend_route + route
+        right_lane = []
+        left_lane = []
         for wp in route:
-            # if math.fabs(wp[0].transform.location.x - last_x) < 0.2 and math.fabs(
-            #         wp[0].transform.location.y - last_y) < 0.2:
-            #     last_x = wp[0].transform.location.x
-            #     last_y = wp[0].transform.location.y
-            #     continue
-            last_x = wp[0].transform.location.x
-            last_y = wp[0].transform.location.y
-            waypoint = WayPoint()
-            waypoint.pose.position.x = wp[0].transform.location.x
-            waypoint.pose.position.y = -wp[0].transform.location.y
-            waypoint.pose.position.z = wp[0].transform.location.z
-            quaternion = tf.transformations.quaternion_from_euler(
-                0, 0, -math.radians(wp[0].transform.rotation.yaw))
-            waypoint.pose.orientation.x = quaternion[0]
-            waypoint.pose.orientation.y = quaternion[1]
-            waypoint.pose.orientation.z = quaternion[2]
-            waypoint.pose.orientation.w = quaternion[3]
-            # print(wp[0].id)
-            waypoint.road_id = wp[0].lane_id
-            # print(wp[0].lane_id)
-            waypoint.section_id = wp[0].section_id
-            waypoint.lane_id = wp[0].lane_id
-            waypoint.is_junction = wp[0].is_junction
-            waypoint.has_value = True
-            left_lane = wp[0].get_left_lane()
-            right_lane = wp[0].get_right_lane()
-            if left_lane is None:
-                waypoint.left_lane_width = -1.0
-                waypoint.has_left_lane = False
-            else:
-                waypoint.has_left_lane = True
-                waypoint.left_lane_width = wp[0].get_left_lane().lane_width
-            if right_lane is None:
-                waypoint.right_lane_width = -1.0
-                waypoint.has_right_lane = False
-            else:
-                waypoint.right_lane_width = wp[0].get_right_lane().lane_width
-                waypoint.has_right_lane = True
-            waypoint.lane_width = wp[0].lane_width
-            waypoint.lane_type.type = self.set_lane_type(wp[0])
+            waypoint = wp[0]
+            if (
+                    waypoint.lane_change == carla.LaneChange.Both or waypoint.lane_change == carla.LaneChange.Right) and waypoint.get_right_lane():
+                right_lane.append([waypoint.get_right_lane(), wp[1]])
+            if (
+                    waypoint.lane_change == carla.LaneChange.Both or waypoint.lane_change == carla.LaneChange.Left) and waypoint.get_left_lane():
+                left_lane.append([waypoint.get_left_lane(), wp[1]])
 
-            lane_change_type = wp[0].lane_change
-            if lane_change_type == carla.LaneChange.NONE:
-                waypoint.lane_change.type = LaneChangeType.FORWARD
-            elif lane_change_type == carla.LaneChange.Both:
-                waypoint.lane_change.type = LaneChangeType.BOTH
-            elif lane_change_type == carla.LaneChange.Left:
-                waypoint.lane_change.type = LaneChangeType.LEFT
-            elif lane_change_type == carla.LaneChange.Right:
-                waypoint.lane_change.type = LaneChangeType.RIGHT
-
-            waypoint.road_option.option = self.set_road_option(wp)
-            # print(waypoint.road_option)
-            if waypoint.is_junction:
-                junction = wp[0].get_junction()
-                waypoint.junction.id = junction.id
-                waypoint.junction.bounding_box.location.x = junction.bounding_box.location.x
-                waypoint.junction.bounding_box.location.y = -junction.bounding_box.location.y
-                waypoint.junction.bounding_box.location.z = junction.bounding_box.location.z
-                waypoint.junction.bounding_box.extent.x = junction.bounding_box.extent.x
-                waypoint.junction.bounding_box.extent.y = junction.bounding_box.extent.y
-                waypoint.junction.bounding_box.extent.z = junction.bounding_box.extent.z
-
-            waypoint.s = wp[0].s
-
-            response.route.append(waypoint)
-
-        if len(response.route) == 0:
-            rospy.logerr("the response.route is empty")
-        else:
-            rospy.loginfo(
-                "update the response, success, the waypoints in response.route is {}".format(len(response.route)))
-
-            # for wp in response.route:
-
-            #     print("waypoint x: {}, y:{}".format(wp.pose.position.x,
-            #                                         wp.pose.position.y))
-
+        response = RoutePlanServiceResponse()
+        response.right_lane = self.route_to_planning_waypoint(right_lane)
+        response.left_lane = self.route_to_planning_waypoint(left_lane)
+        response.route = self.route_to_planning_waypoint(route)
         return response
 
     def set_road_option(self, wp):
@@ -308,8 +300,8 @@ class ClinetInterface(object):
 
         return waypoint_road_option
 
+    @staticmethod
     def set_lane_type(self, wp):
-
         lane_type = wp.lane_type
         waypoint_lane_type = LaneType()
         if lane_type == carla.LaneType.Bidirectional:
@@ -356,7 +348,6 @@ class ClinetInterface(object):
             waypoint_lane_type = LaneType.STOP
         elif lane_type == carla.LaneType.Tram:
             waypoint_lane_type = LaneType.TRAM
-
         return waypoint_lane_type
 
 
@@ -383,16 +374,10 @@ def main():
     try:
         carla_client = carla.Client(host=host, port=port)
         carla_client.set_timeout(timeout)
-
         carla_world = carla_client.get_world()
-
         rospy.loginfo("Connected to Carla.")
-
         carlaInterface = ClinetInterface(carla_world)
-
         rospy.spin()
-
-
         carlaInterface.destroy()
         del carlaInterface
         del carla_world

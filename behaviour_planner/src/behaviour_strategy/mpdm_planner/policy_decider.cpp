@@ -128,7 +128,7 @@ bool PolicyDecider::OpenLoopSimForward(const Policy &policy,
       if (!this->SimulateOneStepForAgent(desired_velocity, agent.second, Agent(), trajectory_point)) {
         return false;
       }
-      agent.second.agent.UpdateAgentStateUsingTrajectoryPoint(trajectory_point);
+      agent.second.agent.MoveAgentToPoint(trajectory_point);
 
       if (agent.second.agent.is_host()) {
         ego_traj.trajectory_points.push_back(trajectory_point);
@@ -179,7 +179,7 @@ bool PolicyDecider::CloseLoopSimulate(const Policy &policy,
           return false;
         }
       }
-      agent.second.agent.UpdateAgentStateUsingTrajectoryPoint(trajectory_point);
+      agent.second.agent.MoveAgentToPoint(trajectory_point);
       trajectory_point.relative_time =
           static_cast<double>(i + 1) / static_cast<double>(kForwardSteps) * config_.sim_horizon_;
       if (agent.second.agent.is_host()) {

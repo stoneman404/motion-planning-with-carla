@@ -4,10 +4,9 @@
 namespace common {
 namespace topic {
 const std::string kEgoVehicleStatusName = "/carla/ego_vehicle/vehicle_status";                                 //NOLINT
-const std::string
-    kTrafficLigthsStatusName = "/carla/traffic_lights";                                                //NOLINT
-const std::string kCarlaActorListName = "/carla/actor_list";//NOLINT
-const std::string kEgoVehicleControlName = "/carla/ego_vehicle/vehicle_control_cmd"; //NOLINT
+const std::string kTrafficLigthsStatusName = "/carla/traffic_lights";                                          //NOLINT
+const std::string kCarlaActorListName = "/carla/actor_list";                                                   //NOLINT
+const std::string kEgoVehicleControlName = "/carla/ego_vehicle/vehicle_control_cmd";                           //NOLINT
 const std::string kObjectsName = "/carla/objects";                                                             //NOLINT
 const std::string kPublishedTrajectoryName = "/motion_planner/published_trajectory";                           //NOLINT
 const std::string kEgoVehicleInfoName = "/carla/ego_vehicle/vehicle_info";                                     //NOLINT
@@ -28,6 +27,8 @@ namespace service {
 const std::string kRouteServiceName = "/carla_client_interface/ego_vehicle/get_route";                          //NOLINT
 const std::string kGetActorWaypointServiceName = "/carla_waypoint_publisher/ego_vehicle/get_actor_waypoint";    //NOLINT
 const std::string kGetEgoWaypontServiceName = "/carla_waypoint_publisher/ego_vehicle/get_waypoint";             //NOLINT
+const std::string
+    kGetAgentPotentialRouteServiceName = "/carla_client_interface/ego_vehicle/agent_potential_routes"; //NOLINT
 
 }
 }

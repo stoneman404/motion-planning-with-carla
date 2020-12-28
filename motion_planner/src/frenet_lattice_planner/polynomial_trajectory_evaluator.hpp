@@ -13,10 +13,9 @@
 
 namespace planning {
 class PolynomialTrajectoryEvaluator {
+ public:
   typedef std::pair<std::shared_ptr<common::Polynomial>, std::shared_ptr<common::Polynomial>> TrajectoryPair;
   typedef std::pair<TrajectoryPair, double> TrajectoryCostPair;
-
- public:
   PolynomialTrajectoryEvaluator() = default;
   ~PolynomialTrajectoryEvaluator() = default;
 

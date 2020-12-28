@@ -492,7 +492,46 @@ bool ReferenceLine::IsBlockedByBox(const Box2d &box, double ego_width, double bu
   }
   double drive_width = GetDrivingWidth(sl_boundary);
   return ego_width + buffer > drive_width;
-
 }
+
+bool ReferenceLine::HasJunctionInFront(double x, double y, double distance_threshold) const {
+  common::SLPoint sl_point;
+  if (!this->XYToSL(x, y, &sl_point)) {
+    return false;
+  }
+  for (double s = sl_point.s; s < sl_point.s + distance_threshold; s += 2.0) {
+    auto way_point = this->NearestWayPoint(sl_point.s);
+    if (way_point.is_junction) {
+      return true;
+    }
+  }
+  return false;
+}
+//bool ReferenceLine::ExtendReferenceLine(double length) {
+//  if (length < std::numeric_limits<double>::epsilon()){
+//    return false;
+//  }
+//  auto end_ref_point = this->GetReferencePoint(length_);
+//
+//  constexpr double s_step = 2.0;
+//  auto last_ref_point = end_ref_point;
+//  for (double s = 0.0; s < length; s += s_step){
+//    const double cos_theta = std::cos(last_ref_point.theta());
+//    const double sin_theta = std::sin(last_ref_point.theta());
+//    double x = last_ref_point.x() + s_step * cos_theta;
+//    double y = last_ref_point.y() + s_step * sin_theta;
+//    double theta = last_ref_point.theta();
+//    double kappa = last_ref_point.kappa();
+//    double dkappa = last_ref_point.dkappa();
+//    double ddkappa = last_ref_point.ddkappa();
+//    this->left_boundary_.emplace_back(left_boundary_.back());
+//    this->right_boundary_.emplace_back(right_boundary_.back());
+//    reference_points_.emplace_back(x, y, theta, kappa, dkappa, ddkappa);
+//    last_ref_point = reference_points_.back();
+//    length_ += s_step;
+//  }
+//
+//
+//}
 
 }

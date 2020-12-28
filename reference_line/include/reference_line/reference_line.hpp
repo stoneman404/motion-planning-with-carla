@@ -152,6 +152,9 @@ class ReferenceLine {
    */
   bool IsSmoothedReferenceLine() const { return smoothed_; }
 
+  bool HasJunctionInFront(double x, double y, double distance_threshold) const;
+
+//  bool ExtendReferenceLine(double length) ;
   /**
   *
   * @param p0
