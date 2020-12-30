@@ -59,6 +59,9 @@ bool OnLaneForwardSimulator::GetIDMLonAcc(const std::array<double, 3> &ego_s_con
   const double T = params_.idm_params.safe_time_headway;
   const double a = params_.idm_params.max_acc;
   const double b = params_.idm_params.max_decel;
+  if (ego_s_conditions[0] > reference_line.Length()) {
+    return false;
+  }
   if (leading_agent.is_valid()) {
     if (!OnLaneForwardSimulator::GetAgentFrenetState(leading_agent,
                                                      reference_line,
@@ -66,18 +69,31 @@ bool OnLaneForwardSimulator::GetIDMLonAcc(const std::array<double, 3> &ego_s_con
                                                      leading_d_conditions)) {
       return false;
     }
-
     const double leading_vel = leading_s_conditions[1];
     const double delta_v = ego_lon_v - leading_vel;
     desired_min_gap = s0 + s1 * std::sqrt(ego_lon_v / v0)
         + T * ego_lon_v + (ego_lon_v * delta_v) / (2.0 * std::sqrt(a * b));
     s_a = leading_s_conditions[0] - ego_s_conditions[0] + params_.idm_params.leading_vehicle_length;
-  }else{
-    s_a = 100.0;
+  } else {
+    if (ego_s_conditions[0] + 50.0 < reference_line.Length()) {
+      // a virtual static agent in front.
+      leading_s_conditions[0] = ego_s_conditions[0] + 50.0;
+      leading_s_conditions[1] = 0.0;
+      leading_s_conditions[2] = 0.0;
+    } else {
+      // a virtual agent in front, has same speed and same acc as agent.
+      leading_s_conditions[0] = ego_s_conditions[0] + 50.0;
+      leading_s_conditions[1] = ego_s_conditions[1];
+      leading_s_conditions[2] = ego_s_conditions[2];
+    }
+    const double leading_vel = leading_s_conditions[1];
+    const double delta_v = ego_lon_v - leading_vel;
+    desired_min_gap = s0 + s1 * std::sqrt(ego_lon_v / v0)
+        + T * ego_lon_v + (ego_lon_v * delta_v) / (2.0 * std::sqrt(a * b));
+    s_a = leading_s_conditions[0] - ego_s_conditions[0] + params_.idm_params.leading_vehicle_length;
   }
   lon_acc =
       a * (1 - std::pow(ego_lon_v / v0, params_.idm_params.acc_exponet) - std::pow(desired_min_gap / s_a, 2));
-//  lon_acc = ego_lon_a * (1 - std::pow(ego_lon_v / v0, params_.idm_params.acc_exponet));
   return true;
 }
 

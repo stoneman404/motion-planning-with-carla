@@ -1,11 +1,15 @@
 #ifndef CATKIN_WS_SRC_MOTION_PLANNING_WITH_CARLA_PLANNING_SRC_ACTION_BEHAVIOUR_HPP_
 #define CATKIN_WS_SRC_MOTION_PLANNING_WITH_CARLA_PLANNING_SRC_ACTION_BEHAVIOUR_HPP_
-#include <planning_msgs/Trajectory.h>
-#include <vehicle_state/kinodynamic_state.hpp>
+
 #include <queue>
 #include <utility>
-#include "unordered_map"
-#include "reference_line/reference_line.hpp"
+#include <unordered_map>
+#include <mutex>
+#include <planning_msgs/Trajectory.h>
+#include <vehicle_state/kinodynamic_state.hpp>
+#include <reference_line/reference_line.hpp>
+#include <boost/circular_buffer.hpp>
+#include <future>
 
 namespace planning {
 enum class LateralBehaviour : uint8_t {
@@ -18,11 +22,31 @@ enum class LateralBehaviour : uint8_t {
   GO_STRAIGHT = 6u
 
 };
+
 enum class LongitudinalBehaviour : uint8_t {
   MAINTAIN = 1u,
   ACCELERATE = 2u,
   DECELERATE = 3u,
   STOPPING = 4u
+};
+
+struct ReferenceLineConfig {
+  ReferenceLineConfig()
+      : reference_smooth_max_curvature_(0.0),
+        reference_smooth_deviation_weight_(0.0),
+        reference_smooth_heading_weight_(0.0),
+        reference_smooth_length_weight_(0.0) {}
+  double reference_smooth_max_curvature_{0.0};
+  double reference_smooth_deviation_weight_{0.0};
+  double reference_smooth_heading_weight_{0.0};
+  double reference_smooth_length_weight_{0.0};
+
+};
+
+struct RouteInfo {
+  std::vector<planning_msgs::WayPoint> main_lane;
+  std::vector<std::vector<planning_msgs::WayPoint>> left_lanes;
+  std::vector<std::vector<planning_msgs::WayPoint>> right_lanes;
 };
 
 struct EnumClassHash {
@@ -34,7 +58,7 @@ struct EnumClassHash {
 
 class ProbDistributeOfLatBehaviour {
  public:
-  using BehaviourProbPair = std::pair<std::pair<LateralBehaviour, std::shared_ptr<ReferenceLine>>, double>;
+  using BehaviourProbPair = std::pair<std::pair<LateralBehaviour, ReferenceLine>, double>;
   using BehaviourProbPairVector = std::vector<BehaviourProbPair>;
   ProbDistributeOfLatBehaviour() = default;
   ~ProbDistributeOfLatBehaviour() = default;
@@ -44,7 +68,7 @@ class ProbDistributeOfLatBehaviour {
    * @param behaviour
    * @param prob
    */
-  void SetEntry(const LateralBehaviour &behaviour, double prob, const std::shared_ptr<ReferenceLine> &lane);
+  void SetEntry(const LateralBehaviour &behaviour, double prob, const ReferenceLine &lane);
 
   /**
    * @brief: get the most likely k-th behaviour and lanes
@@ -54,7 +78,7 @@ class ProbDistributeOfLatBehaviour {
    */
   bool GetKthMaxProbBehavioursAndLanes(
       uint32_t k,
-      std::vector<std::pair<LateralBehaviour, std::shared_ptr<ReferenceLine>>> &behaviour_lane_pairs);
+      std::vector<std::pair<LateralBehaviour, ReferenceLine>> &behaviour_lane_pairs);
   /**
    * @brief get the most likely behaviour
    * @param behaviour
@@ -68,7 +92,7 @@ class ProbDistributeOfLatBehaviour {
    * @param lane
    * @return
    */
-  bool GetMaxProbBehaviourAndLane(LateralBehaviour &behaviour, std::shared_ptr<ReferenceLine> &lane) const;
+  bool GetMaxProbBehaviourAndLane(LateralBehaviour &behaviour, ReferenceLine &lane) const;
 
  private:
   struct cmp : public std::binary_function<const BehaviourProbPair &, const BehaviourProbPair, bool> {
@@ -80,7 +104,7 @@ class ProbDistributeOfLatBehaviour {
 };
 
 struct Behaviour {
-  std::vector<std::pair<LateralBehaviour, std::shared_ptr<ReferenceLine>>> forward_behaviours;
+  std::vector<std::pair<LateralBehaviour, ReferenceLine>> forward_behaviours;
   std::vector<planning_msgs::Trajectory> forward_trajs;
   LateralBehaviour lateral_behaviour;
   LongitudinalBehaviour longitudinal_behaviour;
@@ -91,13 +115,16 @@ class ReferenceInfo {
  public:
   ReferenceInfo() = default;
   ~ReferenceInfo() = default;
-  ReferenceInfo(double max_curvature,
-                double deviation_weight,
-                double heading_weight,
-                double length_weight,
-                std::vector<planning_msgs::WayPoint> main_lane,
-                std::vector<std::vector<planning_msgs::WayPoint>> left_lanes,
-                std::vector<std::vector<planning_msgs::WayPoint>> right_lanes);
+  ReferenceInfo(const ReferenceLineConfig &config, double lookahead_distance, double lookback_distace);
+
+  bool Start();
+  void Stop();
+  bool UpdateRouteResponse(const planning_srvs::RoutePlanServiceResponse &route_response);
+  bool UpdateVehicleState(const vehicle_state::KinoDynamicState &vehicle_state);
+  bool GetReferenceLines(std::vector<ReferenceLine> *reference_lines);
+  bool UpdateReferenceLine(const std::vector<ReferenceLine> &reference_lines);
+  void GenerateThread();
+
   /**
    * @brief:
    *
@@ -105,14 +132,9 @@ class ReferenceInfo {
    * then there're changeable lanes, right lane or/and left lane
    * @return: true if this procedure is successful.
    */
-  bool GetReferenceLines(const vehicle_state::KinoDynamicState &vehicle_state,
-                         double lookahead_distance,
-                         double lookback_distance,
-                         bool smooth,
-                         std::vector<std::shared_ptr<ReferenceLine>> &ref_lanes);
+  bool CreateReferenceLines(bool smooth, std::vector<ReferenceLine> &ref_lanes);
 
   /**
-   *
    * @param vehicle_state
    * @param lane
    * @param lookahead_distance
@@ -125,32 +147,51 @@ class ReferenceInfo {
    * @param ref_lane
    * @return
    */
-  static bool RetriveReferenceLineFromRoute(std::shared_ptr<ReferenceLine> &ref_lane,
-                                            const vehicle_state::KinoDynamicState &vehicle_state,
-                                            const std::vector<planning_msgs::WayPoint> &lane,
-                                            double lookahead_distance,
-                                            double lookback_distance,
-                                            bool smooth = false,
-                                            double max_curvature = 0.0,
-                                            double deviation_weight = 0.0,
-                                            double heading_weight = 0.0,
-                                            double length_weight = 0.0);
+  static bool RetriveReferenceLine(ReferenceLine &ref_lane,
+                                   const vehicle_state::KinoDynamicState &vehicle_state,
+                                   const std::vector<planning_msgs::WayPoint> &lane,
+                                   double lookahead_distance,
+                                   double lookback_distance,
+                                   bool smooth = false,
+                                   const ReferenceLineConfig &smooth_config = ReferenceLineConfig());
 
  private:
-
-  static bool HasOverLapWithRefLane(const std::shared_ptr<ReferenceLine> &ref_lane,
+  /**
+   * @brief: has overlap with ref lane along s direction?
+   * @param ref_lane
+   * @param waypoints
+   * @param overlap_start_s
+   * @param overlap_end_s
+   * @return
+   */
+  static bool HasOverLapWithRefLane(const ReferenceLine &ref_lane,
                                     std::vector<planning_msgs::WayPoint> &waypoints,
                                     double *overlap_start_s,
                                     double *overlap_end_s);
 
+  /**
+   * @brief: split the raw reference line
+   * @param raw_lane
+   * @return
+   */
+  static std::vector<std::vector<planning_msgs::WayPoint>> SplitRawLane(const planning_msgs::Lane &raw_lane);
+
  private:
-  double reference_smooth_max_curvature_;
-  double reference_smooth_deviation_weight_;
-  double reference_smooth_heading_weight_;
-  double reference_smooth_length_weight_;
-  std::vector<planning_msgs::WayPoint> main_lane_;
-  std::vector<std::vector<planning_msgs::WayPoint>> left_lanes_;
-  std::vector<std::vector<planning_msgs::WayPoint>> right_lanes_;
+  bool is_initialized_ = false;
+  std::atomic<bool> is_stop_{false};
+  ReferenceLineConfig smooth_config_;
+  double lookahead_distance_{};
+  double lookback_distance_{};
+  std::mutex route_mutex_;
+  RouteInfo route_info_;
+  bool has_route_ = false;
+  bool has_vehicle_state_ = false;
+  std::mutex vehicle_mutex_;
+  vehicle_state::KinoDynamicState vehicle_state_{};
+  std::mutex reference_line_mutex_;
+  std::vector<ReferenceLine> ref_lines_;
+  boost::circular_buffer<std::vector<ReferenceLine>> reference_line_history_;
+  std::future<void> task_future_;
 
 };
 

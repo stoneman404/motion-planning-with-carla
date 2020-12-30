@@ -107,7 +107,7 @@ class Agent {
    * @return
    */
   bool GetKMaxProbBehavioursAndLanes(
-      uint32_t k, std::vector<std::pair<LateralBehaviour, std::shared_ptr<ReferenceLine>>> &behaviour_with_lanes);
+      uint32_t k, std::vector<std::pair<LateralBehaviour, ReferenceLine>> &behaviour_with_lanes);
 
   /**
    * @brief: get the most likely behaviour
@@ -130,12 +130,31 @@ class Agent {
    * @param potential_lanes
    * @return
    */
-  bool PredictAgentBehaviour(const std::vector<std::shared_ptr<ReferenceLine>> &potential_lanes,
+  bool PredictAgentBehaviour(const std::vector<ReferenceLine> &potential_lanes,
                              double max_lon_acc,
                              double min_lon_acc,
                              double sim_step,
                              double max_lat_acc,
                              double default_desired_vel);
+
+  /**
+  * @brief: convert kinodynamic state to path point
+  * @param state
+  * @param path_point
+  */
+  static void StateToPathPoint(const vehicle_state::KinoDynamicState &state, planning_msgs::PathPoint &path_point);
+
+  static void StateToTrajectoryPoint(const vehicle_state::KinoDynamicState &state,
+                                     double relative_time,
+                                     planning_msgs::TrajectoryPoint &trajectory_point) {
+    Agent::StateToPathPoint(state, trajectory_point.path_point);
+    trajectory_point.vel = state.v;
+    trajectory_point.acc = state.a;
+    trajectory_point.jerk = 0.0;
+    trajectory_point.steer_angle = 0.0;
+    trajectory_point.relative_time = relative_time;
+
+  }
 
  protected:
 
@@ -146,20 +165,13 @@ class Agent {
   void RetriveAgentType(const derived_object_msgs::Object &object);
 
   /**
-   * @brief: convert kinodynamic state to path point
-   * @param state
-   * @param path_point
-   */
-  static void StateToPathPoint(const vehicle_state::KinoDynamicState &state, planning_msgs::PathPoint &path_point);
-
-  /**
    * @brief: predict agent's behaviour based on ref lane, if the ref lane has junction,
    * and the turn angle from two near ref point exceed the turn angle threshold, we may
    * suppose the agent will turn right or left in junction, otherwise go straight
    * @param lane: the lane.
    * @return
    */
-  LateralBehaviour PredictBehaviourFromRefLane(const std::shared_ptr<ReferenceLine> &lane) const;
+  LateralBehaviour PredictBehaviourFromRefLane(const ReferenceLine &lane) const;
 
   /**
    * @brief predict the state on prefixed lane, simulate one step forward to generate the predicted state on lane
@@ -173,7 +185,7 @@ class Agent {
    * @param[out] predict_state: the predicted state.
    * @return: true if the procedure is successful.
    */
-  static bool PredictStateOnPrefixedLane(const std::shared_ptr<ReferenceLine> &lane,
+  static bool PredictStateOnPrefixedLane(const ReferenceLine &lane,
                                          const vehicle_state::KinoDynamicState &current_state,
                                          double desired_velocity,
                                          double sim_step,

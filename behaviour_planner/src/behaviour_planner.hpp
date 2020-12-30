@@ -20,7 +20,7 @@ namespace planning {
 class BehaviourPlanner {
  public:
   BehaviourPlanner() = default;
-  ~BehaviourPlanner() = default;
+  ~BehaviourPlanner();;
   explicit BehaviourPlanner(const ros::NodeHandle &nh);
   void RunOnce();
 
@@ -35,7 +35,7 @@ class BehaviourPlanner {
    * @brief: get the key agents according to the lateral and longitudinal distance from ego agent.
    * @return
    */
-  bool GetKeyAgents();
+  bool GetKeyAgents(const Agent &ego_agent);
 
   bool PredictAgentsBehaviours();
   /**
@@ -53,14 +53,15 @@ class BehaviourPlanner {
    * @return
    */
   static bool ConvertBehaviourToRosMsg(const Behaviour &behaviour, planning_msgs::Behaviour &behaviour_msg);
+  static planning_msgs::Behaviour CreateEmergencyBehaviour();
 
   /**
    * @brief: get agent potential routes
    * @param id : agent id
-   * @param[out] potential_lane: the potential lanes
+   * @param[out] potential_lanes: the potential lanes
    * @return: true if this procedure is successful
    */
-  bool GetAgentPotentialRoutes(int id, std::vector<std::shared_ptr<ReferenceLine>> *potential_lane);
+  bool GetAgentPotentialRefLanes(int id, std::vector<ReferenceLine> *potential_lanes);
 
   /**
    * @brief: generate lane from the lane and current state of agent
@@ -77,7 +78,7 @@ class BehaviourPlanner {
                                               double lookahead_length,
                                               double lookback_length,
                                               bool smooth,
-                                              std::vector<std::shared_ptr<ReferenceLine>> *ptr_potential_lanes);
+                                              std::vector<ReferenceLine> *ptr_potential_lanes);
 
   /**
    * @brief: get the route list from start pose to destination pose, with changeable lanes.
@@ -86,8 +87,6 @@ class BehaviourPlanner {
    * @return: true if the the procedure is successful.
    */
   bool GetEgoVehicleRoutes(const geometry_msgs::Pose &start_pose, const geometry_msgs::Pose &destination_pose);
-
-  static std::vector<std::vector<planning_msgs::WayPoint>> SplitRawLane(const planning_msgs::Lane &raw_lane);
 
  private:
   ros::NodeHandle nh_;
@@ -99,10 +98,13 @@ class BehaviourPlanner {
   bool has_ego_vehicle_ = false;
   bool has_route_ = false;
   PolicySimulateConfig simulate_config_;
-  double reference_smooth_max_curvature_;
-  double reference_smooth_deviation_weight_;
-  double reference_smooth_heading_weight_;
-  double reference_smooth_length_weight_;
+  ReferenceLineConfig ref_line_config_;
+  double lookahead_length_{};
+  double lookback_length_{};
+//  double reference_smooth_max_curvature_{};
+//  double reference_smooth_deviation_weight_{};
+//  double reference_smooth_heading_weight_{};
+//  double reference_smooth_length_weight_{};
 
   ////////////////// ServiceClinet //////////////////////
   ros::ServiceClient get_waypoint_client_;

@@ -23,12 +23,13 @@ struct PolicySimulateConfig {
 
 struct SimulateAgent {
   Agent agent;
-  std::shared_ptr<ReferenceLine> reference_line;
+  std::pair<LateralBehaviour, ReferenceLine> behaviour_lane_pair;
 };
 
 class PolicyDecider {
-  using Policy = std::pair<LateralBehaviour, std::shared_ptr<ReferenceLine>>;
+  using Policy = std::pair<LateralBehaviour, ReferenceLine>;
   using Policies = std::vector<Policy>;
+//  using TrajectoryRefLanePair = std::pair<ReferenceLine, planning_msgs::Trajectory>;
   using SurroundingTrajectories = std::unordered_map<int, planning_msgs::Trajectory>;
  public:
   explicit PolicyDecider(const PolicySimulateConfig &config);
@@ -42,17 +43,21 @@ class PolicyDecider {
 
  private:
 
-  bool SimulateEgoAgentPolicy(const Policy &policy,
+  static bool GetSimulateAgentSet(const std::unordered_map<int, Agent> &agent_set,
+                                  const Policies &possible_policies,
+                                  std::unordered_map<int, SimulateAgent> &simulate_agent_set);
+  bool SimulateEgoAgentPolicy(const std::unordered_map<int, SimulateAgent> &simulate_agent_set,
+                              const Policy &policy,
                               planning_msgs::Trajectory &ego_traj,
-                              std::unordered_map<int, planning_msgs::Trajectory> &surrounding_trajs);
+                              SurroundingTrajectories &surrounding_trajs);
   bool OpenLoopSimForward(const Policy &policy,
                           const std::unordered_map<int, SimulateAgent> &simulate_agents,
                           planning_msgs::Trajectory &ego_traj,
-                          std::unordered_map<int, planning_msgs::Trajectory> &surrounding_trajs);
+                          SurroundingTrajectories &surrounding_trajs);
   bool CloseLoopSimulate(const Policy &policy,
                          const std::unordered_map<int, SimulateAgent> &simulate_agents,
                          planning_msgs::Trajectory &ego_traj,
-                         std::unordered_map<int, planning_msgs::Trajectory> &surrounding_trajs);
+                         SurroundingTrajectories &surrounding_trajs);
 
   /**
    * @brief: simulate the agent with leading agent one step forward, if no leading agent,  leading_agent should be invalid
@@ -88,7 +93,7 @@ class PolicyDecider {
    */
   static bool GetLeadingAgentOnRefLane(const Agent &agent,
                                        const std::unordered_map<int, SimulateAgent> &simulate_agents,
-                                       const std::shared_ptr<ReferenceLine> &ref_lane,
+                                       const ReferenceLine &ref_lane,
                                        int &agent_id);
 
   bool EvaluateMultiPolicyTrajectories(const std::vector<Policy> &valid_policy,

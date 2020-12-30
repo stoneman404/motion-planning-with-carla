@@ -169,12 +169,43 @@ class ReferenceLine {
                                     double s0,
                                     double s1,
                                     double s);
-
-  const std::vector<planning_msgs::WayPoint> & way_points() const { return way_points_; }
-
+  const std::vector<planning_msgs::WayPoint> &way_points() const { return way_points_; }
   bool CanChangeLeft(double s) const;
-
   bool CanChangeRight(double s) const;
+
+//  bool ExtendReferenceLine(double extend_length) {
+//    if (extend_length < 1e-2) {
+//      //do nothing
+//      return true;
+//    }
+//    const double kGap = 2.0;
+//    const auto kExtendNum = static_cast<size_t>(extend_length / kGap);
+//    if (kExtendNum < 1) {
+//      return true;
+//    }
+//    auto last_ref_point = reference_points_.back();
+//    auto last_waypoint = way_points_.back();
+//    for (size_t i = 1; i < kExtendNum; ++i){
+//      length_ += kGap;
+//      double cos_theta = std::cos(last_ref_point.theta());
+//      double sin_theta = std::sin(last_ref_point.theta());
+//      ReferencePoint next_ref_point = last_ref_point;
+//      next_ref_point.set_xy(last_ref_point.x() + kGap * cos_theta, last_ref_point.y() + kGap * sin_theta);
+//      reference_points_.emplace_back(next_ref_point);
+//      auto next_waypoint = last_waypoint;
+//      next_waypoint.s += kGap;
+//      next_waypoint.pose.position.x = last_waypoint.pose.position.x + kGap * cos_theta;
+//      next_waypoint.pose.position.y = last_waypoint.pose.position.y + kGap * sin_theta;
+//      next_waypoint.id = last_waypoint.id + 1;
+//      next_waypoint.is_junction = false;
+//      next_waypoint.has_left_lane = false;
+//      next_waypoint.has_right_lane = false;
+//      next_waypoint.lane_change.type = planning_msgs::LaneChangeType::FORWARD;
+//      next_waypoint.
+//    }
+//
+//
+//  }
 
  private:
   planning_msgs::WayPoint NearestWayPoint(double x, double y, size_t *min_index) const;

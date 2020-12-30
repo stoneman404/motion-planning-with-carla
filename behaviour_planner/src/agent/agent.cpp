@@ -231,14 +231,14 @@ bool Agent::is_static() const {
 }
 
 bool Agent::GetKMaxProbBehavioursAndLanes(
-    uint32_t k, std::vector<std::pair<LateralBehaviour, std::shared_ptr<ReferenceLine>>> &behaviour_with_lanes) {
+    uint32_t k, std::vector<std::pair<LateralBehaviour, ReferenceLine>> &behaviour_with_lanes) {
   if (k < 1) {
     return false;
   }
   return probs_lat_behaviour_.GetKthMaxProbBehavioursAndLanes(k, behaviour_with_lanes);
 }
 
-bool Agent::PredictAgentBehaviour(const std::vector<std::shared_ptr<ReferenceLine>> &potential_lanes,
+bool Agent::PredictAgentBehaviour(const std::vector<ReferenceLine> &potential_lanes,
                                   double max_lon_acc,
                                   double min_lon_acc,
                                   double sim_step,
@@ -247,25 +247,25 @@ bool Agent::PredictAgentBehaviour(const std::vector<std::shared_ptr<ReferenceLin
 
   // there is no potential lanes for agent, the behaviour is undefined.
   if (potential_lanes.empty()) {
-    probs_lat_behaviour_.SetEntry(LateralBehaviour::UNDEFINED, 1.0, std::shared_ptr<ReferenceLine>());
+    probs_lat_behaviour_.SetEntry(LateralBehaviour::UNDEFINED, 1.0, ReferenceLine());
     return true;
   }
   // make decision the potential lane as well as the implied behaviours
   vehicle_state::KinoDynamicState naive_predicted_state{};
   if (!PredictStateFromCurrentState(state_, naive_predicted_state, sim_step)) {
-    probs_lat_behaviour_.SetEntry(LateralBehaviour::UNDEFINED, 1.0, std::shared_ptr<ReferenceLine>());
+    probs_lat_behaviour_.SetEntry(LateralBehaviour::UNDEFINED, 1.0, ReferenceLine());
   }
   std::vector<std::array<double, 2>> feature_vectors;
   feature_vectors.reserve(potential_lanes.size());
   double evidence = 0;
   boost::math::normal_distribution<> speed_feature_distribution(0.0, 2.0);
   boost::math::normal_distribution<> position_feature_distribution(0.0, std::sqrt(6.0));
-  std::vector<std::pair<std::shared_ptr<ReferenceLine>, LateralBehaviour>> valid_lanes;
+  std::vector<std::pair<ReferenceLine, LateralBehaviour>> valid_lanes;
 
   //ref : Decision Making for Autonomous Driving considering Interaction and
   //Uncertain Prediction of Surrounding Vehicles eqn.(14-16)
   for (const auto &lane : potential_lanes) {
-    auto ref_point = lane->GetReferencePoint(state_.x, state_.y);
+    auto ref_point = lane.GetReferencePoint(state_.x, state_.y);
     Eigen::Vector3d predicted_state;
     if (!PredictStateOnPrefixedLane(lane,
                                     state_,
@@ -295,16 +295,16 @@ bool Agent::PredictAgentBehaviour(const std::vector<std::shared_ptr<ReferenceLin
   return true;
 }
 
-LateralBehaviour Agent::PredictBehaviourFromRefLane(const std::shared_ptr<ReferenceLine> &lane) const {
+LateralBehaviour Agent::PredictBehaviourFromRefLane(const ReferenceLine &lane) const {
 
   constexpr double kTurnAngleThreshold = 0.195 * M_PI;
   constexpr double kLengthStep = 2.0;
   constexpr double kLateralThreshold = 0.25;
   constexpr double kFrontDistanceThreshold = 10.0;
-  const double ref_length = lane->Length();
+  const double ref_length = lane.Length();
   // the different lane represents the different behaviour.
   common::SLPoint sl_point;
-  if (!lane->XYToSL(state_.x, state_.y, &sl_point)) {
+  if (!lane.XYToSL(state_.x, state_.y, &sl_point)) {
     return LateralBehaviour::UNDEFINED;
   }
   if (sl_point.l > kLateralThreshold) {
@@ -314,13 +314,13 @@ LateralBehaviour Agent::PredictBehaviourFromRefLane(const std::shared_ptr<Refere
     return LateralBehaviour::LANE_CHANGE_LEFT;
   }
 
-  auto last_ref_point = lane->GetReferencePoint(0.0);
-  if (!lane->HasJunctionInFront(state_.x, state_.y, kFrontDistanceThreshold)) {
+  auto last_ref_point = lane.GetReferencePoint(0.0);
+  if (!lane.HasJunctionInFront(state_.x, state_.y, kFrontDistanceThreshold)) {
     return LateralBehaviour::LANE_KEEPING;
   }
   double s = kLengthStep;
   while (s < ref_length) {
-    auto ref_point = lane->GetReferencePoint(s);
+    auto ref_point = lane.GetReferencePoint(s);
     double angle_diff = common::MathUtils::CalcAngleDist(last_ref_point.theta(), ref_point.theta());
     if (angle_diff > kTurnAngleThreshold) {
       return LateralBehaviour::TURN_LEFT;
@@ -333,7 +333,7 @@ LateralBehaviour Agent::PredictBehaviourFromRefLane(const std::shared_ptr<Refere
   return LateralBehaviour::GO_STRAIGHT;
 }
 
-bool Agent::PredictStateOnPrefixedLane(const std::shared_ptr<ReferenceLine> &lane,
+bool Agent::PredictStateOnPrefixedLane(const ReferenceLine &lane,
                                        const vehicle_state::KinoDynamicState &current_state,
                                        double desired_velocity,
                                        double sim_step,
@@ -343,10 +343,10 @@ bool Agent::PredictStateOnPrefixedLane(const std::shared_ptr<ReferenceLine> &lan
                                        Eigen::Vector3d predict_state) {
   constexpr double kLateralThreshold = 0.25;
   common::SLPoint sl_point;
-  if (!lane->XYToSL(current_state.x, current_state.y, &sl_point)) {
+  if (!lane.XYToSL(current_state.x, current_state.y, &sl_point)) {
     return false;
   }
-  auto ref_point = lane->GetReferencePoint(sl_point.s);
+  auto ref_point = lane.GetReferencePoint(sl_point.s);
   double lateral_approach_ratio = 0.995; // we assume the agent is approaching this lane ...
   if (sl_point.l > kLateralThreshold || sl_point.l < -kLateralThreshold) {
     lateral_approach_ratio = 0.95; // we assume the agent is cutting in this lane ...
@@ -369,19 +369,19 @@ bool Agent::PredictStateOnPrefixedLane(const std::shared_ptr<ReferenceLine> &lan
                                                    x, y, v, a, theta, kappa,
                                                    &s_conditions, &d_conditions);
   double actual_desired_vel =
-      std::min(max_lat_acc / std::fabs(lane->GetReferencePoint(sl_point.s).kappa()) + 1e-5, desired_velocity);
+      std::min(max_lat_acc / std::fabs(lane.GetReferencePoint(sl_point.s).kappa()) + 1e-5, desired_velocity);
   double vel_gap = actual_desired_vel - s_conditions[1];
   double a_ref = vel_gap / sim_step;
   double motion_a = std::max(std::min(a_ref, max_lon_acc), min_lon_acc);
 
   double next_s = s_conditions[0] + s_conditions[1] * sim_step + 0.5 * sim_step * sim_step * motion_a;
   double next_d = d_conditions[0] * lateral_approach_ratio;
-  auto next_ref_point = lane->GetReferencePoint(next_s);
+  auto next_ref_point = lane.GetReferencePoint(next_s);
   auto next_state = common::CoordinateTransformer::CalcCatesianPoint(next_ref_point.theta(),
                                                                      next_ref_point.x(),
                                                                      next_ref_point.y(), next_d);
   double
-      next_ref_v = std::min(max_lat_acc / std::fabs(lane->GetReferencePoint(next_s).kappa()) + 1e-5, desired_velocity);
+      next_ref_v = std::min(max_lat_acc / std::fabs(lane.GetReferencePoint(next_s).kappa()) + 1e-5, desired_velocity);
   predict_state << next_state.x(), next_state.y(), next_ref_v;
   return true;
 }
