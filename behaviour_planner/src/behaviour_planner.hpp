@@ -61,7 +61,10 @@ class BehaviourPlanner {
    * @param[out] potential_lanes: the potential lanes
    * @return: true if this procedure is successful
    */
-  bool GetAgentPotentialRefLanes(int id, std::vector<ReferenceLine> *potential_lanes);
+  bool GetAgentPotentialRefLanes(int id,
+                                 double lookahead_length,
+                                 double lookback_length,
+                                 std::vector<ReferenceLine> *potential_lanes);
 
   /**
    * @brief: generate lane from the lane and current state of agent

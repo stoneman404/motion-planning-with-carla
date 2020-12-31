@@ -243,12 +243,9 @@ void MotionPlanner::VisualizeTrafficLightBox() {
     traffic_light_marker.color.g = 0.2;
     traffic_light_marker.color.b = 1.0;
     traffic_light_marker.scale = traffic_light.second.trigger_volume.size;
-    traffic_light_marker.pose.position.x =
-        traffic_light.second.transform.position.x + traffic_light.second.trigger_volume.center.x;
-    traffic_light_marker.pose.position.y =
-        traffic_light.second.transform.position.y + traffic_light.second.trigger_volume.center.y;
-    traffic_light_marker.pose.position.z =
-        traffic_light.second.transform.position.z + traffic_light.second.trigger_volume.center.z;
+    traffic_light_marker.pose.position.x = traffic_light.second.trigger_volume.center.x;
+    traffic_light_marker.pose.position.y = traffic_light.second.trigger_volume.center.y;
+    traffic_light_marker.pose.position.z = traffic_light.second.trigger_volume.center.z;
     traffic_light_marker.pose.orientation = traffic_light.second.transform.orientation;
     traffic_light_marker.id = traffic_light.first;
     traffic_light_boxes_markers.markers.push_back(traffic_light_marker);

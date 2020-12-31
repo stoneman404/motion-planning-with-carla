@@ -182,6 +182,7 @@ planning_msgs::Behaviour BehaviourPlanner::CreateEmergencyBehaviour() {
   behaviour_msg.lat_behaviour.behaviour = planning_msgs::LateralBehaviour::UNDEFINED;
   behaviour_msg.forward_behaviours.push_back(behaviour_msg.lat_behaviour);
   behaviour_msg.lon_behaviour.behaviour = planning_msgs::LongitudinalBehaviour::MAINTAIN;
+  return behaviour_msg;
 }
 
 bool BehaviourPlanner::ConvertBehaviourToRosMsg(const Behaviour &behaviour,
@@ -327,14 +328,13 @@ bool BehaviourPlanner::MakeAgentSet() {
   for (const auto &object : objects_list_.objects) {
     agent_set_.emplace(object.id, object);
   }
-//  for (size_t i = 0; i < traffic_light_info_list_.traffic_lights.size(); ++i) {
-//    if (traffic_light_status_list_.traffic_lights[i].state == carla_msgs::CarlaTrafficLightStatus::RED) {
-//      agent_set_.emplace(traffic_light_info_list_.traffic_lights[i].id,
-//                         Agent({traffic_light_status_list_.traffic_lights[i],
-//                                traffic_light_info_list_.traffic_lights[i]}));
-//    }
-
-//  }
+  for (size_t i = 0; i < traffic_light_info_list_.traffic_lights.size(); ++i) {
+    if (traffic_light_status_list_.traffic_lights[i].state == carla_msgs::CarlaTrafficLightStatus::RED) {
+      agent_set_.emplace(traffic_light_info_list_.traffic_lights[i].id,
+                         Agent({traffic_light_status_list_.traffic_lights[i],
+                                traffic_light_info_list_.traffic_lights[i]}));
+    }
+  }
   return true;
 }
 void BehaviourPlanner::VisualizeAgentTrajectories(const Behaviour &behaviour) {
@@ -392,7 +392,7 @@ bool BehaviourPlanner::PredictAgentsBehaviours() {
                                          simulate_config_.desired_vel);
     } else {
       std::vector<ReferenceLine> agent_potential_lanes;
-      if (!GetAgentPotentialRefLanes(agent.first, &agent_potential_lanes)) {
+      if (!GetAgentPotentialRefLanes(agent.first, lookahead_length_, lookback_length_, &agent_potential_lanes)) {
         agent.second.PredictAgentBehaviour(std::vector<ReferenceLine>(),
                                            simulate_config_.max_acc,
                                            -simulate_config_.max_decel,
@@ -412,7 +412,8 @@ bool BehaviourPlanner::PredictAgentsBehaviours() {
   return true;
 }
 
-bool BehaviourPlanner::GetAgentPotentialRefLanes(int id, std::vector<ReferenceLine> *potential_lanes) {
+bool BehaviourPlanner::GetAgentPotentialRefLanes(int id, double lookahead_length, double lookback_length,
+                                                 std::vector<ReferenceLine> *potential_lanes) {
   if (potential_lanes == nullptr) {
     return false;
   }
@@ -425,12 +426,13 @@ bool BehaviourPlanner::GetAgentPotentialRefLanes(int id, std::vector<ReferenceLi
   for (const auto &lane : lane_arrays) {
     std::shared_ptr<ReferenceLine> reference_line = std::make_shared<ReferenceLine>();
     if (!AddAgentPotentialReferenceLines(agent_set_[id].state(),
-                                         lane, 100.0,
-                                         30.0,
+                                         lane, lookahead_length,
+                                         lookback_length,
                                          false, potential_lanes)) {
       continue;
     }
   }
+  return true;
 }
 
 bool BehaviourPlanner::AddAgentPotentialReferenceLines(const vehicle_state::KinoDynamicState &state,

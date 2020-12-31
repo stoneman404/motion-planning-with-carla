@@ -54,10 +54,17 @@ Agent::Agent(const carla_msgs::CarlaTrafficLightStatus &traffic_light_status,
   double box_width = traffic_light_info.trigger_volume.size.y;
   length_ = box_length;
   width_ = box_width;
-  Eigen::Vector2d center{traffic_light_info.transform.position.x + traffic_light_info.trigger_volume.center.x,
-                         traffic_light_info.transform.position.y + traffic_light_info.trigger_volume.center.y};
+  Eigen::Vector2d center{traffic_light_info.trigger_volume.center.x, traffic_light_info.trigger_volume.center.y};
   double heading = tf::getYaw(traffic_light_info.transform.orientation);
   bounding_box_ = common::Box2d(center, heading, box_length, box_width);
+  state_.x = center.x();
+  state_.y = center.y();
+  state_.theta = heading;
+  state_.a = 0.0;
+  state_.v = 0.0;
+  state_.kappa = 0.0;
+  state_.z = traffic_light_info.trigger_volume.center.z;
+  state_.centripental_acc = 0.0;
 }
 
 Agent::Agent(const vehicle_state::VehicleState &vehicle_state) : id_(vehicle_state.id()),

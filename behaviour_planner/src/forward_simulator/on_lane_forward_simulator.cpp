@@ -59,7 +59,7 @@ bool OnLaneForwardSimulator::GetIDMLonAcc(const std::array<double, 3> &ego_s_con
   const double T = params_.idm_params.safe_time_headway;
   const double a = params_.idm_params.max_acc;
   const double b = params_.idm_params.max_decel;
-  if (ego_s_conditions[0] > reference_line.Length()) {
+  if (ego_s_conditions[0] > reference_line.Length() || ego_s_conditions[0] < 0.0) {
     return false;
   }
   if (leading_agent.is_valid()) {
