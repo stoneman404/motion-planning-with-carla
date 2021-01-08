@@ -17,11 +17,11 @@ bool FrenetLatticePlanner::Process(const planning_msgs::TrajectoryPoint &init_tr
                                    planning_msgs::Trajectory &pub_trajectory,
                                    std::vector<planning_msgs::Trajectory> *valid_trajectories) {
   if (planning_targets.empty()) {
-    ROS_FATAL("[FrenetLatticePlanner::Process]: ******No planning_targets provided*********88");
+    ROS_FATAL("[FrenetLatticePlanner::Process]: ******No planning_targets provided*********");
     return false;
   }
   ROS_INFO("[FrenetLatticePlanner::Process], the targets size: %zu", planning_targets.size());
-  constexpr double kDefaultNonBestBehaviourCost = 20.0;
+  constexpr double kDefaultNonBestBehaviourCost = 100.0;
   size_t index = 0;
   size_t failed_ref_plan_num = 0;;
   std::vector<std::pair<planning_msgs::Trajectory, double>> optimal_trajectories;
@@ -57,7 +57,7 @@ bool FrenetLatticePlanner::PlanningOnRef(const planning_msgs::TrajectoryPoint &i
                                          std::pair<planning_msgs::Trajectory, double> &optimal_trajectory,
                                          std::vector<planning_msgs::Trajectory> *valid_trajectories) const {
   ros::Time begin = ros::Time::now();
-  std::shared_ptr<ReferenceLine> ref_line = planning_target.ref_lane;
+  ReferenceLine ref_line = planning_target.ref_lane;
   std::array<double, 3> init_s{};
   std::array<double, 3> init_d{};
   FrenetLatticePlanner::GetInitCondition(ref_line, init_trajectory_point, &init_s, &init_d);
@@ -209,12 +209,12 @@ bool FrenetLatticePlanner::PlanningOnRef(const planning_msgs::TrajectoryPoint &i
   return num_lattice_traj > 0;
 }
 
-planning_msgs::Trajectory FrenetLatticePlanner::CombineTrajectories(const std::shared_ptr<ReferenceLine> &ptr_ref_line,
+planning_msgs::Trajectory FrenetLatticePlanner::CombineTrajectories(const ReferenceLine &ref_line,
                                                                     const Polynomial &lon_traj,
                                                                     const Polynomial &lat_traj,
                                                                     double start_time) {
   double s0 = lon_traj.Evaluate(0, 0.0);
-  double s_ref_max = ptr_ref_line->Length();
+  double s_ref_max = ref_line.Length();
   double accumulated_s = 0.0;
   double last_s = -1.0 * std::numeric_limits<double>::epsilon();
   double t_param = 0.0;
@@ -235,7 +235,7 @@ planning_msgs::Trajectory FrenetLatticePlanner::CombineTrajectories(const std::s
     double d = lat_traj.Evaluate(0, relative_s);
     double d_prime = lat_traj.Evaluate(1, relative_s);
     double d_prime_prime = lat_traj.Evaluate(2, relative_s);
-    auto matched_re_point = ptr_ref_line->GetReferencePoint(s);
+    auto matched_re_point = ref_line.GetReferencePoint(s);
     double x = 0;
     double y = 0.0;
     double theta = 0.0;
@@ -338,7 +338,7 @@ void FrenetLatticePlanner::GenerateLonTrajectories(const PlanningTarget &plannin
   }
   ptr_lon_traj_vec->clear();
   auto ref_line = planning_target.ref_lane;
-  auto matched_ref_point = ref_line->GetReferencePoint(init_s[0]);
+  auto matched_ref_point = ref_line.GetReferencePoint(init_s[0]);
 //  std::cout << "=========== matched_ref_point: kappa: " << matched_ref_point.kappa() << std::endl;
   double cruise_speed = std::min(PlanningConfig::Instance().max_lon_velocity() * 0.9,
                                  PlanningConfig::Instance().max_lat_acc()
@@ -430,13 +430,13 @@ void FrenetLatticePlanner::GeneratePolynomialTrajectories(
   }
 }
 
-void FrenetLatticePlanner::GetInitCondition(const std::shared_ptr<ReferenceLine> &ptr_ref_line,
+void FrenetLatticePlanner::GetInitCondition(const ReferenceLine &ptr_ref_line,
                                             const planning_msgs::TrajectoryPoint &init_trajectory_point,
                                             std::array<double, 3> *const init_s,
                                             std::array<double, 3> *const init_d) {
   ReferencePoint matched_ref_point;
   double matched_s;
-  if (!ptr_ref_line->GetMatchedPoint(init_trajectory_point.path_point.x,
+  if (!ptr_ref_line.GetMatchedPoint(init_trajectory_point.path_point.x,
                                      init_trajectory_point.path_point.y,
                                      &matched_ref_point,
                                      &matched_s)) {

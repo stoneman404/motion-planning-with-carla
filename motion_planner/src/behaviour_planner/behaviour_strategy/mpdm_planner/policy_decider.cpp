@@ -155,16 +155,16 @@ bool PolicyDecider::CloseLoopSimulate(const Policy &policy1,
   auto simulate_agent_tmp = simulate_agents;
   for (int i = 0; i < kForwardSteps; ++i) {
     for (auto &agent : simulate_agent_tmp) {
-      auto reference_line = agent.second.behaviour_lane_pair.second;
       auto behaviour = agent.second.behaviour_lane_pair.first;
-      double desired_velocity =
-          this->GetDesiredSpeed({agent.second.agent.state().x, agent.second.agent.state().y}, reference_line);
       planning_msgs::TrajectoryPoint trajectory_point;
       if (behaviour == LateralBehaviour::UNDEFINED || agent.second.agent.agent_type() != AgentType::VEHICLE) {
         if (!NaivePredictionOnStepForAgent(agent.second, config_.sim_step_, trajectory_point)) {
           return false;
         }
       } else {
+        auto reference_line = agent.second.behaviour_lane_pair.second;
+        double desired_velocity =
+            this->GetDesiredSpeed({agent.second.agent.state().x, agent.second.agent.state().y}, reference_line);
         int leading_agent_id = -1;
         if (!PolicyDecider::GetLeadingAgentOnRefLane(agent.second.agent,
                                                      simulate_agent_tmp,
@@ -203,7 +203,7 @@ bool PolicyDecider::CloseLoopSimulate(const Policy &policy1,
 double PolicyDecider::GetDesiredSpeed(const std::pair<double, double> &xy, const ReferenceLine &ref_lane) const {
   auto ref_point = ref_lane.GetReferencePoint(xy);
   double kappa = ref_point.kappa();
-  return std::min(config_.max_lat_acc / (kappa + 1e-5), config_.desired_vel);
+  return std::min(config_.max_lat_acc / (std::fabs(kappa) + 1e-5), config_.desired_vel);
 }
 
 bool PolicyDecider::GetLeadingAgentOnRefLane(const Agent &agent,
@@ -252,7 +252,7 @@ bool PolicyDecider::SimulateOneStepForAgent(double desired_vel,
   SimulationParams simulation_params;
   simulation_params.idm_params.desired_velocity = desired_vel;
   //other params now is default;
-  simulation_params.idm_params.acc_exponet = config_.acc_exponet;
+  simulation_params.idm_params.acc_exponent = config_.acc_exponet;
   simulation_params.idm_params.max_acc = config_.max_acc;
   simulation_params.idm_params.max_decel = config_.max_decel;
   simulation_params.idm_params.safe_time_headway = config_.max_decel;
@@ -336,14 +336,19 @@ void PolicyDecider::EvaluateSinglePolicyTrajectory(const Policy &policy,
                                                    const planning_msgs::Trajectory &trajectory,
                                                    const SurroundingTrajectories &surrounding_trajs,
                                                    double *score) const {
+  auto ref_lane = policy.second;
   // 1.efficiency
   const planning_msgs::TrajectoryPoint terminal_trajectory_point = trajectory.trajectory_points.back();
-  double cost_efficiency = std::fabs(terminal_trajectory_point.vel - config_.desired_vel) / 10.0;
+  const auto start_trajectory_point = trajectory.trajectory_points.front();
+  double cost_efficiency_vel = std::fabs(terminal_trajectory_point.vel - config_.desired_vel) / 10.0;
+  common::SLPoint start_sl, end_sl;
+  ref_lane.XYToSL(terminal_trajectory_point.path_point.x, terminal_trajectory_point.path_point.y, &end_sl);
+  ref_lane.XYToSL(start_trajectory_point.path_point.x, start_trajectory_point.path_point.y, &start_sl);
+  double cost_efficiency_length = 2.0 / (std::fabs(end_sl.s - start_sl.s) + 1e-5);
+  double cost_efficiency = cost_efficiency_length + cost_efficiency_vel;
 
   // 2. dead lane
-  auto ref_lane = policy.second;
-
-
+  const double cost_dead_end = 1.0 / (std::fabs(ref_lane.Length() - start_sl.s) + 1e-5);
 
   //3. safety
   double cost_safety = 0.0;
@@ -359,7 +364,7 @@ void PolicyDecider::EvaluateSinglePolicyTrajectory(const Policy &policy,
   if (policy.first != LateralBehaviour::LANE_KEEPING) {
     cost_action += 0.5;
   }
-  *score = cost_action + cost_safety + cost_efficiency;
+  *score = cost_action + cost_safety + cost_efficiency + cost_dead_end;
 }
 
 bool PolicyDecider::EvaluateSafetyCost(int ego_id, const planning_msgs::Trajectory &trajectory,

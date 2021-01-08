@@ -16,7 +16,7 @@ class EndConditionSampler {
 
   EndConditionSampler(const std::array<double, 3> &init_s,
                       const std::array<double, 3> &init_d,
-                      std::shared_ptr<ReferenceLine> ptr_ref_line,
+                      const ReferenceLine &ref_line,
                       const std::vector<std::shared_ptr<Obstacle>> &ptr_obstacles,
                       std::shared_ptr<STGraph> ptr_st_graph);
   /**
@@ -96,16 +96,16 @@ class EndConditionSampler {
    * @param obstacle_id
    * @param s
    * @param t
-   * @param ptr_ref_line
+   * @param ref_line
    * @return
    */
   double GetObstacleSpeedAlongReferenceLine(int obstacle_id, double s, double t,
-                                            const std::shared_ptr<ReferenceLine> &ptr_ref_line) const;
+                                            const ReferenceLine &ref_line) const;
 
  private:
   std::array<double, 3> init_s_{};
   std::array<double, 3> init_d_{};
-  std::shared_ptr<ReferenceLine> ptr_ref_line_;
+  ReferenceLine ref_line_;
   std::unordered_map<int, std::shared_ptr<Obstacle>> obstacles_;
   std::shared_ptr<STGraph> ptr_st_graph_;
 };

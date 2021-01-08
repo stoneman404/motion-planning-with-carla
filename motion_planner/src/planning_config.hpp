@@ -10,16 +10,17 @@
 #include "planning_msgs/LateralBehaviour.h"
 #include "planning_msgs/LongitudinalBehaviour.h"
 #include "obstacle_manager/obstacle.hpp"
+#include "behaviour_planner/agent/behaviour.hpp"
 
 namespace planning {
 
 struct PlanningTarget {
   double desired_vel{};
-  std::shared_ptr<ReferenceLine> ref_lane{};
+  ReferenceLine ref_lane{};
   planning_msgs::Trajectory behaviour_trajectory{};
   std::vector<std::shared_ptr<Obstacle>> obstacles;
-  planning_msgs::LateralBehaviour lateral_behaviour{};
-  planning_msgs::LongitudinalBehaviour longitudinal_behaviour{};
+  LateralBehaviour lateral_behaviour{};
+  LongitudinalBehaviour longitudinal_behaviour{};
   bool is_best_behaviour = false;
   bool has_stop_point = false;
   double stop_s{};
@@ -38,6 +39,19 @@ class PlanningConfig {
   double reference_smoother_deviation_weight() const;
   double reference_smoother_heading_weight() const;
   double reference_smoother_max_curvature() const;
+  const std::string &behaviour_planner_type() const { return behaviour_planner_type_; }
+  double desired_velocity() const { return desired_velocity_; }
+  double sim_horizon() const { return sim_horizon_; }
+  double sim_step() const { return sim_step_; }
+  double safe_time_headway() const { return safe_time_headway_; }
+  double acc_exponet() const { return acc_exponet_; }
+  double s0() const { return s0_; }
+  double s1() const { return s1_; }
+  double default_lateral_approach_ratio() const { return default_lateral_approach_ratio_; }
+  double cutting_in_lateral_approach_ratio() const { return cutting_in_lateral_approach_ratio_; }
+  double sample_lat_threshold() const { return sample_lat_threshold_; }
+  double sample_min_lon_threshold() const { return sample_min_lon_threshold_; }
+
   double max_lon_acc() const;
   double min_lon_acc() const;
   double max_lon_velocity() const;
@@ -88,7 +102,7 @@ class PlanningConfig {
   double min_lon_acc_{};
   double max_lon_velocity_ = 10.0;
   double min_lon_velocity_{};
-  double target_speed_{};
+  double desired_velocity_{};
   double max_lookback_distance_{};
   double min_lon_jerk_{};
   double max_lon_jerk_{};
@@ -109,6 +123,17 @@ class PlanningConfig {
   double max_replan_lat_distance_threshold_{};
   double max_replan_lon_distance_threshold_{};
   int preserve_history_trajectory_point_num_{};
+  std::string behaviour_planner_type_{};
+  double sim_horizon_{};
+  double sim_step_{};
+  double safe_time_headway_{};
+  double acc_exponet_{};
+  double s0_{};
+  double s1_{};
+  double default_lateral_approach_ratio_{};
+  double cutting_in_lateral_approach_ratio_{};
+  double sample_lat_threshold_{};
+  double sample_min_lon_threshold_{};
 
  private:
   PlanningConfig() = default;

@@ -49,20 +49,20 @@ class FrenetLatticePlanner : public TrajectoryPlanner {
 
   /**
    * @brief: combine the lon and lat trajectories
-   * @param ptr_ref_line: reference line
+   * @param ref_line: reference line
    * @param lon_traj: lon trajectories
    * @param lat_traj: lat trajectories
    * @param ptr_combined_pub_traj: combined trajectory
    * @return
    */
-  static planning_msgs::Trajectory CombineTrajectories(const std::shared_ptr<ReferenceLine> &ptr_ref_line,
+  static planning_msgs::Trajectory CombineTrajectories(const ReferenceLine &ref_line,
                                                        const common::Polynomial &lon_traj,
                                                        const common::Polynomial &lat_traj,
                                                        double start_time);
 
  private:
 
-  static void GetInitCondition(const std::shared_ptr<ReferenceLine> &ptr_ref_line,
+  static void GetInitCondition(const ReferenceLine &ptr_ref_line,
                                const planning_msgs::TrajectoryPoint &init_trajectory_point,
                                std::array<double, 3> *const init_s,
                                std::array<double, 3> *const init_d);

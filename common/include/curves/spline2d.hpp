@@ -157,7 +157,7 @@ class Spline2d {
  private:
   std::vector<double> xs_;
   std::vector<double> ys_;
-  size_t order_ = 5;
+  size_t order_ = 3;
   spline x_spline_;
   spline y_spline_;
   double arc_length_ = 0.0;

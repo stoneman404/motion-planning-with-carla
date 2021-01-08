@@ -3,6 +3,7 @@ project(motion_planner)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 add_compile_options(-std=c++14 -g -Werror -Wall -Wno-unused -Wno-sign-compare)
+#add_compile_options(-std=c++14 -O3 -Werror -Wall -Wno-unused -Wno-sign-compare)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -157,6 +158,12 @@ include_directories(
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
 set(planning_SRC
+        src/behaviour_planner/agent/agent.cpp
+        src/behaviour_planner/agent/behaviour.cpp
+        src/behaviour_planner/behaviour_strategy/behaviour_strategy.hpp
+        src/behaviour_planner/behaviour_strategy/mpdm_planner/mpdm_planner.cpp
+        src/behaviour_planner/behaviour_strategy/mpdm_planner/policy_decider.cpp
+        src/behaviour_planner/forward_simulator/on_lane_forward_simulator.cpp
         src/frenet_lattice_planner/constraint_checker.cpp
         src/frenet_lattice_planner/end_condition_sampler.cpp
         src/frenet_lattice_planner/polynomial_trajectory_evaluator.cpp

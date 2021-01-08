@@ -61,11 +61,12 @@ bool ReferenceInfo::Start() {
     return false;
   }
   is_stop_ = false;
-  task_future_ = std::async(std::launch::async, [this] { GenerateThread(); });
+  task_future_ = std::async(std::launch::async, &ReferenceInfo::GenerateThread, this);
   return true;
 }
 
 bool ReferenceInfo::CreateReferenceLines(bool smooth, std::vector<ReferenceLine> &ref_lanes) {
+  auto begin = ros::Time::now();
   if (!has_route_ || !has_vehicle_state_) {
     return false;
   }
@@ -92,51 +93,68 @@ bool ReferenceInfo::CreateReferenceLines(bool smooth, std::vector<ReferenceLine>
     return false;
   }
   ref_lanes.emplace_back(main_ref_lane);
-  bool has_overlap_left_lane = false;
-  size_t overlap_left_index = 0;
-  for (size_t i = 0; i < route_info.left_lanes.size(); ++i) {
-    auto left_lane = route_info.left_lanes[i];
-    double overlap_begin_s, overlap_end_s;
-    if (HasOverLapWithRefLane(main_ref_lane, left_lane, &overlap_begin_s, &overlap_end_s)) {
-      overlap_left_index = i;
-      has_overlap_left_lane = true;
+
+  double const kDefaultLaneWidth = 3.5;
+  common::SLPoint sl_point;
+  if (!main_ref_lane.XYToSL(vehicle_state.x, vehicle_state.y, &sl_point)) {
+    return false;
+  }
+  auto tmp_sl = sl_point;
+  tmp_sl.l = kDefaultLaneWidth;
+  Eigen::Vector2d left_xy;
+  if (!main_ref_lane.SLToXY(tmp_sl, &left_xy)) {
+    return false;
+  }
+  common::SLPoint left_sl;
+  for (const auto &lane : route_info.left_lanes) {
+    auto left_ref_lane = ReferenceLine(lane);
+    if (!left_ref_lane.XYToSL(left_xy, &left_sl)) {
+      continue;
+    }
+    if (!left_ref_lane.IsOnLane(left_sl)) {
+      continue;
+    }
+    auto left_ref = left_ref_lane.GetReferencePoint(left_sl.s);
+    if (std::fabs(common::MathUtils::CalcAngleDist(left_ref.theta(), vehicle_state.theta)) > 0.25 * M_PI) {
+      continue;
+    } else {
+      left_ref_lane.Smooth(smooth_config_.reference_smooth_deviation_weight_,
+                           smooth_config_.reference_smooth_heading_weight_,
+                           smooth_config_.reference_smooth_length_weight_,
+                           smooth_config_.reference_smooth_max_curvature_);
+      ref_lanes.emplace_back(left_ref_lane);
       break;
     }
   }
-  if (has_overlap_left_lane) {
-    auto left_ref_lane = ReferenceLine();
-    if (RetriveReferenceLine(
-        left_ref_lane, vehicle_state,
-        route_info.left_lanes[overlap_left_index],
-        lookback_distance_,
-        lookback_distance_,
-        smooth, smooth_config_)) {
-      ref_lanes.emplace_back(left_ref_lane);
-    }
+  tmp_sl.l = -kDefaultLaneWidth;
+  Eigen::Vector2d right_xy;
+  if (!main_ref_lane.SLToXY(tmp_sl, &right_xy)) {
+    return false;
   }
 
-  bool has_overlap_right_lane = false;
-  size_t overlap_right_index = 0;
-  for (size_t i = 0; i < route_info.right_lanes.size(); ++i) {
-    auto right_lane = route_info.right_lanes[i];
-    double overlap_begin_s, overlap_end_s;
-    if (HasOverLapWithRefLane(main_ref_lane, right_lane, &overlap_begin_s, &overlap_end_s)) {
-      overlap_right_index = i;
-      has_overlap_right_lane = true;
+  common::SLPoint right_sl;
+  for (const auto &lane : route_info.right_lanes) {
+    auto right_ref_lane = ReferenceLine(lane);
+    if (!right_ref_lane.XYToSL(right_xy, &right_sl)) {
+      continue;
+    }
+    if (!right_ref_lane.IsOnLane(right_sl)) {
+      continue;
+    }
+    auto right_ref = right_ref_lane.GetReferencePoint(right_sl.s);
+    if (std::fabs(common::MathUtils::CalcAngleDist(right_ref.theta(), vehicle_state.theta)) > 0.25 * M_PI) {
+      continue;
+    } else {
+      right_ref_lane.Smooth(smooth_config_.reference_smooth_deviation_weight_,
+                           smooth_config_.reference_smooth_heading_weight_,
+                           smooth_config_.reference_smooth_length_weight_,
+                           smooth_config_.reference_smooth_max_curvature_);
+      ref_lanes.emplace_back(right_ref_lane);
       break;
     }
   }
-  if (has_overlap_right_lane) {
-    auto right_ref_lane = ReferenceLine();
-    if (RetriveReferenceLine(
-        right_ref_lane, vehicle_state,
-        route_info.right_lanes[overlap_right_index],
-        lookback_distance_,
-        lookback_distance_,
-        smooth, smooth_config_)) {
-      ref_lanes.emplace_back(right_ref_lane);
-    }
-  }
+  auto end = ros::Time::now();
+  ROS_WARN("CreateReferenceLine elapsed time is %lf s", (end - begin).toSec());
   return true;
 }
 
@@ -153,18 +171,19 @@ bool ReferenceInfo::RetriveReferenceLine(ReferenceLine &ref_lane,
   };
   size_t index_min = 0;
   Eigen::Vector2d xy{vehicle_state.x, vehicle_state.y};
-  double d_min = dist_sqr(lane.front(), xy);
+  double d_min = dist_sqr(lane[0], xy);
   for (size_t i = 1; i < lane.size(); ++i) {
     double d = dist_sqr(lane[i], xy);
-    if (d < d_min) {
+    double angle_diff = common::MathUtils::CalcAngleDist(tf::getYaw(lane[i].pose.orientation), vehicle_state.theta);
+    if (d < d_min && std::fabs(angle_diff) < 0.25 * M_PI) {
       d_min = d;
       index_min = i;
     }
   }
   std::vector<planning_msgs::WayPoint> sampled_way_points;
   double s = 0;
-  size_t index = index_min == 0 ? index_min : index_min - 1;;
-  while (index > 0 || s > lookback_distance - std::numeric_limits<double>::epsilon()) {
+  size_t index = index_min > 0 ? index_min - 1 : index_min;;
+  while (index > 0 && s < lookback_distance - std::numeric_limits<double>::epsilon()) {
     sampled_way_points.push_back(lane[index]);
     Eigen::Vector2d xy_last{lane[index].pose.position.x, lane[index].pose.position.y};
     s += std::sqrt(dist_sqr(lane[--index], xy_last));
@@ -174,7 +193,7 @@ bool ReferenceInfo::RetriveReferenceLine(ReferenceLine &ref_lane,
   }
   index = index_min;
   s = 0;
-  while (index < lane.size() || s > lookahead_distance - std::numeric_limits<double>::epsilon()) {
+  while (index < lane.size() && s < lookahead_distance - std::numeric_limits<double>::epsilon()) {
     sampled_way_points.push_back(lane[index]);
     Eigen::Vector2d xy_last{lane[index].pose.position.x, lane[index].pose.position.y};
     s += std::sqrt(dist_sqr(lane[++index], xy_last));
@@ -244,8 +263,10 @@ bool ReferenceInfo::UpdateRouteResponse(const planning_srvs::RoutePlanServiceRes
   auto raw_ref_lane = route_response.route;
   auto raw_left_lane = route_response.left_lane;
   auto raw_right_lane = route_response.right_lane;
+  route_info_.main_lane = raw_ref_lane.way_points;
   route_info_.right_lanes = ReferenceInfo::SplitRawLane(raw_right_lane);
-  route_info_.left_lanes = ReferenceInfo::SplitRawLane(raw_ref_lane);
+  route_info_.left_lanes = ReferenceInfo::SplitRawLane(raw_right_lane);
+  route_info_.PrintRouteInfo();
   has_route_ = true;
   return true;
 }
@@ -256,8 +277,8 @@ std::vector<std::vector<planning_msgs::WayPoint>> ReferenceInfo::SplitRawLane(co
   auto dist = [](const planning_msgs::WayPoint &p1, const planning_msgs::WayPoint &p2) -> double {
     return std::hypot(p1.pose.position.x - p2.pose.position.x, p1.pose.position.y - p2.pose.position.y);
   };
-  constexpr double kMaxDistanceGap = 3.0;
-  if (raw_lane.way_points.size() > 3) {
+  constexpr double kMaxDistanceGap = 5.0;
+  if (raw_lane.way_points.size() > 10) {
     split_lanes.emplace_back();
     auto last_waypoint = raw_lane.way_points[0];
     split_lanes.back().emplace_back(last_waypoint);
@@ -270,7 +291,7 @@ std::vector<std::vector<planning_msgs::WayPoint>> ReferenceInfo::SplitRawLane(co
       last_waypoint = cur_waypoint;
     }
     for (const auto &lane : split_lanes) {
-      if (lane.size() > 3) {
+      if (lane.size() > 10) {
         lanes.emplace_back(lane);
       }
     }
@@ -307,12 +328,11 @@ bool ReferenceInfo::GetReferenceLines(std::vector<ReferenceLine> *reference_line
     reference_lines->assign(reference_line_history_.back().begin(), reference_line_history_.back().end());
     return true;
   }
-  return false;
 }
 
 void ReferenceInfo::GenerateThread() {
   while (!is_stop_) {
-    static constexpr int32_t kSleepTime = 50;  // milliseconds
+    static constexpr int32_t kSleepTime = 60;  // milliseconds
     std::this_thread::sleep_for(std::chrono::milliseconds(kSleepTime));
     auto start_time = std::chrono::system_clock::now();
     if (!has_route_) {

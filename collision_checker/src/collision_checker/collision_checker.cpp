@@ -5,7 +5,7 @@ namespace planning {
 using namespace vehicle_state;
 using namespace common;
 CollisionChecker::CollisionChecker(const std::unordered_map<int, std::shared_ptr<Obstacle>> &obstacles,
-                                   std::shared_ptr<ReferenceLine> ptr_ref_line,
+                                   const ReferenceLine &ref_line,
                                    std::shared_ptr<STGraph> ptr_st_graph,
                                    double ego_vehicle_s,
                                    double ego_vehicle_d,
@@ -15,7 +15,7 @@ CollisionChecker::CollisionChecker(const std::unordered_map<int, std::shared_ptr
                                    double delta_t,
                                    const VehicleParams& vehicle_params,
                                    ThreadPool *thread_pool)
-    : ptr_ref_line_(std::move(ptr_ref_line)),
+    : ref_line_(ref_line),
       ptr_st_graph_(std::move(ptr_st_graph)),
       thread_pool_(thread_pool),
       lon_buffer_(lon_buffer),
@@ -23,7 +23,7 @@ CollisionChecker::CollisionChecker(const std::unordered_map<int, std::shared_ptr
       lookahead_time_(lookahead_time),
       delta_t_(delta_t){
   predicted_obstacle_box_.clear();
-  this->Init(obstacles, ego_vehicle_s, ego_vehicle_d, ptr_ref_line_);
+  this->Init(obstacles, ego_vehicle_s, ego_vehicle_d, ref_line_);
 }
 
 bool CollisionChecker::IsCollision(const planning_msgs::Trajectory &trajectory) const {
@@ -76,7 +76,7 @@ bool CollisionChecker::IsCollision(const planning_msgs::Trajectory &trajectory) 
 void CollisionChecker::Init(const std::unordered_map<int, std::shared_ptr<Obstacle>> &obstacles,
                             double ego_vehicle_s,
                             double ego_vehicle_d,
-                            const std::shared_ptr<ReferenceLine> &reference_line) {
+                            const ReferenceLine &reference_line) {
 
   bool ego_vehicle_in_lane = IsEgoVehicleInLane(ego_vehicle_s, ego_vehicle_d);
   std::vector<std::shared_ptr<Obstacle>> obstacle_considered;
@@ -107,19 +107,19 @@ void CollisionChecker::Init(const std::unordered_map<int, std::shared_ptr<Obstac
 bool CollisionChecker::IsEgoVehicleInLane(double ego_vehicle_s, double ego_vehicle_d) const {
   double left_width = 0.0;
   double right_width = 0.0;
-  ptr_ref_line_->GetLaneWidth(ego_vehicle_s, &left_width, &right_width);
+  ref_line_.GetLaneWidth(ego_vehicle_s, &left_width, &right_width);
   return ego_vehicle_d < left_width && ego_vehicle_d > -right_width;
 }
 
 bool CollisionChecker::IsObstacleBehindEgoVehicle(const std::shared_ptr<Obstacle> &obstacle,
                                                   double ego_s,
-                                                  const std::shared_ptr<ReferenceLine> &ref_line) const {
-  double default_lane_width = 3.0;
+                                                  const ReferenceLine &ref_line) const {
+  double default_lane_width = 3.5;
   planning_msgs::TrajectoryPoint point = obstacle->GetPointAtTime(0.0);
   ReferencePoint matched_ref_point;
   double matched_s;
   SLPoint sl_point;
-  ptr_ref_line_->XYToSL(point.path_point.x, point.path_point.y, &sl_point);
+  ref_line.XYToSL(point.path_point.x, point.path_point.y, &sl_point);
   if (ego_s > sl_point.s && std::fabs(sl_point.l) < default_lane_width / 2.0) {
     return true;
   }

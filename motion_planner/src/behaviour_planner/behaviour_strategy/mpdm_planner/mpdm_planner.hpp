@@ -1,9 +1,10 @@
 #ifndef CATKIN_WS_SRC_MOTION_PLANNING_WITH_CARLA_BEHAVIOUR_PLANNING_INCLUDE_MPDM_BEHAVIOUR_PLANNER_HPP_
 #define CATKIN_WS_SRC_MOTION_PLANNING_WITH_CARLA_BEHAVIOUR_PLANNING_INCLUDE_MPDM_BEHAVIOUR_PLANNER_HPP_
 #include <thread_pool/thread_pool.hpp>
-#include "behaviour_strategy/behaviour_strategy.hpp"
-#include "agent/behaviour.hpp"
-#include "agent/agent.hpp"
+#include <planning_config.hpp>
+#include "behaviour_planner/behaviour_strategy/behaviour_strategy.hpp"
+#include "behaviour_planner/agent/behaviour.hpp"
+#include "behaviour_planner/agent/agent.hpp"
 #include "policy_decider.hpp"
 
 namespace planning {
@@ -22,7 +23,7 @@ class MPDMPlanner : public BehaviourStrategy {
    * @param[in] reference_lines: reference lines.
    * @return: true if this procedure is successful, false otherwise
    */
-  bool Execute(Behaviour &behaviour, const std::vector<ReferenceLine> &reference_lines) override;
+  bool Execute(const std::vector<ReferenceLine> &reference_lines, Behaviour &behaviour) override;
 
   /**
    * @brief: set simulate agent set including ego agent.
@@ -39,6 +40,7 @@ class MPDMPlanner : public BehaviourStrategy {
    * @return: true if this procedure is successful, false otherwise
    */
   bool UpdateAvailableBehaviourRefLanePairs(const std::vector<ReferenceLine> &reference_lines);
+
 
  private:
   bool update_agent_ = false;

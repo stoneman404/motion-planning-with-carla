@@ -1,8 +1,8 @@
 #ifndef CATKIN_WS_SRC_MOTION_PLANNING_WITH_CARLA_PLANNING_SRC_BEHAVIOUR_PLANNER_MPDM_PLANNER_POLICY_DECIDER_HPP_
 #define CATKIN_WS_SRC_MOTION_PLANNING_WITH_CARLA_PLANNING_SRC_BEHAVIOUR_PLANNER_MPDM_PLANNER_POLICY_DECIDER_HPP_
-#include "agent/agent.hpp"
-#include "agent/behaviour.hpp"
-#include "forward_simulator/on_lane_forward_simulator.hpp"
+#include "behaviour_planner/agent/agent.hpp"
+#include "behaviour_planner/agent/behaviour.hpp"
+#include "behaviour_planner/forward_simulator/on_lane_forward_simulator.hpp"
 #include <planning_msgs/Trajectory.h>
 
 namespace planning {
@@ -35,7 +35,7 @@ class PolicyDecider {
   explicit PolicyDecider(const PolicySimulateConfig &config);
   bool PolicyDecision(const Agent &ego_agent,
                       const std::unordered_map<int, Agent> &agents_set,
-                      const Policies &possible_policies,
+                      const PolicyDecider::Policies &possible_policies,
                       Policy &best_policy,
                       Policies &forward_policies,
                       std::vector<SurroundingTrajectories> &forward_surrounding_trajectories,

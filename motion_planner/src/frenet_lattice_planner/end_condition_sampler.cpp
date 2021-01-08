@@ -11,14 +11,14 @@ using State = std::array<double, 3>;
 using EndCondition = std::pair<std::array<double, 3>, double>;
 EndConditionSampler::EndConditionSampler(const std::array<double, 3> &init_s,
                                          const std::array<double, 3> &init_d,
-                                         std::shared_ptr<ReferenceLine> ptr_ref_line,
-                                         const std::vector<std::shared_ptr<Obstacle>> &obstacles,
+                                         const ReferenceLine &ref_line,
+                                         const std::vector<std::shared_ptr<Obstacle>> &ptr_obstacles,
                                          std::shared_ptr<STGraph> ptr_st_graph)
     : init_s_(init_s),
       init_d_(init_d),
-      ptr_ref_line_(std::move(ptr_ref_line)),
+      ref_line_(ref_line),
       ptr_st_graph_(std::move(ptr_st_graph)) {
-  for (const auto &obstacle : obstacles) {
+  for (const auto &obstacle : ptr_obstacles) {
     obstacles_.emplace(obstacle->Id(), obstacle);
   }
 }
@@ -154,7 +154,7 @@ std::vector<std::pair<STPoint, double>> EndConditionSampler::OvertakeSamplePoint
   std::vector<STPoint> overtake_st_points = ptr_st_graph_->GetObstacleSurroundingPoints(
       obstacle_id, 1e-3, PlanningConfig::Instance().delta_t());
   for (const auto &st_point : overtake_st_points) {
-    double v = GetObstacleSpeedAlongReferenceLine(obstacle_id, st_point.s(), st_point.t(), ptr_ref_line_);
+    double v = GetObstacleSpeedAlongReferenceLine(obstacle_id, st_point.s(), st_point.t(), ref_line_);
     std::pair<STPoint, double> sample_point;
     sample_point.first = st_point;
     sample_point.first.set_s(st_point.s() + PlanningConfig::Instance().lon_safety_buffer());
@@ -170,7 +170,7 @@ std::vector<std::pair<STPoint, double>> EndConditionSampler::FollowingSamplePoin
   std::vector<STPoint> follow_st_points = ptr_st_graph_->GetObstacleSurroundingPoints(
       obstacle_id, -1e-3, PlanningConfig::Instance().delta_t());
   for (const auto &st_point : follow_st_points) {
-    double v = GetObstacleSpeedAlongReferenceLine(obstacle_id, st_point.s(), st_point.t(), ptr_ref_line_);
+    double v = GetObstacleSpeedAlongReferenceLine(obstacle_id, st_point.s(), st_point.t(), ref_line_);
     double s_upper = st_point.s() - PlanningConfig::Instance().vehicle_params().half_length;
     double s_lower = s_upper - PlanningConfig::Instance().lon_safety_buffer();
     double s_gap =
@@ -188,7 +188,7 @@ std::vector<std::pair<STPoint, double>> EndConditionSampler::FollowingSamplePoin
 }
 
 double EndConditionSampler::GetObstacleSpeedAlongReferenceLine(int obstacle_id, double s, double t,
-                                                               const std::shared_ptr<ReferenceLine> &ptr_ref_line) const {
+                                                               const ReferenceLine &ref_line) const {
 
   if (obstacles_.empty()) {
     return 0.0;
@@ -215,7 +215,7 @@ double EndConditionSampler::GetObstacleSpeedAlongReferenceLine(int obstacle_id, 
   double theta = matched_iter->path_point.theta;
   double v_x = v * std::cos(theta);
   double v_y = v * std::sin(theta);
-  ReferencePoint matched_ref_point = ptr_ref_line->GetReferencePoint(s);
+  ReferencePoint matched_ref_point = ref_line.GetReferencePoint(s);
   double ref_theta = matched_ref_point.theta();
   return std::cos(ref_theta) * v_x + std::sin(ref_theta) * v_y;
 }

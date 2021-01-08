@@ -1,6 +1,6 @@
 #include <tf/transform_datatypes.h>
-#include <agent/behaviour.hpp>
-#include <agent/agent.hpp>
+#include <behaviour_planner/agent/behaviour.hpp>
+#include <behaviour_planner/agent/agent.hpp>
 #include "mpdm_planner.hpp"
 #include "name/string_name.hpp"
 
@@ -12,10 +12,11 @@ MPDMPlanner::MPDMPlanner(const PolicySimulateConfig &config,
   behavior_.lateral_behaviour = LateralBehaviour::LANE_KEEPING;
   behavior_.forward_behaviours = decltype(behavior_.forward_behaviours)();
   behavior_.forward_trajs = decltype(behavior_.forward_trajs)();
+  behavior_.ref_lane = ReferenceLine();
   policy_decider_ = std::make_unique<PolicyDecider>(config);
 }
 
-bool MPDMPlanner::Execute(Behaviour &behaviour, const std::vector<ReferenceLine> &reference_lines) {
+bool MPDMPlanner::Execute(const std::vector<ReferenceLine> &reference_lines, Behaviour &behaviour) {
 
   if (!update_agent_) {
     return false;
@@ -31,14 +32,23 @@ bool MPDMPlanner::Execute(Behaviour &behaviour, const std::vector<ReferenceLine>
   for (const auto &policy : available_policies_with_ref_lanes_) {
     possible_policies.emplace_back(policy);
   }
-  if (!policy_decider_->PolicyDecision(ego_agent_, behaviour_agent_set_, possible_policies, best_policy,
-                                       forward_policies, surround_trajs, forward_trajectories)) {
+
+  if (!policy_decider_->PolicyDecision(ego_agent_,
+                                       behaviour_agent_set_,
+                                       possible_policies,
+                                       best_policy,
+                                       forward_policies,
+                                       surround_trajs,
+                                       forward_trajectories)) {
     return false;
   }
+
   behaviour.lateral_behaviour = best_policy.first;
+  behaviour.ref_lane = best_policy.second;
   behaviour.forward_behaviours = forward_policies;
   behaviour.forward_trajs = forward_trajectories;
   behaviour.surrounding_trajs = surround_trajs;
+  behavior_ = behaviour;
   return true;
 }
 
@@ -84,5 +94,7 @@ bool MPDMPlanner::UpdateAvailableBehaviourRefLanePairs(const std::vector<Referen
   }
   return true;
 }
+
+
 
 }

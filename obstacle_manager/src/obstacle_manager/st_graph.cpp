@@ -4,7 +4,7 @@
 namespace planning {
 using namespace common;
 STGraph::STGraph(const std::vector<std::shared_ptr<Obstacle>> &obstacles,
-                 std::shared_ptr<ReferenceLine> reference_line,
+                 const ReferenceLine &reference_line,
                  double s_start,
                  double s_end,
                  double t_start,
@@ -17,12 +17,12 @@ STGraph::STGraph(const std::vector<std::shared_ptr<Obstacle>> &obstacles,
   s_range_.second = s_end;
   time_range_.first = t_start;
   time_range_.second = t_end;
-  reference_line_ = std::move(reference_line);
+  reference_line_ = reference_line;
   init_d_ = init_d;
   SetUp(obstacles, reference_line_);
 }
 void STGraph::SetUp(const std::vector<std::shared_ptr<Obstacle>> &obstacles,
-                    std::shared_ptr<ReferenceLine> ref_line) {
+                    ReferenceLine &ref_line) {
   for (const auto &obstacle : obstacles) {
     if (!obstacle->IsStatic()) {
       SetUpStaticObstacle(obstacle, ref_line);
@@ -44,17 +44,17 @@ void STGraph::SetUp(const std::vector<std::shared_ptr<Obstacle>> &obstacles,
 }
 
 void STGraph::SetUpStaticObstacle(const std::shared_ptr<Obstacle> &obstacle,
-                                  const std::shared_ptr<ReferenceLine> &ref_line) {
+                                  const ReferenceLine &ref_line) {
   auto box = obstacle->BoundingBox();
   SLBoundary sl_boundary;
-  if (!ref_line->GetSLBoundary(box, &sl_boundary)) {
+  if (!ref_line.GetSLBoundary(box, &sl_boundary)) {
     ROS_DEBUG("[STGraph::SetUpStaticObstacle] Failed to GetSLBoundary.");
     return;
   }
   double left_width;
   double right_width;
   int obstacle_id = obstacle->Id();
-  ref_line->GetLaneWidth(sl_boundary.start_s, &left_width, &right_width);
+  ref_line.GetLaneWidth(sl_boundary.start_s, &left_width, &right_width);
   if (sl_boundary.start_s > s_range_.second ||
       sl_boundary.end_s < s_range_.first ||
       sl_boundary.start_l > left_width ||
@@ -72,20 +72,20 @@ void STGraph::SetUpStaticObstacle(const std::shared_ptr<Obstacle> &obstacle,
 }
 
 void STGraph::SetUpDynamicObstacle(const std::shared_ptr<Obstacle> &obstacle,
-                                   const std::shared_ptr<ReferenceLine> &ref_line) {
+                                   const ReferenceLine &ref_line) {
 
   double relative_time = time_range_.first;
   while (relative_time < time_range_.second) {
     planning_msgs::TrajectoryPoint point = obstacle->GetPointAtTime(relative_time);
     Box2d box = obstacle->GetBoundingBoxAtPoint(point);
     SLBoundary sl_boundary;
-    if (!ref_line->GetSLBoundary(box, &sl_boundary)) {
+    if (!ref_line.GetSLBoundary(box, &sl_boundary)) {
       ROS_FATAL("[STGraph::SetUpDynamicObstacle]: failed to get sl_boundary");
       return;
     }
     double left_width;
     double right_width;
-    ref_line->GetLaneWidth(sl_boundary.start_s, &left_width, &right_width);
+    ref_line.GetLaneWidth(sl_boundary.start_s, &left_width, &right_width);
 
     // The obstacle is not shown on the region to be considered.
     if (sl_boundary.start_s > s_range_.second || sl_boundary.end_s < s_range_.first ||

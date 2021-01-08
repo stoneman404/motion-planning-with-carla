@@ -24,14 +24,14 @@ class PolynomialTrajectoryEvaluator {
    * @param init_s
    * @param lon_trajectory_vec
    * @param lat_trajectory_vec
-   * @param ptr_ref_line
+   * @param ref_line
    * @param ptr_st_graph
    */
   PolynomialTrajectoryEvaluator(const std::array<double, 3> &init_s,
                                 const PlanningTarget &planning_target,
                                 const std::vector<std::shared_ptr<common::Polynomial>> &lon_trajectory_vec,
                                 const std::vector<std::shared_ptr<common::Polynomial>> &lat_trajectory_vec,
-                                std::shared_ptr<ReferenceLine> ptr_ref_line,
+                                const ReferenceLine &ref_line,
                                 std::shared_ptr<STGraph> ptr_st_graph,
                                 common::ThreadPool *thread_pool);
   bool has_more_trajectory_pairs() const;
@@ -73,7 +73,7 @@ class PolynomialTrajectoryEvaluator {
   std::priority_queue<TrajectoryCostPair, std::vector<TrajectoryCostPair>, Comparator> cost_queue_;
   std::array<double, 3> init_s_{0.0, 0.0, 0.0};
   std::shared_ptr<STGraph> ptr_st_graph_;
-  std::shared_ptr<ReferenceLine> ptr_ref_line_;
+  ReferenceLine ref_line_;
 
   std::vector<std::vector<std::pair<double, double>>> intervals_;
 

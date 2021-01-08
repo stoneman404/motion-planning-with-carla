@@ -10,7 +10,7 @@ PlanningConfig &PlanningConfig::Instance() {
 
 void PlanningConfig::UpdateParams(const ros::NodeHandle &nh) {
   nh.param<std::string>("/motion_planner/planner_type", planner_type_, "frenet_lattice");
-  nh.param<double>("/motion_planner/loop_rate", planning_loop_rate_, 10.0);
+  nh.param<double>("/motion_planner/loop_rate", planning_loop_rate_, 8.0);
   nh.param<double>("/motion_planner/delta_t", delta_t_, 0.1);
   nh.param<double>("/motion_planner/reference_smoother_deviation_weight", reference_smoother_deviation_weight_, 5.5);
   nh.param<double>("/motion_planner/reference_smoother_curvature_weight", reference_smoother_curvature_weight_, 4.0);
@@ -34,16 +34,13 @@ void PlanningConfig::UpdateParams(const ros::NodeHandle &nh) {
   nh.param<double>("/motion_planner/max_kappa", max_kappa_, 2.0);
   nh.param<double>("/motion_planner/min_lat_acc", min_lat_acc_, -4.0);
   nh.param<double>("/motion_planner/max_lat_acc", max_lat_acc_, 4.0);
-  nh.param<double>("/motion_planner/target_speed", target_speed_, 8.333);
+  nh.param<double>("/motion_planner/target_speed", desired_velocity_, 8.333);
   nh.param<double>("/motion_planner/lattice_weight_opposite_side_offset",
-                   lattice_weight_opposite_side_offset_,
-                   10.0);
+                   lattice_weight_opposite_side_offset_,10.0);
   nh.param<double>("/motion_planner/lattice_weight_same_side_offset",
-                   lattice_weight_same_side_offset_,
-                   1.0);
+                   lattice_weight_same_side_offset_,1.0);
   nh.param<double>("/motion_planner/lattice_weight_dist_travelled",
-                   lattice_weight_dist_travelled_,
-                   10.0);
+                   lattice_weight_dist_travelled_,10.0);
   nh.param<double>("/motion_planner/lattice_weight_target_speed", lattice_weight_target_speed_, 2.0);
   nh.param<double>("/motion_planner/lattice_weight_collision", lattice_weight_collision_, 5);
   nh.param<double>("/motion_planner/lattice_weight_lon_jerk", lattice_weight_lon_jerk_, 10.0);
@@ -54,7 +51,17 @@ void PlanningConfig::UpdateParams(const ros::NodeHandle &nh) {
   nh.param<double>("/motion_planner/max_replan_lat_distance_threshold", max_replan_lat_distance_threshold_, 0.5);
   nh.param<double>("/motion_planner/max_replan_lon_distance_threshold", max_replan_lon_distance_threshold_, 2.5);
   nh.param<int>("/motion_planner/preserve_history_trajectory_point_num", preserve_history_trajectory_point_num_, 15);
-
+  nh.param<std::string> ("/motion_planner/behaviour_planner_type", behaviour_planner_type_, "mpdm");
+  nh.param<double>("/motion_planner/sim_horizon", sim_horizon_, 10.0);
+  nh.param<double>("/motion_planner/sim_step", sim_step_, 0.25);
+  nh.param<double>("/motion_planner/safe_time_headway", safe_time_headway_, 0.5);
+  nh.param<double>("/motion_planner/acc_exponet", acc_exponet_, 4.0);
+  nh.param<double>("/motion_planner/s0", s0_, 2.0);
+  nh.param<double>("/motion_planner/s1", s1_, 0.0);
+  nh.param<double>("/motion_planner/default_lateral_approach_ratio", default_lateral_approach_ratio_, 0.995);
+  nh.param<double>("/motion_planner/cutting_in_lateral_approach_ratio", cutting_in_lateral_approach_ratio_, 0.95);
+  nh.param<double>("/motion_planner/sample_lat_threshold", sample_lat_threshold_, 6.0);
+  nh.param<double>("/motion_planner/sample_min_lon_threshold", sample_min_lon_threshold_, 20.0);
 }
 const std::string &PlanningConfig::planner_type() const { return planner_type_; }
 double PlanningConfig::max_lookahead_distance() const { return max_lookahead_distance_; }
@@ -119,9 +126,11 @@ double PlanningConfig::max_lon_jerk() const { return max_lon_jerk_; }
 const vehicle_state::VehicleParams &PlanningConfig::vehicle_params() const {
   return vehicle_params_;
 }
+
 void PlanningConfig::set_vehicle_params(const vehicle_state::VehicleParams &vehicle_params) {
   this->vehicle_params_ = vehicle_params;
 }
+
 double PlanningConfig::max_replan_lat_distance_threshold() const {
   return max_replan_lat_distance_threshold_;
 }

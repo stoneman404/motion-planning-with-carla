@@ -9,11 +9,11 @@ PolynomialTrajectoryEvaluator::PolynomialTrajectoryEvaluator(const std::array<do
                                                              const PlanningTarget &planning_target,
                                                              const std::vector<std::shared_ptr<common::Polynomial>> &lon_trajectory_vec,
                                                              const std::vector<std::shared_ptr<common::Polynomial>> &lat_trajectory_vec,
-                                                             std::shared_ptr<ReferenceLine> ptr_ref_line,
+                                                             const ReferenceLine &ref_line,
                                                              std::shared_ptr<STGraph> ptr_st_graph,
                                                              common::ThreadPool *thread_pool)
     : init_s_(init_s), ptr_st_graph_(std::move(ptr_st_graph)),
-      ptr_ref_line_(std::move(ptr_ref_line)) {
+      ref_line_(ref_line) {
   double start_time = 0.0;
   double end_time = PlanningConfig::Instance().max_lookahead_time();
   intervals_ = ptr_st_graph_->GetPathBlockingIntervals(start_time, end_time, PlanningConfig::Instance().delta_t());
@@ -251,7 +251,7 @@ double PolynomialTrajectoryEvaluator::CentripetalAccelerationCost(const std::sha
        t += PlanningConfig::Instance().delta_t()) {
     double s = lon_trajectory->Evaluate(0, t);
     double v = lon_trajectory->Evaluate(1, t);
-    auto ref_point = ptr_ref_line_->GetReferencePoint(s);
+    auto ref_point = ref_line_.GetReferencePoint(s);
     double centripetal_acc = v * v * ref_point.kappa();
     centripetal_acc_sum += std::fabs(centripetal_acc);
     centripetal_acc_sqr_sum += centripetal_acc * centripetal_acc;

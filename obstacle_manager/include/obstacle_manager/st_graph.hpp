@@ -15,7 +15,7 @@ class STGraph {
   ~STGraph() = default;
 
   STGraph(const std::vector<std::shared_ptr<Obstacle>> &obstacles,
-          std::shared_ptr<ReferenceLine> reference_line,
+          const ReferenceLine &reference_line,
           double s_start, double s_end, double t_start, double t_end,
           const std::array<double, 3> &init_d,
           double max_lookahead_time, double delta_t);
@@ -72,13 +72,13 @@ class STGraph {
 
  private:
   void SetUp(const std::vector<std::shared_ptr<Obstacle>> &obstacles,
-             std::shared_ptr<ReferenceLine> ref_line);
+             ReferenceLine &ref_line);
 
   void SetUpStaticObstacle(const std::shared_ptr<Obstacle> &obstacle,
-                           const std::shared_ptr<ReferenceLine> &ref_line);
+                           const ReferenceLine &ref_line);
 
   void SetUpDynamicObstacle(const std::shared_ptr<Obstacle> &obstacle,
-                            const std::shared_ptr<ReferenceLine> &ref_line);
+                            const ReferenceLine &ref_line);
   static common::STPoint SetSTPoint(double s, double t);
 
  private:
@@ -86,7 +86,7 @@ class STGraph {
   double delta_t_{};
   std::pair<double, double> time_range_;
   std::pair<double, double> s_range_;
-  std::shared_ptr<ReferenceLine> reference_line_;
+  ReferenceLine reference_line_;
   std::array<double, 3> init_d_{};
   std::unordered_map<int, common::STBoundary> st_map_;
   std::vector<common::STBoundary> obstacles_st_boundary_;

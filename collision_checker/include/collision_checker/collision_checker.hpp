@@ -17,7 +17,7 @@ class CollisionChecker {
 
   /**
    * @param obstacles: the nearby obstacles, which refers to vehicles, walkers and etc.
-   * @param ptr_ref_line: the reference line
+   * @param ref_line: the reference line
    * @param ptr_st_graph: the st graph to check
    * @param ego_vehicle_s: ego vehicle stational state
    * @param ego_vehicle_d: ego vehicle lateral state
@@ -29,7 +29,7 @@ class CollisionChecker {
    * @param thread_pool: the thread pool, to accelerate the calculation
    */
   CollisionChecker(const std::unordered_map<int, std::shared_ptr<Obstacle>> &obstacles,
-                   std::shared_ptr<ReferenceLine> ptr_ref_line,
+                   const ReferenceLine &ref_line,
                    std::shared_ptr<STGraph> ptr_st_graph,
                    double ego_vehicle_s,
                    double ego_vehicle_d,
@@ -55,7 +55,7 @@ class CollisionChecker {
    * @param reference_line
    */
   void Init(const std::unordered_map<int, std::shared_ptr<planning::Obstacle>> &obstacles, double ego_vehicle_s,
-            double ego_vehicle_d, const std::shared_ptr<ReferenceLine> &reference_line);
+            double ego_vehicle_d, const ReferenceLine &reference_line);
 
   /**
    *
@@ -72,10 +72,10 @@ class CollisionChecker {
    * @return
    */
   bool IsObstacleBehindEgoVehicle(const std::shared_ptr<planning::Obstacle> &obstacle, double ego_s,
-                                  const std::shared_ptr<ReferenceLine> &ref_line) const;
+                                  const ReferenceLine &ref_line) const;
 
  private:
-  std::shared_ptr<ReferenceLine> ptr_ref_line_;
+  ReferenceLine ref_line_;
   std::shared_ptr<STGraph> ptr_st_graph_;
   std::vector<std::vector<common::Box2d>> predicted_obstacle_box_;
   common::ThreadPool *thread_pool_ = nullptr;

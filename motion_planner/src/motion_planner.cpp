@@ -2,6 +2,7 @@
 #include <tf/transform_datatypes.h>
 #include <visualization_msgs/MarkerArray.h>
 #include <planning_msgs/Behaviour.h>
+#include <planning_srvs/AgentRouteService.h>
 #include "motion_planner.hpp"
 #include "name/string_name.hpp"
 #include "planning_config.hpp"
@@ -11,7 +12,26 @@ MotionPlanner::MotionPlanner(const ros::NodeHandle &nh) : nh_(nh), thread_pool_s
   PlanningConfig::Instance().UpdateParams(nh_);
   this->thread_pool_ = std::make_unique<common::ThreadPool>(thread_pool_size_);
   this->vehicle_state_ = std::make_unique<vehicle_state::VehicleState>();
-
+  if (PlanningConfig::Instance().behaviour_planner_type() == "mpdm") {
+    PolicySimulateConfig config;
+    config.sim_step_ = PlanningConfig::Instance().sim_step();
+    config.sim_horizon_ = PlanningConfig::Instance().sim_horizon();
+    config.acc_exponet = PlanningConfig::Instance().acc_exponet();
+    config.cutting_in_lateral_approach_ratio = PlanningConfig::Instance().cutting_in_lateral_approach_ratio();
+    config.default_lat_approach_ratio = PlanningConfig::Instance().default_lateral_approach_ratio();
+    config.desired_vel = PlanningConfig::Instance().desired_velocity();
+    config.max_acc = PlanningConfig::Instance().max_lon_acc();
+    config.max_decel = -1.0 * PlanningConfig::Instance().min_lon_acc();
+    config.max_lat_acc = PlanningConfig::Instance().max_lat_acc();
+    config.s0 = PlanningConfig::Instance().s0();
+    config.s1 = PlanningConfig::Instance().s1();
+    config.safe_time_headway = PlanningConfig::Instance().safe_time_headway();
+    behaviour_planner_ = std::make_unique<MPDMPlanner>(config, nullptr);
+  } else {
+    ROS_FATAL("MotionPlanner, no such [%s] trajectory planner at now",
+              PlanningConfig::Instance().behaviour_planner_type().c_str());
+    ROS_ASSERT(false);
+  }
   if (PlanningConfig::Instance().planner_type() == "frenet_lattice") {
     trajectory_planner_ = std::make_unique<FrenetLatticePlanner>(thread_pool_.get());
   } else {
@@ -23,6 +43,18 @@ MotionPlanner::MotionPlanner(const ros::NodeHandle &nh) : nh_(nh), thread_pool_s
   this->InitPublisher();
   this->InitSubscriber();
   this->InitServiceClient();
+  ReferenceLineConfig reference_line_config;
+  reference_line_config.reference_smooth_deviation_weight_ =
+      PlanningConfig::Instance().reference_smoother_deviation_weight();
+  reference_line_config.reference_smooth_heading_weight_ =
+      PlanningConfig::Instance().reference_smoother_heading_weight();
+  reference_line_config.reference_smooth_length_weight_ =
+      PlanningConfig::Instance().reference_smoother_distance_weight();
+  reference_line_config.reference_smooth_max_curvature_ = PlanningConfig::Instance().reference_smoother_max_curvature();
+  double lookahead_length = 100.0;
+  double lookback_length = 30.0;
+  reference_info_ = std::make_unique<ReferenceInfo>(reference_line_config, lookahead_length, lookback_length);
+  reference_info_->Start();
 }
 
 void MotionPlanner::Launch() {
@@ -44,10 +76,12 @@ void MotionPlanner::RunOnce() {
   if (ego_vehicle_id_ == -1) {
     return;
   }
+
   if (objects_map_.find(ego_vehicle_id_) == objects_map_.end()) {
-    ROS_FATAL("[MotionPlanner::RunOnce], no ego vehicle founded");
+    ROS_FATAL("[MotionPlanner::RunOnce], no ego vehicle");
     return;
   }
+
   ego_object_ = objects_map_[ego_vehicle_id_];
   vehicle_state_->Update(ego_vehicle_status_, ego_vehicle_info_, ego_object_);
   auto stitching_trajectory =
@@ -55,18 +89,57 @@ void MotionPlanner::RunOnce() {
                                    1.0 / static_cast<double>(PlanningConfig::Instance().loop_rate()),
                                    PlanningConfig::Instance().preserve_history_trajectory_point_num());
   auto init_trajectory_point = stitching_trajectory.back();
-  PlanningConfig::Instance().set_vehicle_params(vehicle_state_->vehicle_params());
-  std::vector<PlanningTarget> planning_targets;
-  planning_msgs::Trajectory optimal_trajectory;
 
-  if (!this->GetPlanningTargetFromBehaviour(behaviour_, planning_targets)) {
-    ROS_FATAL("[MotionPlanner::RunOnce], Failed to Get the PlanningTargetFromBehaviours");
+  auto agent_set = this->MakeBehaviourAgentSet();
+  agent_set[ego_vehicle_id_].MoveAgentToPoint(init_trajectory_point);
+
+  reference_info_->UpdateVehicleState(agent_set[ego_vehicle_id_].state());
+  planning_msgs::Trajectory optimal_trajectory;
+  std::vector<ReferenceLine> ref_lines;
+  if (!reference_info_->GetReferenceLines(&ref_lines)) {
     GenerateEmergencyStopTrajectory(init_trajectory_point, optimal_trajectory);
     has_history_trajectory_ = false;
     optimal_trajectory.header.stamp = current_time_stamp;
     optimal_trajectory.status = planning_msgs::Trajectory::EMERGENCYSTOP;
     trajectory_publisher_.publish(optimal_trajectory);
     return;
+  }
+
+  std::cout << "-----------reference line size: " << ref_lines.size() << std::endl;
+  VisualizeReferenceLine(ref_lines);
+  VisualizeTrafficLightBox();
+
+  auto key_agent_set = this->GetKeyAgents(agent_set, ego_vehicle_id_);
+  PlanningConfig::Instance().set_vehicle_params(vehicle_state_->vehicle_params());
+
+  if (!this->PredictAgentsBehaviours(key_agent_set, ego_vehicle_id_)) {
+    GenerateEmergencyStopTrajectory(init_trajectory_point, optimal_trajectory);
+    has_history_trajectory_ = false;
+    optimal_trajectory.header.stamp = current_time_stamp;
+    optimal_trajectory.status = planning_msgs::Trajectory::EMERGENCYSTOP;
+    trajectory_publisher_.publish(optimal_trajectory);
+    return;
+  }
+
+  behaviour_planner_->SetAgentSet(ego_vehicle_id_, key_agent_set);
+  Behaviour behaviour;
+  if (!behaviour_planner_->Execute(ref_lines, behaviour)) {
+    ROS_FATAL("[BehaviourPlanner::RunOnce], failed tor execute.");
+    GenerateEmergencyStopTrajectory(init_trajectory_point, optimal_trajectory);
+    has_history_trajectory_ = false;
+    optimal_trajectory.header.stamp = current_time_stamp;
+    optimal_trajectory.status = planning_msgs::Trajectory::EMERGENCYSTOP;
+    trajectory_publisher_.publish(optimal_trajectory);
+    return;
+  }
+
+  std::vector<PlanningTarget> planning_targets;
+  if (!GetPlanningTargetFromBehaviour(behaviour, planning_targets)) {
+    GenerateEmergencyStopTrajectory(init_trajectory_point, optimal_trajectory);
+    has_history_trajectory_ = false;
+    optimal_trajectory.header.stamp = current_time_stamp;
+    optimal_trajectory.status = planning_msgs::Trajectory::EMERGENCYSTOP;
+    trajectory_publisher_.publish(optimal_trajectory);
   }
 
   if (!trajectory_planner_->Process(init_trajectory_point, planning_targets, optimal_trajectory, nullptr)) {
@@ -84,7 +157,7 @@ void MotionPlanner::RunOnce() {
                                               stitching_trajectory.end() - 1);
   if (optimal_trajectory.trajectory_points.empty()) {
     optimal_trajectory.status = planning_msgs::Trajectory::EMPTY;
-  }else{
+  } else {
     optimal_trajectory.status = planning_msgs::Trajectory::NORMAL;
   }
   optimal_trajectory.header.stamp = current_time_stamp;
@@ -93,12 +166,6 @@ void MotionPlanner::RunOnce() {
   trajectory_publisher_.publish(optimal_trajectory);
   // for visualization
   VisualizeOptimalTrajectory(optimal_trajectory);
-  std::vector<std::shared_ptr<ReferenceLine>> ref_lines;
-  for (const auto &target : planning_targets) {
-    ref_lines.emplace_back(target.ref_lane);
-  }
-  VisualizeTrafficLightBox();
-  VisualizeReferenceLine(ref_lines);
 }
 
 void MotionPlanner::InitPublisher() {
@@ -118,11 +185,11 @@ void MotionPlanner::InitPublisher() {
 
 void MotionPlanner::InitSubscriber() {
 
-  this->behaviour_subscriber_ = nh_.subscribe<planning_msgs::Behaviour>(
-      common::topic::kBehaviourName, 5,
-      [this](const planning_msgs::Behaviour::ConstPtr &behaviour) {
-        this->behaviour_ = *behaviour;
-      });
+//  this->behaviour_subscriber_ = nh_.subscribe<planning_msgs::Behaviour>(
+//      common::topic::kBehaviourName, 5,
+//      [this](const planning_msgs::Behaviour::ConstPtr &behaviour) {
+//        this->behaviour_ = *behaviour;
+//      });
   this->ego_vehicle_subscriber_ = nh_.subscribe<carla_msgs::CarlaEgoVehicleStatus>(
       common::topic::kEgoVehicleStatusName, 5,
       [this](const carla_msgs::CarlaEgoVehicleStatus::ConstPtr &ego_vehicle_status) {
@@ -160,6 +227,25 @@ void MotionPlanner::InitSubscriber() {
         }
         ROS_INFO("the objects map_ size is: %lu", objects_map_.size());
       });
+  this->goal_pose_subscriber_ = nh_.subscribe<geometry_msgs::PoseStamped>(
+      common::topic::kGoalPoseName, 1, [this](const geometry_msgs::PoseStamped::ConstPtr &goal_pose) {
+        std::cout << "goal pose subscriber : " << std::endl;
+        if (ego_vehicle_id_ == -1) {
+          return;
+        }
+
+        geometry_msgs::Pose start_pose;
+        auto state = vehicle_state_->GetKinoDynamicVehicleState();
+        start_pose.position.x = state.x;
+        start_pose.position.y = state.y;
+        start_pose.position.z = state.z;
+        start_pose.orientation = tf::createQuaternionMsgFromYaw(state.theta);
+        geometry_msgs::Pose destination;
+        std::cout << "destination is  : " << destination.position.x << ", y: " << destination.position.y << std::endl;
+        if (!GetEgoVehicleRoutes(start_pose, destination)) {
+          return;
+        }
+      });
 }
 
 void MotionPlanner::InitServiceClient() {
@@ -167,6 +253,10 @@ void MotionPlanner::InitServiceClient() {
       common::service::kGetEgoWaypontServiceName);
   this->get_actor_waypoint_client_ = nh_.serviceClient<carla_waypoint_types::GetActorWaypoint>(
       common::service::kGetActorWaypointServiceName);
+  this->get_agent_potential_routes_client_ =
+      nh_.serviceClient<planning_srvs::AgentRouteService>(common::service::kGetAgentPotentialRouteServiceName);
+  this->get_ego_vehicle_route_client_ =
+      nh_.serviceClient<planning_srvs::RoutePlanService>(common::service::kRouteServiceName);
   ROS_DEBUG("MotionPlanner::InitServiceClient finished");
 }
 
@@ -227,10 +317,10 @@ void MotionPlanner::VisualizeTrafficLightBox() {
   visualization_msgs::MarkerArray traffic_light_boxes_markers;
 
   for (const auto &traffic_light : traffic_lights_info_list_) {
-    if (traffic_light_status_list_.find(traffic_light.first) == traffic_light_status_list_.end()){
+    if (traffic_light_status_list_.find(traffic_light.first) == traffic_light_status_list_.end()) {
       continue;
     }
-    if (traffic_light_status_list_[traffic_light.first].state == carla_msgs::CarlaTrafficLightStatus::GREEN){
+    if (traffic_light_status_list_[traffic_light.first].state == carla_msgs::CarlaTrafficLightStatus::GREEN) {
       continue;
     }
     visualization_msgs::Marker traffic_light_marker;
@@ -253,10 +343,10 @@ void MotionPlanner::VisualizeTrafficLightBox() {
   visualized_traffic_light_box_publisher_.publish(traffic_light_boxes_markers);
 }
 
-void MotionPlanner::VisualizeReferenceLine(std::vector<std::shared_ptr<ReferenceLine>> &ref_lines) {
+void MotionPlanner::VisualizeReferenceLine(std::vector<ReferenceLine> &ref_lanes) {
   visualization_msgs::MarkerArray marker_array;
   int i = 0;
-  for (const auto &ref_line : ref_lines) {
+  for (const auto &ref_line : ref_lanes) {
     visualization_msgs::Marker marker;
     marker.type = visualization_msgs::Marker::LINE_STRIP;
     marker.id = i;
@@ -269,8 +359,8 @@ void MotionPlanner::VisualizeReferenceLine(std::vector<std::shared_ptr<Reference
     marker.action = visualization_msgs::Marker::ADD;
     const double ds = 0.5;
     double s = 0.0;
-    while (s <= ref_line->Length()) {
-      auto ref_point = ref_line->GetReferencePoint(s);
+    while (s <= ref_line.Length()) {
+      auto ref_point = ref_line.GetReferencePoint(s);
       geometry_msgs::Point pt;
       pt.x = ref_point.x();
       pt.y = ref_point.y();
@@ -283,74 +373,33 @@ void MotionPlanner::VisualizeReferenceLine(std::vector<std::shared_ptr<Reference
   }
   visualized_reference_lines_publisher_.publish(marker_array);
 }
-bool MotionPlanner::GetPlanningTargetFromBehaviour(const planning_msgs::Behaviour &behaviour,
+
+bool MotionPlanner::GetPlanningTargetFromBehaviour(const Behaviour &behaviour,
                                                    std::vector<PlanningTarget> &planning_targets) {
-  if (behaviour.lat_behaviour.behaviour == planning_msgs::LateralBehaviour::UNDEFINED) {
+  if (behaviour.lateral_behaviour == LateralBehaviour::UNDEFINED) {
     ROS_FATAL("[MotionPlanner::GetPlanningTargetFromBehaviour], the lateral behaviour is UNDEFINED");
     return false;
   }
   planning_targets.clear();
   planning_targets.resize(behaviour.forward_behaviours.size());
-  std::vector<std::future<bool>> futures;
-  const double distance_weight = PlanningConfig::Instance().reference_smoother_distance_weight();
-  const double deviation_weight = PlanningConfig::Instance().reference_smoother_deviation_weight();
-  const double heading_weight = PlanningConfig::Instance().reference_smoother_heading_weight();
-  const double max_curvature = PlanningConfig::Instance().reference_smoother_max_curvature();
-
-//  for (size_t i = 0; i < behaviour.forward_behaviours.size(); ++i) {
-//    const auto lambda =
-//        [&i, &planning_targets, &behaviour, &distance_weight, &deviation_weight, &heading_weight, &max_curvature]() -> bool {
-//          planning_targets[i].ref_lane = std::make_shared<ReferenceLine>(behaviour.reference_lane[i].way_points);
-//          if (!planning_targets[i].ref_lane->Smooth(deviation_weight, heading_weight, distance_weight, max_curvature)) {
-//            ROS_FATAL(
-//                "[MotionPlanner::GetPlanningTargetFromBehaviour], failed to smooth reference line for lateral_behaviour: %u",
-//                behaviour.forward_behaviours[i].behaviour);
-//            return false;
-//          }
-//
-//          if (behaviour.forward_behaviours[i].behaviour == behaviour.lat_behaviour.behaviour) {
-//            planning_targets[i].is_best_behaviour = true;
-//          }
-//          planning_targets[i].lateral_behaviour = behaviour.forward_behaviours[i];
-//          planning_targets[i].behaviour_trajectory = behaviour.forward_trajectories[i];
-//          return true;
-//        };
-//    futures.push_back(thread_pool_->PushTask(lambda));
-//  }
-//
-//  for (auto &task : futures) {
-//    if (!task.get()) {
-//      return false;
-//    }
-//  }
-
   for (size_t i = 0; i < behaviour.forward_behaviours.size(); ++i) {
-    planning_targets[i].ref_lane = std::make_shared<ReferenceLine>(behaviour.reference_lane[i].way_points);
-    auto begin = ros::Time::now();
-    if (!planning_targets[i].ref_lane->Smooth(deviation_weight, heading_weight, distance_weight, max_curvature)) {
-      ROS_FATAL("[MotionPlanner::GetPlanningTargetFromBehaviour], failed to smooth reference line for lateral_behaviour: %u",
-          behaviour.forward_behaviours[i].behaviour);
-      return false;
-    }
-    auto end = ros::Time::now();
-    ROS_WARN("[GetPlanningTargetFromBehaviour], THE SMOOTH REFERENCELINE ESLAPESD TIME IS : %f s", (end - begin).toSec());
-
-    if (behaviour.forward_behaviours[i].behaviour == behaviour.lat_behaviour.behaviour) {
+    planning_targets[i].ref_lane = behaviour.forward_behaviours[i].second;
+    if (behaviour.forward_behaviours[i].first == behaviour.lateral_behaviour) {
       planning_targets[i].is_best_behaviour = true;
     }
-    planning_targets[i].lateral_behaviour = behaviour.forward_behaviours[i];
-    planning_targets[i].behaviour_trajectory = behaviour.forward_trajectories[i];
-
-    MotionPlanner::GetLocalGoal(planning_targets[i]);
-    for (size_t j = 0; j < behaviour.surroud_trajectories[i].trajectories.size(); ++i) {
-      int agent_id = behaviour.surroud_trajectories[i].trajectories[j].id;
+    planning_targets[i].lateral_behaviour = behaviour.forward_behaviours[i].first;
+    planning_targets[i].behaviour_trajectory = behaviour.forward_trajs[i];
+    GetLocalGoal(planning_targets[i]);
+    for (const auto &obstacle_traj : behaviour.surrounding_trajs[i]) {
+      int agent_id = obstacle_traj.first;
       if (objects_map_.find(agent_id) != objects_map_.end()) {
         planning_targets[i].obstacles.emplace_back(std::make_shared<Obstacle>(objects_map_[agent_id]));
-        planning_targets[i].obstacles.back()->SetTrajectory(behaviour.surroud_trajectories[i].trajectories[j].trajectory);
+        planning_targets[i].obstacles.back()->SetTrajectory(obstacle_traj.second);
       } else if (traffic_lights_info_list_.find(agent_id) != traffic_lights_info_list_.end()) {
-        planning_targets[i].obstacles.emplace_back(std::make_shared<Obstacle>(traffic_lights_info_list_[i],
-                                                                              traffic_light_status_list_[i]));
-        planning_targets[i].obstacles.back()->SetTrajectory(behaviour.surroud_trajectories[i].trajectories[j].trajectory);
+        planning_targets[i].obstacles.emplace_back(
+            std::make_shared<Obstacle>(traffic_lights_info_list_[agent_id],
+                                       traffic_light_status_list_[agent_id]));
+        planning_targets[i].obstacles.back()->SetTrajectory(obstacle_traj.second);
       } else {
         continue;
       }
@@ -423,16 +472,16 @@ bool MotionPlanner::GetLocalGoal(PlanningTarget &planning_target) {
   auto ref_lane = planning_target.ref_lane;
   ReferencePoint ref_point;
   double matched_s;
-  if (!ref_lane->GetMatchedPoint(goal_trajectory_point.path_point.x,
-                                 goal_trajectory_point.path_point.y,
-                                 &ref_point,
-                                 &matched_s)) {
+  if (!ref_lane.GetMatchedPoint(goal_trajectory_point.path_point.x,
+                                goal_trajectory_point.path_point.y,
+                                &ref_point,
+                                &matched_s)) {
     ROS_FATAL("[MotionPlanner::GetLocalGoal]: failed to get local goal because get matched point failed");
     return false;
   }
-  if (matched_s > ref_lane->Length() - 2.0) {
+  if (matched_s > ref_lane.Length() - 2.0) {
     planning_target.has_stop_point = true;
-    planning_target.stop_s = ref_lane->Length() - PlanningConfig::Instance().lon_safety_buffer();
+    planning_target.stop_s = ref_lane.Length() - PlanningConfig::Instance().lon_safety_buffer();
   } else {
     planning_target.has_stop_point = false;
     planning_target.stop_s = std::numeric_limits<double>::max();
@@ -443,26 +492,6 @@ bool MotionPlanner::GetLocalGoal(PlanningTarget &planning_target) {
   double ref_v = std::cos(ref_point.theta()) * v_x + std::sin(ref_point.theta()) * v_y;
   double max_ref_v = std::sqrt(PlanningConfig::Instance().max_lat_acc() / (std::fabs(ref_point.kappa()) + 1e-5));
   planning_target.desired_vel = std::min(max_ref_v, ref_v);
-//  auto ref_lane = planning_target.ref_lane;
-//  double cur_x = planning_target.behaviour_trajectory.trajectory_points.front().path_point.x;
-//  double cur_y = planning_target.behaviour_trajectory.trajectory_points.front().path_point.y;
-//  ReferencePoint matched_ref_point;
-//  double matched_s;
-//  if (!ref_lane->GetMatchedPoint(cur_x, cur_y, &matched_ref_point, &matched_s)){
-//    return false;
-//  }
-//  double max_ref_v = std::sqrt(PlanningConfig::Instance().max_lat_acc() / (matched_ref_point.kappa() + 1e-5));
-//  if (matched_s + PlanningConfig::Instance().max_lookahead_distance() < ref_lane->Length()){
-//    planning_target.has_stop_point = true;
-//    planning_target.stop_s = ref_lane->Length();
-//  }else{
-//    planning_target.has_stop_point = false;
-//    planning_target.stop_s = std::numeric_limits<double>::max();
-//  }
-
-//  planning_target.desired_vel = std::min(max_ref_v, 10.333);
-//  ROS_INFO("[PlanningTarget], desired vel is %lf", ref_v);
-//  planning_target.desired_vel = ref_v;
   return true;
 
 }
@@ -586,6 +615,150 @@ std::pair<double, double> MotionPlanner::GetLatAndLonDistFromRefPoint(double x,
   sd.first = v.x() * n.x() + n.y() + v.y() + point.s;
   sd.second = v.x() * n.y() - v.y() * n.x();
   return sd;
+}
+
+MotionPlanner::~MotionPlanner() {
+  if (reference_info_) {
+    reference_info_->Stop();
+  }
+}
+std::unordered_map<int, Agent> MotionPlanner::MakeBehaviourAgentSet() {
+  std::unordered_map<int, Agent> agent_set;
+  for (const auto &object : objects_map_) {
+    agent_set.emplace(object.first, object.second);
+  }
+  for (const auto &traffic_light :  traffic_lights_info_list_) {
+    if (traffic_light_status_list_.find(traffic_light.first) == traffic_light_status_list_.end()) {
+      continue;
+    }
+    auto traffic_status = traffic_light_status_list_[traffic_light.first];
+    if (traffic_status.state == carla_msgs::CarlaTrafficLightStatus::RED) {
+      agent_set.emplace(traffic_light.first, Agent({traffic_status, traffic_light.second}));
+    }
+  }
+  return agent_set;
+}
+std::unordered_map<int, Agent> MotionPlanner::GetKeyAgents(const std::unordered_map<int, Agent> &agent_set,
+                                                           int ego_id) {
+  std::unordered_map<int, Agent> key_agent_set;
+  const double front_distance =
+      std::max(PlanningConfig::Instance().desired_velocity() * PlanningConfig::Instance().sim_horizon(),
+               PlanningConfig::Instance().sample_min_lon_threshold());
+  const double back_distance = front_distance / 2.0;
+  auto ego_agent = agent_set.at(ego_id);
+  Eigen::Vector2d ego_heading{std::cos(ego_agent.state().theta), std::sin(ego_agent.state().theta)};
+  key_agent_set.emplace(ego_agent.id(), ego_agent);
+  key_agent_set[ego_id].set_is_host(true);
+
+  for (const auto &agent : agent_set) {
+    if (agent.first == ego_id) {
+      continue;
+    }
+    Eigen::Vector2d agent_to_ego{agent.second.state().x - ego_agent.state().x,
+                                 agent.second.state().y - ego_agent.state().y};
+
+    const double cross_prod = agent_to_ego.x() * ego_heading.y() - agent_to_ego.y() * ego_heading.x();
+    if (std::fabs(cross_prod) > PlanningConfig::Instance().sample_lat_threshold()) {
+      continue;
+    }
+    const double dot_prod = agent_to_ego.x() * ego_heading.x() + agent_to_ego.y() * ego_heading.y();
+    if (dot_prod < front_distance && dot_prod > -back_distance) {
+      key_agent_set.insert(agent);
+    }
+  }
+  return key_agent_set;
+}
+
+bool MotionPlanner::PredictAgentsBehaviours(std::unordered_map<int, Agent> &key_agent_set, int ego_id) {
+  if (key_agent_set.empty()) {
+    ROS_WARN("The key agent set is empty");
+    return false;
+  }
+  const double kMaxAcc = PlanningConfig::Instance().max_lon_acc();
+  const double kMaxDecel = kMaxAcc;
+  const double kSimStep = PlanningConfig::Instance().sim_step();
+  const double kMaxLatAcc = PlanningConfig::Instance().max_lat_acc();
+  const double kDesiredVel = PlanningConfig::Instance().desired_velocity();
+  for (auto &agent: key_agent_set) {
+    // if the agent is host, we dont assign probability.
+    if (agent.second.is_host()) {
+      continue;
+    }
+    if (agent.second.agent_type() != AgentType::VEHICLE) {
+      agent.second.PredictAgentBehaviour(std::vector<ReferenceLine>(),
+                                         kMaxAcc, kMaxDecel,
+                                         kSimStep, kMaxLatAcc, kDesiredVel);
+    } else {
+      std::vector<ReferenceLine> agent_potential_lanes;
+      if (!GetAgentPotentialRefLanes(agent.second.state(), agent.first, 100.0, 20.0, &agent_potential_lanes)) {
+        agent.second.PredictAgentBehaviour(std::vector<ReferenceLine>(),
+                                           kMaxAcc, kMaxDecel,
+                                           kSimStep, kMaxLatAcc, kDesiredVel);
+      } else {
+        agent.second.PredictAgentBehaviour(agent_potential_lanes,
+                                           kMaxAcc, kMaxDecel,
+                                           kSimStep, kMaxLatAcc, kDesiredVel);
+      }
+    }
+  }
+  return true;
+}
+bool MotionPlanner::GetAgentPotentialRefLanes(const vehicle_state::KinoDynamicState &agent_state,
+                                              int agent_id,
+                                              double lookahead_length,
+                                              double lookback_length,
+                                              std::vector<ReferenceLine> *potential_reference_lines) {
+  if (potential_reference_lines == nullptr) {
+    return false;
+  }
+  planning_srvs::AgentRouteService srv;
+  srv.request.actor_id = agent_id;
+  if (!get_agent_potential_routes_client_.call(srv)) {
+    return false;
+  }
+  std::vector<planning_msgs::Lane> lane_arrays = srv.response.lanes;
+  for (const auto &lane : lane_arrays) {
+    std::shared_ptr<ReferenceLine> reference_line = std::make_shared<ReferenceLine>();
+    if (!AddAgentPotentialReferenceLines(agent_state,
+                                         lane, lookahead_length,
+                                         lookback_length,
+                                         false, potential_reference_lines)) {
+      continue;
+    }
+  }
+  return true;
+}
+bool MotionPlanner::AddAgentPotentialReferenceLines(const vehicle_state::KinoDynamicState &state,
+                                                    const planning_msgs::Lane &lane,
+                                                    double lookahead_length,
+                                                    double lookback_length,
+                                                    bool smooth,
+                                                    std::vector<ReferenceLine> *ptr_potential_lanes) {
+
+  if (ptr_potential_lanes == nullptr || lane.way_points.empty()) {
+    return false;
+  }
+
+  auto ref_lane = ReferenceLine();
+  if (!ReferenceInfo::RetriveReferenceLine(ref_lane,
+                                           state,
+                                           lane.way_points,
+                                           lookahead_length,
+                                           lookback_length)) {
+    return false;
+  }
+  ptr_potential_lanes->emplace_back(ref_lane);
+  return true;
+}
+
+bool MotionPlanner::GetEgoVehicleRoutes(geometry_msgs::Pose &start_pose, geometry_msgs::Pose &destination) {
+  planning_srvs::RoutePlanService srv;
+  srv.request.start_pose = start_pose;
+  srv.request.end_pose = destination;
+  if (!get_ego_vehicle_route_client_.call(srv)) {
+    return false;
+  }
+  return reference_info_->UpdateRouteResponse(srv.response);
 }
 
 }

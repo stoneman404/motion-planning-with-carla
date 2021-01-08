@@ -18,6 +18,7 @@ bool OnLaneForwardSimulator::ForwardOneStep(const Agent &agent,
   if (!GetAgentFrenetState(agent, reference_line, s_conditions, d_conditions)) {
     return false;
   }
+
 //  ROS_WARN("[OnLaneForwardSimulator::ForwardOneStep], the init ref_point is %f, %f",
 //           reference_line.GetReferencePoint(agent.state().x, agent.state().y).x(),
 //           reference_line.GetReferencePoint(agent.state().x, agent.state().y).y());
@@ -29,17 +30,36 @@ bool OnLaneForwardSimulator::ForwardOneStep(const Agent &agent,
   if (!GetIDMLonAcc(s_conditions, reference_line, leading_agent, lon_acc)) {
     return false;
   }
-//  ROS_WARN("[OnLaneForwardSimulator]: the lon acc is : %f", lon_acc);
-  std::array<double, 3> next_s_conditions{0, 0, 0};
-  std::array<double, 3> next_d_conditions{0, 0, 0};
-  OnLaneForwardSimulator::AgentMotionModel(s_conditions,
-                                           d_conditions,
-                                           lateral_approach_ratio,
-                                           lon_acc,
-                                           sim_time_step,
-                                           next_s_conditions,
-                                           next_d_conditions);
-  OnLaneForwardSimulator::FrenetStateToTrajectoryPoint(next_s_conditions, next_d_conditions, reference_line, point);
+  double next_s = s_conditions[0] + s_conditions[1] * sim_time_step + 0.5 * lon_acc * sim_time_step * sim_time_step;
+  double next_sd = s_conditions[1] + lon_acc * sim_time_step;
+  double next_sdd = lon_acc;
+  double next_d = std::fabs(s_conditions[1]) < 1e-2 ? d_conditions[0] : d_conditions[0] * lateral_approach_ratio;
+  Eigen::Vector2d next_xy;
+  if (!reference_line.SLToXY({next_s, next_d}, &next_xy)) {
+    return false;
+  }
+  point.vel = next_sd;
+  point.acc = next_sdd;
+  point.path_point.x = next_xy.x();
+  point.path_point.y = next_xy.y();
+  point.path_point.theta =
+      common::MathUtils::NormalizeAngle(std::atan2(next_xy[1] - agent.state().y, next_xy[0] - agent.state().x));
+  point.path_point.s = next_s;
+  point.path_point.kappa = 0.0;
+  point.path_point.dkappa = 0.0;
+
+
+////  ROS_WARN("[OnLaneForwardSimulator]: the lon acc is : %f", lon_acc);
+//  std::array<double, 3> next_s_conditions{0, 0, 0};
+//  std::array<double, 3> next_d_conditions{0, 0, 0};
+//  OnLaneForwardSimulator::AgentMotionModel(s_conditions,
+//                                           d_conditions,
+//                                           lateral_approach_ratio,
+//                                           lon_acc,
+//                                           sim_time_step,
+//                                           next_s_conditions,
+//                                           next_d_conditions);
+//  OnLaneForwardSimulator::FrenetStateToTrajectoryPoint(next_s_conditions, next_d_conditions, reference_line, point);
   return true;
 }
 
@@ -75,14 +95,14 @@ bool OnLaneForwardSimulator::GetIDMLonAcc(const std::array<double, 3> &ego_s_con
         + T * ego_lon_v + (ego_lon_v * delta_v) / (2.0 * std::sqrt(a * b));
     s_a = leading_s_conditions[0] - ego_s_conditions[0] + params_.idm_params.leading_vehicle_length;
   } else {
-    if (ego_s_conditions[0] + 50.0 < reference_line.Length()) {
+    if (ego_s_conditions[0] + 50.0 > reference_line.Length()) {
       // a virtual static agent in front.
-      leading_s_conditions[0] = ego_s_conditions[0] + 50.0;
+      leading_s_conditions[0] = reference_line.Length() - 0.5;
       leading_s_conditions[1] = 0.0;
       leading_s_conditions[2] = 0.0;
     } else {
       // a virtual agent in front, has same speed and same acc as agent.
-      leading_s_conditions[0] = ego_s_conditions[0] + 50.0;
+      leading_s_conditions[0] = reference_line.Length() - 0.5;
       leading_s_conditions[1] = ego_s_conditions[1];
       leading_s_conditions[2] = ego_s_conditions[2];
     }
@@ -93,7 +113,8 @@ bool OnLaneForwardSimulator::GetIDMLonAcc(const std::array<double, 3> &ego_s_con
     s_a = leading_s_conditions[0] - ego_s_conditions[0] + params_.idm_params.leading_vehicle_length;
   }
   lon_acc =
-      a * (1 - std::pow(ego_lon_v / v0, params_.idm_params.acc_exponet) - std::pow(desired_min_gap / s_a, 2));
+      a * (1 - std::pow(ego_lon_v / v0, params_.idm_params.acc_exponent) - std::pow(desired_min_gap / s_a, 2));
+  lon_acc = std::max(std::min(lon_acc, params_.idm_params.max_acc), -params_.idm_params.max_decel);
   return true;
 }
 
@@ -164,6 +185,7 @@ void OnLaneForwardSimulator::FrenetStateToTrajectoryPoint(const std::array<doubl
                                                           planning_msgs::TrajectoryPoint &trajectory_point) {
 
   auto ref_point = ref_line.GetReferencePoint(s_conditions[0]);
+
   common::CoordinateTransformer::FrenetToCartesian(s_conditions[0],
                                                    ref_point.x(),
                                                    ref_point.y(),
@@ -179,4 +201,5 @@ void OnLaneForwardSimulator::FrenetStateToTrajectoryPoint(const std::array<doubl
                                                    &trajectory_point.vel,
                                                    &trajectory_point.acc);
 }
+
 }

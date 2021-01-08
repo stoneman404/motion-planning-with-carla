@@ -10,6 +10,7 @@
 #include <reference_line/reference_line.hpp>
 #include <boost/circular_buffer.hpp>
 #include <future>
+#include <tf/transform_datatypes.h>
 
 namespace planning {
 enum class LateralBehaviour : uint8_t {
@@ -47,6 +48,34 @@ struct RouteInfo {
   std::vector<planning_msgs::WayPoint> main_lane;
   std::vector<std::vector<planning_msgs::WayPoint>> left_lanes;
   std::vector<std::vector<planning_msgs::WayPoint>> right_lanes;
+  void PrintRouteInfo() {
+    std::cout << "=============== main_lane: ============" << std::endl;
+    for (const auto &waypoint : main_lane) {
+      std::cout << "x: " << waypoint.pose.position.x << ", y: " << waypoint.pose.position.y << ", theta: "
+                << tf::getYaw(waypoint.pose.orientation) << std::endl;
+    }
+    std::cout << "============ left lane: ================" << std::endl;
+    int i = 0;
+    for (const auto &lane : left_lanes) {
+      std::cout << "lane " << i << std::endl;
+      for (const auto &waypoint : lane) {
+        std::cout << "x: " << waypoint.pose.position.x << ", y: " << waypoint.pose.position.y << ", theta: "
+                  << tf::getYaw(waypoint.pose.orientation) << std::endl;
+      }
+      i++;
+    }
+
+    std::cout << "============ right lane: ================" << std::endl;
+    int j = 0;
+    for (const auto &lane : right_lanes) {
+      std::cout << "lane " << j << std::endl;
+      for (const auto &waypoint : lane) {
+        std::cout << "x: " << waypoint.pose.position.x << ", y: " << waypoint.pose.position.y << ", theta: "
+                  << tf::getYaw(waypoint.pose.orientation) << std::endl;
+      }
+      j++;
+    }
+  }
 };
 
 struct EnumClassHash {
@@ -107,6 +136,7 @@ struct Behaviour {
   std::vector<std::pair<LateralBehaviour, ReferenceLine>> forward_behaviours;
   std::vector<planning_msgs::Trajectory> forward_trajs;
   LateralBehaviour lateral_behaviour;
+  ReferenceLine ref_lane;
   LongitudinalBehaviour longitudinal_behaviour;
   std::vector<std::unordered_map<int, planning_msgs::Trajectory>> surrounding_trajs;
 };
@@ -127,7 +157,6 @@ class ReferenceInfo {
 
   /**
    * @brief:
-   *
    * @param[out] ref_lanes, the reference line vector, ref_lanes[0]: the main reference line, if the ref_lanes.size() > 1,
    * then there're changeable lanes, right lane or/and left lane
    * @return: true if this procedure is successful.

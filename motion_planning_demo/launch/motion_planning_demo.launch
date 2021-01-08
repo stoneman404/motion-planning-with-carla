@@ -63,11 +63,13 @@
         <arg name='role_name' value='$(arg role_name)'/>
     </include>
 
-    <include file="$(find motion_planner)/launch/motion_planner.launch">
-    </include>
+<!--     <include file="$(find behaviour_planner)/launch/behaviour_planner.launch"> -->
+<!--     </include> -->
 
-    <include file="$(find behaviour_planner)/launch/behaviour_planner.launch">
-    </include>
+<!--     <include file="$(find motion_planner)/launch/motion_planner.launch"> -->
+<!--     </include> -->
+
+
 
     <include file="$(find motion_controller)/launch/motion_controller.launch">
     </include>
