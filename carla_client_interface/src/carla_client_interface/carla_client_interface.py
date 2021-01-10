@@ -349,11 +349,11 @@ class ClinetInterface(object):
         #     else:
         #         break
         for wp in route:
-            self._world.debug.draw_point(wp[0].transform.location + carla.Location(z=1), color = Color(100, 255, 1), life_time=120)
+            self._world.debug.draw_point(wp[0].transform.location + carla.Location(z=1), size=0.1, color = Color(100, 255, 1), life_time=120)
         for wp in left_lane:
-            self._world.debug.draw_point(wp[0].transform.location + carla.Location(z=1), color = Color(100, 100, 1), life_time=120)
+            self._world.debug.draw_point(wp[0].transform.location + carla.Location(z=1), size=0.1, color = Color(100, 100, 1), life_time=120)
         for wp in right_lane:
-            self._world.debug.draw_point(wp[0].transform.location + carla.Location(z=1), color = Color(255, 0, 1), life_time=120)
+            self._world.debug.draw_point(wp[0].transform.location + carla.Location(z=1), size=0.1, color = Color(255, 0, 1), life_time=120)
         response = RoutePlanServiceResponse()
         if len(route) > 0:
             route.pop(0)

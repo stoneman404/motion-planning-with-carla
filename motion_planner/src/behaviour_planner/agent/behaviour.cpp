@@ -118,10 +118,11 @@ bool ReferenceInfo::CreateReferenceLines(bool smooth, std::vector<ReferenceLine>
     if (std::fabs(common::MathUtils::CalcAngleDist(left_ref.theta(), vehicle_state.theta)) > 0.25 * M_PI) {
       continue;
     } else {
-      left_ref_lane.Smooth(smooth_config_.reference_smooth_deviation_weight_,
-                           smooth_config_.reference_smooth_heading_weight_,
-                           smooth_config_.reference_smooth_length_weight_,
-                           smooth_config_.reference_smooth_max_curvature_);
+      ReferenceInfo::RetriveReferenceLine(left_ref_lane, vehicle_state, lane, lookahead_distance_, lookback_distance_, smooth, smooth_config_);
+//      left_ref_lane.Smooth(smooth_config_.reference_smooth_deviation_weight_,
+//                           smooth_config_.reference_smooth_heading_weight_,
+//                           smooth_config_.reference_smooth_length_weight_,
+//                           smooth_config_.reference_smooth_max_curvature_);
       ref_lanes.emplace_back(left_ref_lane);
       break;
     }
@@ -145,14 +146,60 @@ bool ReferenceInfo::CreateReferenceLines(bool smooth, std::vector<ReferenceLine>
     if (std::fabs(common::MathUtils::CalcAngleDist(right_ref.theta(), vehicle_state.theta)) > 0.25 * M_PI) {
       continue;
     } else {
-      right_ref_lane.Smooth(smooth_config_.reference_smooth_deviation_weight_,
-                           smooth_config_.reference_smooth_heading_weight_,
-                           smooth_config_.reference_smooth_length_weight_,
-                           smooth_config_.reference_smooth_max_curvature_);
+      ReferenceInfo::RetriveReferenceLine(right_ref_lane, vehicle_state, lane, lookahead_distance_, lookback_distance_, smooth, smooth_config_);
+//      left_ref_lane.Smooth(smooth_config_.reference_smooth_deviation_weight_,
+//                           smooth_config_.reference_smooth_heading_weight_,
+//                           smooth_config_.reference_smooth_length_weight_,
+//                           smooth_config_.reference_smooth_max_curvature_);
       ref_lanes.emplace_back(right_ref_lane);
       break;
     }
   }
+
+//  bool has_overlap_left_lane = false;
+//  size_t overlap_left_index = 0;
+//  for (size_t i = 0; i < route_info.left_lanes.size(); ++i) {
+//    auto left_lane = route_info.left_lanes[i];
+//    double overlap_begin_s, overlap_end_s;
+//    if (HasOverLapWithRefLane(main_ref_lane, left_lane, &overlap_begin_s, &overlap_end_s)) {
+//      overlap_left_index = i;
+//      has_overlap_left_lane = true;
+//      break;
+//    }
+//  }
+//  if (has_overlap_left_lane) {
+//    auto left_ref_lane = ReferenceLine();
+//    if (RetriveReferenceLine(
+//        left_ref_lane, vehicle_state,
+//        route_info.left_lanes[overlap_left_index],
+//        lookback_distance_,
+//        lookback_distance_,
+//        smooth, smooth_config_)) {
+//      ref_lanes.emplace_back(left_ref_lane);
+//    }
+//  }
+//  bool has_overlap_right_lane = false;
+//  size_t overlap_right_index = 0;
+//  for (size_t i = 0; i < route_info.right_lanes.size(); ++i) {
+//    auto right_lane = route_info.right_lanes[i];
+//    double overlap_begin_s, overlap_end_s;
+//    if (HasOverLapWithRefLane(main_ref_lane, right_lane, &overlap_begin_s, &overlap_end_s)) {
+//      overlap_right_index = i;
+//      has_overlap_right_lane = true;
+//      break;
+//    }
+//  }
+//  if (has_overlap_right_lane) {
+//    auto right_ref_lane = ReferenceLine();
+//    if (RetriveReferenceLine(
+//        right_ref_lane, vehicle_state,
+//        route_info.right_lanes[overlap_right_index],
+//        lookback_distance_,
+//        lookback_distance_,
+//        smooth, smooth_config_)) {
+//      ref_lanes.emplace_back(right_ref_lane);
+//    }
+//  }
   auto end = ros::Time::now();
   ROS_WARN("CreateReferenceLine elapsed time is %lf s", (end - begin).toSec());
   return true;
@@ -219,7 +266,7 @@ bool ReferenceInfo::HasOverLapWithRefLane(const ReferenceLine &ref_lane,
                                           std::vector<planning_msgs::WayPoint> &waypoints,
                                           double *overlap_start_s,
                                           double *overlap_end_s) {
-  if (waypoints.size() < 3) {
+  if (waypoints.size() < 10) {
     return false;
   }
   const auto begin = waypoints.front();
@@ -332,7 +379,7 @@ bool ReferenceInfo::GetReferenceLines(std::vector<ReferenceLine> *reference_line
 
 void ReferenceInfo::GenerateThread() {
   while (!is_stop_) {
-    static constexpr int32_t kSleepTime = 60;  // milliseconds
+    static constexpr int32_t kSleepTime = 80;  // milliseconds
     std::this_thread::sleep_for(std::chrono::milliseconds(kSleepTime));
     auto start_time = std::chrono::system_clock::now();
     if (!has_route_) {

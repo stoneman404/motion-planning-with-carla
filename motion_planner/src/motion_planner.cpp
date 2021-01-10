@@ -50,7 +50,8 @@ MotionPlanner::MotionPlanner(const ros::NodeHandle &nh) : nh_(nh), thread_pool_s
       PlanningConfig::Instance().reference_smoother_heading_weight();
   reference_line_config.reference_smooth_length_weight_ =
       PlanningConfig::Instance().reference_smoother_distance_weight();
-  reference_line_config.reference_smooth_max_curvature_ = PlanningConfig::Instance().reference_smoother_max_curvature();
+  reference_line_config.reference_smooth_max_curvature_ =
+      PlanningConfig::Instance().reference_smoother_max_curvature();
   double lookahead_length = 100.0;
   double lookback_length = 30.0;
   reference_info_ = std::make_unique<ReferenceInfo>(reference_line_config, lookahead_length, lookback_length);
@@ -109,7 +110,7 @@ void MotionPlanner::RunOnce() {
   VisualizeReferenceLine(ref_lines);
   VisualizeTrafficLightBox();
 
-  auto key_agent_set = this->GetKeyAgents(agent_set, ego_vehicle_id_);
+  auto key_agent_set = MotionPlanner::GetKeyAgents(agent_set, ego_vehicle_id_);
   PlanningConfig::Instance().set_vehicle_params(vehicle_state_->vehicle_params());
 
   if (!this->PredictAgentsBehaviours(key_agent_set, ego_vehicle_id_)) {
@@ -124,7 +125,7 @@ void MotionPlanner::RunOnce() {
   behaviour_planner_->SetAgentSet(ego_vehicle_id_, key_agent_set);
   Behaviour behaviour;
   if (!behaviour_planner_->Execute(ref_lines, behaviour)) {
-    ROS_FATAL("[BehaviourPlanner::RunOnce], failed tor execute.");
+    ROS_FATAL("[BehaviourPlanner::RunOnce], failed to execute.");
     GenerateEmergencyStopTrajectory(init_trajectory_point, optimal_trajectory);
     has_history_trajectory_ = false;
     optimal_trajectory.header.stamp = current_time_stamp;
@@ -142,7 +143,10 @@ void MotionPlanner::RunOnce() {
     trajectory_publisher_.publish(optimal_trajectory);
   }
 
-  if (!trajectory_planner_->Process(init_trajectory_point, planning_targets, optimal_trajectory, nullptr)) {
+  if (!trajectory_planner_->Process(init_trajectory_point,
+                                    planning_targets,
+                                    optimal_trajectory,
+                                    nullptr)) {
     GenerateEmergencyStopTrajectory(init_trajectory_point, optimal_trajectory);
     has_history_trajectory_ = false;
     optimal_trajectory.header.stamp = current_time_stamp;
@@ -228,7 +232,8 @@ void MotionPlanner::InitSubscriber() {
         ROS_INFO("the objects map_ size is: %lu", objects_map_.size());
       });
   this->goal_pose_subscriber_ = nh_.subscribe<geometry_msgs::PoseStamped>(
-      common::topic::kGoalPoseName, 1, [this](const geometry_msgs::PoseStamped::ConstPtr &goal_pose) {
+      common::topic::kGoalPoseName, 1,
+      [this](const geometry_msgs::PoseStamped::ConstPtr &goal_pose) {
         std::cout << "goal pose subscriber : " << std::endl;
         if (ego_vehicle_id_ == -1) {
           return;
@@ -260,7 +265,8 @@ void MotionPlanner::InitServiceClient() {
   ROS_DEBUG("MotionPlanner::InitServiceClient finished");
 }
 
-void MotionPlanner::VisualizeValidTrajectories(const std::vector<planning_msgs::Trajectory> &valid_trajectories) const {
+void MotionPlanner::VisualizeValidTrajectories(
+    const std::vector<planning_msgs::Trajectory> &valid_trajectories) const {
   visualization_msgs::MarkerArray valid_trajectories_marker_array;
   ROS_INFO("MotionPlanner  valid trajectories size %zu", valid_trajectories.size());
   int i = 1;
@@ -455,19 +461,21 @@ bool MotionPlanner::GetLocalGoal(PlanningTarget &planning_target) {
   auto trajectory = planning_target.behaviour_trajectory;
   double t = PlanningConfig::Instance().max_lookahead_time();
   planning_msgs::TrajectoryPoint goal_trajectory_point;
-  auto matched_iterator = std::lower_bound(trajectory.trajectory_points.begin(), trajectory.trajectory_points.end(), t,
-                                           [](const planning_msgs::TrajectoryPoint &p0,
-                                              const double relative_time) -> bool {
-                                             return p0.relative_time < relative_time;
-                                           });
+  auto matched_iterator = std::lower_bound(
+      trajectory.trajectory_points.begin(), trajectory.trajectory_points.end(), t,
+      [](const planning_msgs::TrajectoryPoint &p0,
+         const double relative_time) -> bool {
+        return p0.relative_time < relative_time;
+      });
   if (matched_iterator == trajectory.trajectory_points.begin()) {
     goal_trajectory_point = trajectory.trajectory_points.front();
   } else if (matched_iterator == trajectory.trajectory_points.end()) {
     goal_trajectory_point = trajectory.trajectory_points.back();
   } else {
-    goal_trajectory_point = common::MathUtils::InterpolateTrajectoryPoint(*(matched_iterator - 1),
-                                                                          *matched_iterator,
-                                                                          PlanningConfig::Instance().max_lookahead_time());
+    goal_trajectory_point = common::MathUtils::InterpolateTrajectoryPoint(
+        *(matched_iterator - 1),
+        *matched_iterator,
+        PlanningConfig::Instance().max_lookahead_time());
   }
   auto ref_lane = planning_target.ref_lane;
   ReferencePoint ref_point;
@@ -496,9 +504,10 @@ bool MotionPlanner::GetLocalGoal(PlanningTarget &planning_target) {
 
 }
 
-std::vector<planning_msgs::TrajectoryPoint> MotionPlanner::GetStitchingTrajectory(const ros::Time &current_time_stamp,
-                                                                                  double planning_cycle_time,
-                                                                                  size_t preserve_points_num) {
+std::vector<planning_msgs::TrajectoryPoint> MotionPlanner::GetStitchingTrajectory(
+    const ros::Time &current_time_stamp,
+    double planning_cycle_time,
+    size_t preserve_points_num) {
   auto state = vehicle_state_->GetKinoDynamicVehicleState();
   if (!has_history_trajectory_) {
     return MotionPlanner::ComputeReinitStitchingTrajectory(planning_cycle_time, state);
@@ -532,7 +541,8 @@ std::vector<planning_msgs::TrajectoryPoint> MotionPlanner::GetStitchingTrajector
     return MotionPlanner::ComputeReinitStitchingTrajectory(planning_cycle_time, state);
   }
   double forward_rel_time = relative_time + planning_cycle_time;
-  size_t forward_rel_matched_index = GetTimeMatchIndex(forward_rel_time, 1.0e-5, history_trajectory_.trajectory_points);
+  size_t forward_rel_matched_index = GetTimeMatchIndex(forward_rel_time, 1.0e-5,
+                                                       history_trajectory_.trajectory_points);
 
   auto matched_index = std::min(position_matched_index, time_matched_index);
   std::vector<planning_msgs::TrajectoryPoint> stitching_trajectory;
@@ -547,8 +557,9 @@ std::vector<planning_msgs::TrajectoryPoint> MotionPlanner::GetStitchingTrajector
   return stitching_trajectory;
 }
 
-planning_msgs::TrajectoryPoint MotionPlanner::ComputeTrajectoryPointFromVehicleState(double planning_cycle_time,
-                                                                                     const vehicle_state::KinoDynamicState &kinodynamic_state) {
+planning_msgs::TrajectoryPoint MotionPlanner::ComputeTrajectoryPointFromVehicleState(
+    double planning_cycle_time,
+    const vehicle_state::KinoDynamicState &kinodynamic_state) {
   planning_msgs::TrajectoryPoint point;
   point.relative_time = planning_cycle_time;
   point.path_point.x = kinodynamic_state.x;
@@ -561,8 +572,9 @@ planning_msgs::TrajectoryPoint MotionPlanner::ComputeTrajectoryPointFromVehicleS
   point.jerk = 0.0;
   return point;
 }
-std::vector<planning_msgs::TrajectoryPoint> MotionPlanner::ComputeReinitStitchingTrajectory(double planning_cycle_time,
-                                                                                            const vehicle_state::KinoDynamicState &kino_dynamic_state) {
+std::vector<planning_msgs::TrajectoryPoint> MotionPlanner::ComputeReinitStitchingTrajectory(
+    double planning_cycle_time,
+    const vehicle_state::KinoDynamicState &kino_dynamic_state) {
   constexpr double kEpsilon_v = 0.1;
   constexpr double kEpsilon_a = 0.4;
   planning_msgs::TrajectoryPoint reinit_point;
@@ -690,7 +702,8 @@ bool MotionPlanner::PredictAgentsBehaviours(std::unordered_map<int, Agent> &key_
                                          kSimStep, kMaxLatAcc, kDesiredVel);
     } else {
       std::vector<ReferenceLine> agent_potential_lanes;
-      if (!GetAgentPotentialRefLanes(agent.second.state(), agent.first, 100.0, 20.0, &agent_potential_lanes)) {
+      if (!GetAgentPotentialRefLanes(agent.second.state(), agent.first,
+                                     100.0, 20.0, &agent_potential_lanes)) {
         agent.second.PredictAgentBehaviour(std::vector<ReferenceLine>(),
                                            kMaxAcc, kMaxDecel,
                                            kSimStep, kMaxLatAcc, kDesiredVel);

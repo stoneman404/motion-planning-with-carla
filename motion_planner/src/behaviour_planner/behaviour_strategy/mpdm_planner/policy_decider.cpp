@@ -22,6 +22,7 @@ bool PolicyDecider::PolicyDecision(const Agent &ego_agent,
   std::vector<SurroundingTrajectories> valid_surrounding_trajectories;
   std::unordered_map<int, SimulateAgent> simulate_agent_set;
   if (!PolicyDecider::GetSimulateAgentSet(agents_set, possible_policies, simulate_agent_set)) {
+    ROS_FATAL("[PolicyDecider::GetSimulateAgentSet], Failed");
     return false;
   }
 
@@ -33,9 +34,13 @@ bool PolicyDecider::PolicyDecision(const Agent &ego_agent,
     planning_msgs::Trajectory trajectory;
     SurroundingTrajectories surround_trajs;
     simulate_agent_set[ego_id_].behaviour_lane_pair = policy;
+
     if (!SimulateEgoAgentPolicy(simulate_agent_set, policy, trajectory, surround_trajs)) {
+      ROS_WARN("[PolicyDecider::SimulateEgoAgentPolicy], "
+               "failed to Simulate Policy : %i", static_cast<int>(policy.first));
       continue;
     }
+
     valid_trajectories.push_back(trajectory);
     valid_policies.push_back(policy);
     valid_surrounding_trajectories.push_back(surround_trajs);
@@ -56,6 +61,7 @@ bool PolicyDecider::PolicyDecision(const Agent &ego_agent,
                                        winner_policy,
                                        winner_forward_trajectory,
                                        winner_score)) {
+    ROS_FATAL("[PolicyDecider::EvaluateMultiPolicyTrajectories], failed!!!");
     return false;
   }
   best_policy = winner_policy;

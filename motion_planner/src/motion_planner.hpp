@@ -52,7 +52,7 @@ class MotionPlanner {
    * @param ego_id
    * @return
    */
-  std::unordered_map<int, Agent> GetKeyAgents(
+  static std::unordered_map<int, Agent> GetKeyAgents(
       const std::unordered_map<int, Agent> &agent_set, int ego_id);
 
   /**

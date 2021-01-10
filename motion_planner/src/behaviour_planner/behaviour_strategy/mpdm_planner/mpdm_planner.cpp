@@ -40,6 +40,7 @@ bool MPDMPlanner::Execute(const std::vector<ReferenceLine> &reference_lines, Beh
                                        forward_policies,
                                        surround_trajs,
                                        forward_trajectories)) {
+    ROS_FATAL("[MPDMPlanner::PolicyDecision], failed !!!!!");
     return false;
   }
 
