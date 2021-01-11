@@ -1,6 +1,6 @@
 #include "pure_pursuit_control.hpp"
 
-namespace planning{
+namespace planning {
 
 bool PurePursuitControl::CalculateDesiredSteer(const double wheel_base_len,
                                                const double angle_diff,
