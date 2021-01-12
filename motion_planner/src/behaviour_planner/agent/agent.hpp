@@ -56,6 +56,12 @@ class Agent {
    */
   bool MoveAgentToPoint(planning_msgs::TrajectoryPoint &trajectory_point);
 
+  bool AgentShift(const Eigen::Vector2d& shift_vec) {
+    bounding_box_.Shift(shift_vec);
+    state_.ShiftState(shift_vec);
+    return true;
+  }
+
   /**
    * @brief: the id of this agent
    * @return
@@ -91,6 +97,10 @@ class Agent {
    * @return
    */
   bool is_static() const;
+
+  bool is_rear_centered() const {
+    return rear_axle_centered_;
+  }
 
   /**
    * @brief the agent type
@@ -209,6 +219,7 @@ class Agent {
   int id_{}; // the agent id
   bool is_host_{true};
   bool is_valid_{false};
+  bool rear_axle_centered_{false};
   // the bounding box of the agent
   common::Box2d bounding_box_{};
   double length_{};

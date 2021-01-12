@@ -2,24 +2,12 @@
 #define CATKIN_WS_SRC_MOTION_PLANNING_WITH_CARLA_PLANNING_SRC_BEHAVIOUR_PLANNER_MPDM_PLANNER_POLICY_DECIDER_HPP_
 #include "behaviour_planner/agent/agent.hpp"
 #include "behaviour_planner/agent/behaviour.hpp"
+#include "behaviour_planner/behaviour_configs/behaviour_configs.hpp"
 #include "behaviour_planner/forward_simulator/on_lane_forward_simulator.hpp"
 #include <planning_msgs/Trajectory.h>
 
 namespace planning {
-struct PolicySimulateConfig {
-  double desired_vel{8.333};
-  double max_lat_acc{0.8};
-  double sim_horizon_{10.0};
-  double sim_step_{0.25};
-  double safe_time_headway{0.5}; // T
-  double max_acc{1.75}; // a
-  double max_decel{0.8}; // b
-  double acc_exponet{4.0}; // /delta
-  double s0{2.0}; // jam distance
-  double s1{0.0}; // jam distance
-  double default_lat_approach_ratio = 0.995;
-  double cutting_in_lateral_approach_ratio = 0.95;
-};
+
 
 struct SimulateAgent {
   Agent agent;
@@ -32,7 +20,7 @@ class PolicyDecider {
 //  using TrajectoryRefLanePair = std::pair<ReferenceLine, planning_msgs::Trajectory>;
   using SurroundingTrajectories = std::unordered_map<int, planning_msgs::Trajectory>;
  public:
-  explicit PolicyDecider(const PolicySimulateConfig &config);
+  explicit PolicyDecider(const SimulationParams &config);
   bool PolicyDecision(const Agent &ego_agent,
                       const std::unordered_map<int, Agent> &agents_set,
                       const PolicyDecider::Policies &possible_policies,
@@ -70,9 +58,11 @@ class PolicyDecider {
   bool SimulateOneStepForAgent(double desired_vel,
                                const SimulateAgent &agent,
                                const Agent &leading_agent,
+                               double cur_relative_time,
                                planning_msgs::TrajectoryPoint &trajectory_point);
 
   static bool NaivePredictionOnStepForAgent(const SimulateAgent &agent,
+                                            double cur_relative_time,
                                             double sim_step,
                                             planning_msgs::TrajectoryPoint &trajectory_point);
 
@@ -115,7 +105,7 @@ class PolicyDecider {
 
  private:
   int ego_id_{};
-  PolicySimulateConfig config_;
+  SimulationParams config_;
   std::unique_ptr<OnLaneForwardSimulator> forward_simulator_;
   std::unordered_map<int, Agent> agent_set_;
 

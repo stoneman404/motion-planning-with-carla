@@ -1,8 +1,9 @@
+#include <planning_config.hpp>
 #include "policy_decider.hpp"
 
 namespace planning {
 
-PolicyDecider::PolicyDecider(const PolicySimulateConfig &config)
+PolicyDecider::PolicyDecider(const SimulationParams &config)
     : config_(config),
       forward_simulator_(std::make_unique<OnLaneForwardSimulator>()) {
 }
@@ -160,11 +161,12 @@ bool PolicyDecider::CloseLoopSimulate(const Policy &policy1,
   const int kForwardSteps = static_cast<int>(config_.sim_horizon_ / config_.sim_step_);
   auto simulate_agent_tmp = simulate_agents;
   for (int i = 0; i < kForwardSteps; ++i) {
+    double cur_relative_time = static_cast<double>(i) / static_cast<double>(kForwardSteps) * config_.sim_horizon_;
     for (auto &agent : simulate_agent_tmp) {
       auto behaviour = agent.second.behaviour_lane_pair.first;
       planning_msgs::TrajectoryPoint trajectory_point;
       if (behaviour == LateralBehaviour::UNDEFINED || agent.second.agent.agent_type() != AgentType::VEHICLE) {
-        if (!NaivePredictionOnStepForAgent(agent.second, config_.sim_step_, trajectory_point)) {
+        if (!NaivePredictionOnStepForAgent(agent.second, cur_relative_time, config_.sim_step_, trajectory_point)) {
           return false;
         }
       } else {
@@ -180,7 +182,11 @@ bool PolicyDecider::CloseLoopSimulate(const Policy &policy1,
         }
         // no leading agent or cannot find leading agent in simulate_agent_tmp
         if (leading_agent_id == -1 || simulate_agent_tmp.find(leading_agent_id) == simulate_agent_tmp.end()) {
-          if (!this->SimulateOneStepForAgent(desired_velocity, agent.second, Agent(), trajectory_point)) {
+          if (!this->SimulateOneStepForAgent(desired_velocity,
+                                             agent.second,
+                                             Agent(),
+                                             cur_relative_time,
+                                             trajectory_point)) {
             return false;
           }
         } else {
@@ -188,14 +194,18 @@ bool PolicyDecider::CloseLoopSimulate(const Policy &policy1,
           if (agent.second.agent.bounding_box().HasOverlapWithBox2d(leading_agent.agent.bounding_box())) {
             return false;
           }
-          if (!this->SimulateOneStepForAgent(desired_velocity, agent.second, leading_agent.agent, trajectory_point)) {
+          if (!this->SimulateOneStepForAgent(desired_velocity,
+                                             agent.second,
+                                             leading_agent.agent,
+                                             cur_relative_time,
+                                             trajectory_point)) {
             return false;
           }
         }
       }
       agent.second.agent.MoveAgentToPoint(trajectory_point);
-      trajectory_point.relative_time =
-          static_cast<double>(i + 1) / static_cast<double>(kForwardSteps) * config_.sim_horizon_;
+//      trajectory_point.relative_time =
+//          static_cast<double>(i + 1) / static_cast<double>(kForwardSteps) * config_.sim_horizon_;
       if (agent.second.agent.is_host()) {
         ego_traj.trajectory_points.push_back(trajectory_point);
       } else {
@@ -209,7 +219,7 @@ bool PolicyDecider::CloseLoopSimulate(const Policy &policy1,
 double PolicyDecider::GetDesiredSpeed(const std::pair<double, double> &xy, const ReferenceLine &ref_lane) const {
   auto ref_point = ref_lane.GetReferencePoint(xy);
   double kappa = ref_point.kappa();
-  return std::min(config_.max_lat_acc / (std::fabs(kappa) + 1e-5), config_.desired_vel);
+  return std::min(config_.max_lat_acceleration_abs / (std::fabs(kappa) + 1e-5), PlanningConfig::Instance().desired_velocity());
 }
 
 bool PolicyDecider::GetLeadingAgentOnRefLane(const Agent &agent,
@@ -249,24 +259,16 @@ bool PolicyDecider::GetLeadingAgentOnRefLane(const Agent &agent,
 bool PolicyDecider::SimulateOneStepForAgent(double desired_vel,
                                             const SimulateAgent &agent,
                                             const Agent &leading_agent,
+                                            double cur_relative_time,
                                             planning_msgs::TrajectoryPoint &trajectory_point) {
   if (!agent.agent.is_host() && agent.agent.is_static()) {
-    return NaivePredictionOnStepForAgent(agent, config_.sim_step_, trajectory_point);
+    return NaivePredictionOnStepForAgent(agent, cur_relative_time, config_.sim_step_, trajectory_point);
   }
 //  if (agent.agent.agent_type() == AgentType::VEHICLE) {
   // agent is the vehicle
-  SimulationParams simulation_params;
+  SimulationParams simulation_params = config_;
   simulation_params.idm_params.desired_velocity = desired_vel;
-  //other params now is default;
-  simulation_params.idm_params.acc_exponent = config_.acc_exponet;
-  simulation_params.idm_params.max_acc = config_.max_acc;
-  simulation_params.idm_params.max_decel = config_.max_decel;
-  simulation_params.idm_params.safe_time_headway = config_.max_decel;
-  simulation_params.idm_params.s0 = config_.s0;
-  simulation_params.idm_params.s1 = config_.s1;
-  simulation_params.default_lateral_approach_ratio = config_.default_lat_approach_ratio;
-  simulation_params.cutting_in_lateral_approach_ratio = config_.cutting_in_lateral_approach_ratio;
-  simulation_params.idm_params.safe_time_headway = config_.safe_time_headway;
+
   if (!leading_agent.is_valid()) {
     simulation_params.idm_params.leading_vehicle_length = agent.agent.bounding_box().length();
   } else {
@@ -274,31 +276,26 @@ bool PolicyDecider::SimulateOneStepForAgent(double desired_vel,
     if (!agent.behaviour_lane_pair.second.GetSLBoundary(leading_agent.bounding_box(), &leading_sl_boundary)) {
       return false;
     }
-//      simulation_params.idm_params.leading_vehicle_length = leading_agent.bounding_box().length();
     simulation_params.idm_params.leading_vehicle_length = leading_sl_boundary.end_s - leading_sl_boundary.start_s;
   }
   return forward_simulator_->ForwardOneStep(agent.agent,
                                             simulation_params,
                                             agent.behaviour_lane_pair.second,
-                                            leading_agent,
+                                            leading_agent, 0,
                                             config_.sim_step_,
                                             trajectory_point);
 }
 
-bool PolicyDecider::NaivePredictionOnStepForAgent(const SimulateAgent &agent, double sim_step,
+bool PolicyDecider::NaivePredictionOnStepForAgent(const SimulateAgent &agent,
+                                                  double cur_relative_time,
+                                                  double sim_step,
                                                   planning_msgs::TrajectoryPoint &trajectory_point) {
   if (!agent.agent.is_valid()) {
     return false;
   }
   auto next_state = agent.agent.state().GetNextStateAfterTime(sim_step);
-  trajectory_point.path_point.x = next_state.x;
-  trajectory_point.path_point.y = next_state.y;
-  trajectory_point.path_point.theta = next_state.theta;
-  trajectory_point.path_point.kappa = next_state.kappa;
-  trajectory_point.path_point.dkappa = 0.0;
-  trajectory_point.vel = next_state.v;
-  trajectory_point.acc = next_state.a;
-  trajectory_point.jerk = 0.0;
+
+  trajectory_point = next_state.ToTrajectoryPoint(cur_relative_time + sim_step);
   return true;
 }
 
@@ -346,7 +343,7 @@ void PolicyDecider::EvaluateSinglePolicyTrajectory(const Policy &policy,
   // 1.efficiency
   const planning_msgs::TrajectoryPoint terminal_trajectory_point = trajectory.trajectory_points.back();
   const auto start_trajectory_point = trajectory.trajectory_points.front();
-  double cost_efficiency_vel = std::fabs(terminal_trajectory_point.vel - config_.desired_vel) / 10.0;
+  double cost_efficiency_vel = std::fabs(terminal_trajectory_point.vel - PlanningConfig::Instance().desired_velocity()) / 10.0;
   common::SLPoint start_sl, end_sl;
   ref_lane.XYToSL(terminal_trajectory_point.path_point.x, terminal_trajectory_point.path_point.y, &end_sl);
   ref_lane.XYToSL(start_trajectory_point.path_point.x, start_trajectory_point.path_point.y, &start_sl);

@@ -1,205 +1,137 @@
 #include "on_lane_forward_simulator.hpp"
 #include "math/coordinate_transformer.hpp"
+#include "planning_config.hpp"
 namespace planning {
 
 bool OnLaneForwardSimulator::ForwardOneStep(const Agent &agent,
                                             const SimulationParams &params,
                                             const ReferenceLine &reference_line,
                                             const Agent &leading_agent,
+                                            double cur_relative_time,
                                             double sim_time_step,
                                             planning_msgs::TrajectoryPoint &point) {
   params_ = params;
-  if (!agent.is_valid()) {
-    return false;
+  double wheel_base = 0.0;
+  if (agent.is_host()) {
+    wheel_base = PlanningConfig::Instance().vehicle_params().axle_length_;
+  } else {
+    wheel_base = agent.bounding_box().length() * 0.585;
   }
-//  params_.idm_params.PrintParams();
-  std::array<double, 3> s_conditions{0, 0, 0};
-  std::array<double, 3> d_conditions{0, 0, 0};
-  if (!GetAgentFrenetState(agent, reference_line, s_conditions, d_conditions)) {
-    return false;
+  double approx_lookahead_dist =
+      std::min(std::max(params_.steer_control_min_lookahead_dist, agent.state().v * params_.steer_control_gain),
+               params_.steer_control_max_lookahead_dist);
+  double steer = 0.0;
+  auto ego_state = agent.state();
+  auto leading_state = agent.state();
+  bool has_shift_ego_state = false;
+  if (!agent.is_rear_centered()) {
+    double shift_dis = 0.5 * wheel_base;
+    ego_state.ShiftState({-std::cos(ego_state.theta) * shift_dis,
+                          -std::sin(ego_state.theta) * shift_dis});
+    has_shift_ego_state = true;
   }
 
-//  ROS_WARN("[OnLaneForwardSimulator::ForwardOneStep], the init ref_point is %f, %f",
-//           reference_line.GetReferencePoint(agent.state().x, agent.state().y).x(),
-//           reference_line.GetReferencePoint(agent.state().x, agent.state().y).y());
-  double lateral_approach_ratio = params.default_lateral_approach_ratio;
-  if (!reference_line.IsOnLane({s_conditions[0], d_conditions[0]})) {
-    lateral_approach_ratio = params.cutting_in_lateral_approach_ratio;
-  }
-  double lon_acc = 0.0;
-  if (!GetIDMLonAcc(s_conditions, reference_line, leading_agent, lon_acc)) {
-    return false;
-  }
-  double next_s = s_conditions[0] + s_conditions[1] * sim_time_step + 0.5 * lon_acc * sim_time_step * sim_time_step;
-  double next_sd = s_conditions[1] + lon_acc * sim_time_step;
-  double next_sdd = lon_acc;
-  double next_d = std::fabs(s_conditions[1]) < 1e-2 ? d_conditions[0] : d_conditions[0] * lateral_approach_ratio;
-  Eigen::Vector2d next_xy;
-  if (!reference_line.SLToXY({next_s, next_d}, &next_xy)) {
-    return false;
-  }
-  point.vel = next_sd;
-  point.acc = next_sdd;
-  point.path_point.x = next_xy.x();
-  point.path_point.y = next_xy.y();
-  point.path_point.theta =
-      common::MathUtils::NormalizeAngle(std::atan2(next_xy[1] - agent.state().y, next_xy[0] - agent.state().x));
-  point.path_point.s = next_s;
-  point.path_point.kappa = 0.0;
-  point.path_point.dkappa = 0.0;
-
-
-////  ROS_WARN("[OnLaneForwardSimulator]: the lon acc is : %f", lon_acc);
-//  std::array<double, 3> next_s_conditions{0, 0, 0};
-//  std::array<double, 3> next_d_conditions{0, 0, 0};
-//  OnLaneForwardSimulator::AgentMotionModel(s_conditions,
-//                                           d_conditions,
-//                                           lateral_approach_ratio,
-//                                           lon_acc,
-//                                           sim_time_step,
-//                                           next_s_conditions,
-//                                           next_d_conditions);
-//  OnLaneForwardSimulator::FrenetStateToTrajectoryPoint(next_s_conditions, next_d_conditions, reference_line, point);
-  return true;
-}
-
-bool OnLaneForwardSimulator::GetIDMLonAcc(const std::array<double, 3> &ego_s_conditions,
-                                          const ReferenceLine &reference_line,
-                                          const Agent &leading_agent,
-                                          double &lon_acc) const {
-  std::array<double, 3> leading_s_conditions{0.0, 0.0, 0.0};
-  std::array<double, 3> leading_d_conditions{0.0, 0.0, 0.0};
-  double desired_min_gap = 0.0;
-  const double ego_lon_a = ego_s_conditions[2];
-  const double ego_lon_v = ego_s_conditions[1];
-  const double v0 = params_.idm_params.desired_velocity;
-  double s_a = 0.0;
-  const double s0 = params_.idm_params.s0;
-  const double s1 = params_.idm_params.s1;
-  const double T = params_.idm_params.safe_time_headway;
-  const double a = params_.idm_params.max_acc;
-  const double b = params_.idm_params.max_decel;
-  if (ego_s_conditions[0] > reference_line.Length() || ego_s_conditions[0] < 0.0) {
-    return false;
-  }
-  if (leading_agent.is_valid()) {
-    if (!OnLaneForwardSimulator::GetAgentFrenetState(leading_agent,
-                                                     reference_line,
-                                                     leading_s_conditions,
-                                                     leading_d_conditions)) {
+  CalculateSteer(reference_line, ego_state, wheel_base, {approx_lookahead_dist, 0.0}, &steer);
+  double sim_vel = params_.idm_params.desired_velocity;
+  params_.idm_params.desired_velocity = std::max(0.0, sim_vel);
+  double velocity = 0.0;
+  if (!leading_agent.is_valid()) {
+    CalculateVelocityUsingIdm(params_, agent.state().v, sim_time_step, &velocity);
+  } else {
+    common::SLPoint sl_point, leading_sl_point;
+    if (!reference_line.XYToSL(ego_state.x, ego_state.y, &sl_point)) {
       return false;
     }
-    const double leading_vel = leading_s_conditions[1];
-    const double delta_v = ego_lon_v - leading_vel;
-    desired_min_gap = s0 + s1 * std::sqrt(ego_lon_v / v0)
-        + T * ego_lon_v + (ego_lon_v * delta_v) / (2.0 * std::sqrt(a * b));
-    s_a = leading_s_conditions[0] - ego_s_conditions[0] + params_.idm_params.leading_vehicle_length;
-  } else {
-    if (ego_s_conditions[0] + 50.0 > reference_line.Length()) {
-      // a virtual static agent in front.
-      leading_s_conditions[0] = reference_line.Length() - 0.5;
-      leading_s_conditions[1] = 0.0;
-      leading_s_conditions[2] = 0.0;
-    } else {
-      // a virtual agent in front, has same speed and same acc as agent.
-      leading_s_conditions[0] = reference_line.Length() - 0.5;
-      leading_s_conditions[1] = ego_s_conditions[1];
-      leading_s_conditions[2] = ego_s_conditions[2];
+    if (!reference_line.XYToSL(leading_state.x, leading_state.y, &leading_sl_point)) {
+      return false;
     }
-    const double leading_vel = leading_s_conditions[1];
-    const double delta_v = ego_lon_v - leading_vel;
-    desired_min_gap = s0 + s1 * std::sqrt(ego_lon_v / v0)
-        + T * ego_lon_v + (ego_lon_v * delta_v) / (2.0 * std::sqrt(a * b));
-    s_a = leading_s_conditions[0] - ego_s_conditions[0] + params_.idm_params.leading_vehicle_length;
+    //todo here the position should be in rear axle center
+    CalculateVelocityUsingIdm(params_, sl_point.s, agent.state().v,
+                              leading_sl_point.s, leading_agent.state().v,
+                              sim_time_step, &velocity);
   }
-  lon_acc =
-      a * (1 - std::pow(ego_lon_v / v0, params_.idm_params.acc_exponent) - std::pow(desired_min_gap / s_a, 2));
-  lon_acc = std::max(std::min(lon_acc, params_.idm_params.max_acc), -params_.idm_params.max_decel);
+  vehicle_state::KinoDynamicState state{};
+  CalculateDesiredState(params, ego_state, steer, velocity, wheel_base, sim_time_step, &state);
+  // recetered at agent geometric center.
+  if (!agent.is_rear_centered() && has_shift_ego_state) {
+    double shift_dis = 0.5 * wheel_base;
+    ego_state.ShiftState({std::cos(ego_state.theta) * shift_dis,
+                          std::sin(ego_state.theta) * shift_dis});
+  }
+  point = state.ToTrajectoryPoint(sim_time_step + cur_relative_time);
   return true;
 }
 
-planning_msgs::PathPoint OnLaneForwardSimulator::AgentStateToPathPoint(
-    const vehicle_state::KinoDynamicState &kino_dynamic_state) {
-  planning_msgs::PathPoint path_point;
-  path_point.x = kino_dynamic_state.x;
-  path_point.y = kino_dynamic_state.y;
-  path_point.theta = kino_dynamic_state.theta;
-  path_point.kappa = kino_dynamic_state.kappa;
-  return path_point;
-}
-
-bool OnLaneForwardSimulator::GetAgentFrenetState(const Agent &agent,
-                                                 const ReferenceLine &reference_line,
-                                                 std::array<double, 3> &s_conditions,
-                                                 std::array<double, 3> &d_conditions) {
-  double rs = 0.0;
-  planning::ReferencePoint ref_point;
-  if (!reference_line.GetMatchedPoint(agent.state().x, agent.state().y, &ref_point, &rs)) {
+bool OnLaneForwardSimulator::CalculateSteer(const ReferenceLine &reference_line,
+                                            const vehicle_state::KinoDynamicState &cur_state,
+                                            double wheelbase_len,
+                                            const std::array<double, 2> &lookahead_offset,
+                                            double *steer) {
+  Eigen::Vector2d cur_xy{cur_state.x, cur_state.y};
+  common::SLPoint sl_point;
+  if (reference_line.XYToSL(cur_xy, &sl_point)) {
     return false;
   }
-  double rx = ref_point.x();
-  double ry = ref_point.y();
-  double rtheta = ref_point.theta();
-  double rkappa = ref_point.kappa();
-  double rdkappa = ref_point.dkappa();
-  double x = agent.state().x;
-  double y = agent.state().y;
-  double v = agent.state().v;
-  double a = agent.state().a;
-  double kappa = agent.state().kappa;
-  double theta = agent.state().theta;
-  common::CoordinateTransformer::CartesianToFrenet(rs, rx, ry, rtheta,
-                                                   rkappa, rdkappa,
-                                                   x, y, v, a,
-                                                   theta, kappa,
-                                                   &s_conditions,
-                                                   &d_conditions);
+  common::SLPoint dest_sl;
+  dest_sl.s = sl_point.s + lookahead_offset[0];
+  dest_sl.l = lookahead_offset[1];
+  Eigen::Vector2d destination;
+  if (reference_line.SLToXY(dest_sl, &destination)) {
+    return false;
+  }
+  double lookahead_dist = (destination - cur_xy).norm();
+  double cur_to_dest_angle = common::MathUtils::NormalizeAngle(
+      std::atan2(destination.y() - cur_xy.y(),
+                 destination.x() - cur_xy.x()));
+  double angle_diff = common::MathUtils::CalcAngleDist(cur_state.theta, cur_to_dest_angle);
+  PurePursuitControl::CalculateDesiredSteer(wheelbase_len, angle_diff, lookahead_dist, steer);
+  return true;
+
+}
+bool OnLaneForwardSimulator::CalculateVelocityUsingIdm(const SimulationParams &param,
+                                                       double cur_s,
+                                                       double cur_v,
+                                                       double leading_s,
+                                                       double leading_v,
+                                                       double dt,
+                                                       double *velocity) {
+  double leading_vel_fin = leading_v;
+  if (leading_vel_fin < 0) {
+    leading_vel_fin = 0.0;
+  }
+  return IntelligentVelocityControl::CalculateDesiredVelocity(param.idm_params,
+                                                              cur_s,
+                                                              leading_s,
+                                                              cur_v,
+                                                              leading_vel_fin,
+                                                              dt,
+                                                              velocity);
+}
+
+bool OnLaneForwardSimulator::CalculateVelocityUsingIdm(const SimulationParams &param,
+                                                       double cur_v,
+                                                       double dt,
+                                                       double *velocity) {
+  const double virtual_leading_dist = 100.0 + 100.0 * cur_v;
+  return IntelligentVelocityControl::CalculateDesiredVelocity(
+      param.idm_params, 0.0, 0.0 + virtual_leading_dist, cur_v,
+      cur_v, dt, velocity);
+}
+bool OnLaneForwardSimulator::CalculateDesiredState(const SimulationParams &param,
+                                                   const vehicle_state::KinoDynamicState &cur_state,
+                                                   double steer,
+                                                   double velocity,
+                                                   double wheel_base,
+                                                   double dt,
+                                                   vehicle_state::KinoDynamicState *state) {
+  IdealSteerModel model(wheel_base, param.idm_params.max_acc, param.idm_params.max_decel,
+                        param.max_lon_acc_jerk,
+                        param.max_lon_brake_jerk,
+                        param.max_lat_acceleration_abs,
+                        param.max_lat_jerk_abs, param.max_steer_angle_abs,
+                        param.max_steer_rate, param.max_curvature_abs);
+  auto control = IdealSteerModel::Control(steer, velocity);
+  *state = model.Step(control, cur_state, dt);
   return true;
 }
-
-void OnLaneForwardSimulator::AgentMotionModel(const std::array<double, 3> &s_conditions,
-                                              const std::array<double, 3> &d_conditions,
-                                              double lateral_approach_ratio,
-                                              double lon_acc,
-                                              double delta_t,
-                                              std::array<double, 3> &next_s_conditions,
-                                              std::array<double, 3> &next_d_conditions) {
-  next_s_conditions[0] = s_conditions[0] + s_conditions[1] * delta_t + 0.5 * delta_t * delta_t * lon_acc;
-  next_s_conditions[1] = s_conditions[1] + delta_t * lon_acc;
-  next_s_conditions[2] = lon_acc;
-  const double ds = s_conditions[1] * delta_t + 0.5 * delta_t * delta_t * lon_acc;
-  if (std::fabs(ds) < 1e-3) {
-    next_d_conditions[0] = d_conditions[0];
-    next_d_conditions[1] = 0.0;
-    next_d_conditions[2] = 0.0;
-  } else {
-    next_d_conditions[0] = d_conditions[0] * lateral_approach_ratio;
-    next_d_conditions[1] = (next_d_conditions[0] - d_conditions[0]) / ds;
-    next_d_conditions[2] = (next_d_conditions[1] - d_conditions[1]) / ds;
-  }
-}
-
-void OnLaneForwardSimulator::FrenetStateToTrajectoryPoint(const std::array<double, 3> &s_conditions,
-                                                          const std::array<double, 3> &d_conditions,
-                                                          const ReferenceLine &ref_line,
-                                                          planning_msgs::TrajectoryPoint &trajectory_point) {
-
-  auto ref_point = ref_line.GetReferencePoint(s_conditions[0]);
-
-  common::CoordinateTransformer::FrenetToCartesian(s_conditions[0],
-                                                   ref_point.x(),
-                                                   ref_point.y(),
-                                                   ref_point.theta(),
-                                                   ref_point.kappa(),
-                                                   ref_point.dkappa(),
-                                                   s_conditions,
-                                                   d_conditions,
-                                                   &trajectory_point.path_point.x,
-                                                   &trajectory_point.path_point.y,
-                                                   &trajectory_point.path_point.theta,
-                                                   &trajectory_point.path_point.kappa,
-                                                   &trajectory_point.vel,
-                                                   &trajectory_point.acc);
-}
-
 }

@@ -22,7 +22,9 @@ find_package(catkin REQUIRED COMPONENTS
         nav_msgs
         tf
         common
+
         )
+find_package(Eigen3 REQUIRED)
 
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
@@ -139,7 +141,8 @@ add_library(vehicle_state
 
 target_link_libraries(vehicle_state
         ${catkin_LIBRARIES}
-        common)
+        common
+        Eigen3::Eigen)
 ## Add cmake target dependencies of the library
 ## as an example, code may need to be generated before libraries
 ## either from message generation or dynamic reconfigure

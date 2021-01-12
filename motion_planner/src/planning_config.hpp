@@ -44,7 +44,7 @@ class PlanningConfig {
   double sim_horizon() const { return sim_horizon_; }
   double sim_step() const { return sim_step_; }
   double safe_time_headway() const { return safe_time_headway_; }
-  double acc_exponet() const { return acc_exponet_; }
+  int acc_exponet() const { return acc_exponet_; }
   double s0() const { return s0_; }
   double s1() const { return s1_; }
   double default_lateral_approach_ratio() const { return default_lateral_approach_ratio_; }
@@ -127,7 +127,7 @@ class PlanningConfig {
   double sim_horizon_{};
   double sim_step_{};
   double safe_time_headway_{};
-  double acc_exponet_{};
+  int acc_exponet_{};
   double s0_{};
   double s1_{};
   double default_lateral_approach_ratio_{};

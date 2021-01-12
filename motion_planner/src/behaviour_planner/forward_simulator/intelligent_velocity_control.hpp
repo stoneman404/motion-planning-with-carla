@@ -15,14 +15,21 @@ class IntelligentVelocityControl {
 
 class IntelligentDriverModel {
  public:
-  using std::array<double, 4>
-  State;
+  using State = std::array<double, 4>;
   IntelligentDriverModel() = default;
   ~IntelligentDriverModel() = default;
   IntelligentDriverModel(const IDMParams &param, std::array<double, 4> &state);
+  std::array<double, 4> Step(double dt);
+  void operator()(const State &x, State &dxdt, const double /*t*/);
+
  private:
-  State state_;
+  static bool GetAccDesiredAcceleration(const IDMParams &param,
+                                        const State &cur_state, double *acc);
+  static bool GetIIdmDesiredAcceleration(const IDMParams &param,
+                                         const State &cur_state, double *acc);
+ private:
   IDMParams param_;
+  State state_;
 };
 }
 

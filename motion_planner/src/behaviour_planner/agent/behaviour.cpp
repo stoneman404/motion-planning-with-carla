@@ -379,7 +379,7 @@ bool ReferenceInfo::GetReferenceLines(std::vector<ReferenceLine> *reference_line
 
 void ReferenceInfo::GenerateThread() {
   while (!is_stop_) {
-    static constexpr int32_t kSleepTime = 80;  // milliseconds
+    static constexpr int32_t kSleepTime = 60;  // milliseconds
     std::this_thread::sleep_for(std::chrono::milliseconds(kSleepTime));
     auto start_time = std::chrono::system_clock::now();
     if (!has_route_) {

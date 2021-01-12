@@ -13,7 +13,7 @@ class MPDMPlanner : public BehaviourStrategy {
  public:
 
   MPDMPlanner() = default;
-  explicit MPDMPlanner(const PolicySimulateConfig &config,
+  explicit MPDMPlanner(const SimulationParams &config,
                        common::ThreadPool *thread_pool);
   ~MPDMPlanner() override = default;
 

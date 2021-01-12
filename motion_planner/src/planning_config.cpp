@@ -55,7 +55,7 @@ void PlanningConfig::UpdateParams(const ros::NodeHandle &nh) {
   nh.param<double>("/motion_planner/sim_horizon", sim_horizon_, 10.0);
   nh.param<double>("/motion_planner/sim_step", sim_step_, 0.25);
   nh.param<double>("/motion_planner/safe_time_headway", safe_time_headway_, 0.5);
-  nh.param<double>("/motion_planner/acc_exponet", acc_exponet_, 4.0);
+  nh.param<int>("/motion_planner/acc_exponet", acc_exponet_, 4);
   nh.param<double>("/motion_planner/s0", s0_, 2.0);
   nh.param<double>("/motion_planner/s1", s1_, 0.0);
   nh.param<double>("/motion_planner/default_lateral_approach_ratio", default_lateral_approach_ratio_, 0.995);

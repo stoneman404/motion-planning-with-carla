@@ -40,6 +40,8 @@ VehicleState::VehicleState(const carla_msgs::CarlaEgoVehicleStatus &ego_vehicle_
   double centripental_acc = -1.0 * ego_vehicle_status.acceleration.linear.x * std::sin(ego_theta) + ego_vehicle_status.acceleration.linear.y * std::cos(ego_theta);
   kino_dynamic_state_ =
       KinoDynamicState(ego_x, ego_y, object.pose.position.z, ego_theta, ego_kappa, ego_v, ego_a, centripental_acc);
+  // should shift when using ego box; here the position is rear axle center
+  ego_box_ = common::Box2d({ego_x, ego_y}, ego_theta, vehicle_params_.length, vehicle_params_.width);
 
 //  ROS_INFO("centripental_acc is %lf", centripental_acc);
   this->time_stamp_ = ego_vehicle_status.header.stamp;
@@ -84,6 +86,7 @@ void VehicleState::Update(const carla_msgs::CarlaEgoVehicleStatus &ego_vehicle_s
   kino_dynamic_state_ =
       KinoDynamicState(ego_x, ego_y, object.pose.position.z, ego_theta, ego_kappa, ego_v, ego_a, centripental_acc);
   ROS_INFO("centripental_acc is %lf", centripental_acc);
+  ego_box_ = common::Box2d({ego_x, ego_y}, ego_theta, vehicle_params_.length, vehicle_params_.width);
   this->time_stamp_ = ego_vehicle_status.header.stamp;
   this->steer_percentage_ = ego_vehicle_status.control.steer;
   this->reverse_ = ego_vehicle_status.control.reverse;

@@ -13,19 +13,7 @@ MotionPlanner::MotionPlanner(const ros::NodeHandle &nh) : nh_(nh), thread_pool_s
   this->thread_pool_ = std::make_unique<common::ThreadPool>(thread_pool_size_);
   this->vehicle_state_ = std::make_unique<vehicle_state::VehicleState>();
   if (PlanningConfig::Instance().behaviour_planner_type() == "mpdm") {
-    PolicySimulateConfig config;
-    config.sim_step_ = PlanningConfig::Instance().sim_step();
-    config.sim_horizon_ = PlanningConfig::Instance().sim_horizon();
-    config.acc_exponet = PlanningConfig::Instance().acc_exponet();
-    config.cutting_in_lateral_approach_ratio = PlanningConfig::Instance().cutting_in_lateral_approach_ratio();
-    config.default_lat_approach_ratio = PlanningConfig::Instance().default_lateral_approach_ratio();
-    config.desired_vel = PlanningConfig::Instance().desired_velocity();
-    config.max_acc = PlanningConfig::Instance().max_lon_acc();
-    config.max_decel = -1.0 * PlanningConfig::Instance().min_lon_acc();
-    config.max_lat_acc = PlanningConfig::Instance().max_lat_acc();
-    config.s0 = PlanningConfig::Instance().s0();
-    config.s1 = PlanningConfig::Instance().s1();
-    config.safe_time_headway = PlanningConfig::Instance().safe_time_headway();
+    SimulationParams config = GetSimulateParams();
     behaviour_planner_ = std::make_unique<MPDMPlanner>(config, nullptr);
   } else {
     ROS_FATAL("MotionPlanner, no such [%s] trajectory planner at now",
@@ -56,6 +44,33 @@ MotionPlanner::MotionPlanner(const ros::NodeHandle &nh) : nh_(nh), thread_pool_s
   double lookback_length = 30.0;
   reference_info_ = std::make_unique<ReferenceInfo>(reference_line_config, lookahead_length, lookback_length);
   reference_info_->Start();
+}
+
+SimulationParams MotionPlanner::GetSimulateParams() const {
+  SimulationParams config;
+  config.sim_step_ = PlanningConfig::Instance().sim_step();
+  config.sim_horizon_ = PlanningConfig::Instance().sim_horizon();
+  config.idm_params.acc_exponent = PlanningConfig::Instance().acc_exponet();
+//  config.cutting_in_lateral_approach_ratio = PlanningConfig::Instance().cutting_in_lateral_approach_ratio();
+//  config.default_lat_approach_ratio = PlanningConfig::Instance().default_lateral_approach_ratio();
+  config.idm_params.desired_velocity = PlanningConfig::Instance().desired_velocity();
+  config.idm_params.max_acc = PlanningConfig::Instance().max_lon_acc();
+  config.idm_params.max_decel = -1.0 * PlanningConfig::Instance().min_lon_acc();
+  config.idm_params.comfortable_decel = 3.0;
+  config.idm_params.s0 = PlanningConfig::Instance().s0();
+  config.idm_params.s1 = PlanningConfig::Instance().s1();
+  config.idm_params.safe_time_headway = PlanningConfig::Instance().safe_time_headway();
+  config.steer_control_gain = 1.5;
+  config.steer_control_max_lookahead_dist = 50.0;
+  config.steer_control_min_lookahead_dist = 3.0;
+  config.max_lat_acceleration_abs = 1.5;
+  config.max_lat_jerk_abs = 3.0;
+  config.max_curvature_abs = 0.33;
+  config.max_lon_acc_jerk = 5.0;
+  config.max_lon_brake_jerk = 5.0;
+  config.max_steer_angle_abs = 0.25 * M_PI;
+  config.max_steer_rate = 0.39;
+  return config;
 }
 
 void MotionPlanner::Launch() {
@@ -634,20 +649,21 @@ MotionPlanner::~MotionPlanner() {
     reference_info_->Stop();
   }
 }
+
 std::unordered_map<int, Agent> MotionPlanner::MakeBehaviourAgentSet() {
   std::unordered_map<int, Agent> agent_set;
   for (const auto &object : objects_map_) {
     agent_set.emplace(object.first, object.second);
   }
-  for (const auto &traffic_light :  traffic_lights_info_list_) {
-    if (traffic_light_status_list_.find(traffic_light.first) == traffic_light_status_list_.end()) {
-      continue;
-    }
-    auto traffic_status = traffic_light_status_list_[traffic_light.first];
-    if (traffic_status.state == carla_msgs::CarlaTrafficLightStatus::RED) {
-      agent_set.emplace(traffic_light.first, Agent({traffic_status, traffic_light.second}));
-    }
-  }
+//  for (const auto &traffic_light :  traffic_lights_info_list_) {
+//    if (traffic_light_status_list_.find(traffic_light.first) == traffic_light_status_list_.end()) {
+//      continue;
+//    }
+//    auto traffic_status = traffic_light_status_list_[traffic_light.first];
+//    if (traffic_status.state == carla_msgs::CarlaTrafficLightStatus::RED) {
+//      agent_set.emplace(traffic_light.first, Agent({traffic_status, traffic_light.second}));
+//    }
+//  }
   return agent_set;
 }
 std::unordered_map<int, Agent> MotionPlanner::GetKeyAgents(const std::unordered_map<int, Agent> &agent_set,

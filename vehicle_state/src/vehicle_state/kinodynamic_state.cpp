@@ -1,5 +1,7 @@
 #include "vehicle_state/kinodynamic_state.hpp"
 #include <ros/ros.h>
+#include <planning_msgs/TrajectoryPoint.h>
+
 namespace vehicle_state {
 
 KinoDynamicState::KinoDynamicState(double _x,
@@ -9,9 +11,10 @@ KinoDynamicState::KinoDynamicState(double _x,
                                    double _kappa,
                                    double _v,
                                    double _a,
-                                   double _centripental_acc)
+                                   double _centripental_acc,
+                                   double _steer)
     : x(_x), y(_y), z(_z),
-      theta(_theta), kappa(_kappa), v(_v), a(_a), centripental_acc(_centripental_acc) {}
+      theta(_theta), kappa(_kappa), v(_v), a(_a), centripental_acc(_centripental_acc), steer(_steer) {}
 
 KinoDynamicState KinoDynamicState::GetNextStateAfterTime(double predict_time) const {
   double dt = 0.1;
@@ -47,7 +50,27 @@ KinoDynamicState KinoDynamicState::GetNextStateAfterTime(double predict_time) co
     cur_theta = next_theta;
     cur_v = next_v;
   }
-  return (KinoDynamicState(next_x, next_y, next_z, next_theta, next_kappa, next_v, next_a, centripental_acc));
+  return (KinoDynamicState(next_x, next_y, next_z, next_theta, next_kappa, next_v, next_a, centripental_acc, steer));
+}
+planning_msgs::TrajectoryPoint KinoDynamicState::ToTrajectoryPoint(double relative_time)  {
+  planning_msgs::TrajectoryPoint tp;
+  tp.path_point.x = x;
+  tp.path_point.y = y;
+  tp.path_point.theta = theta;
+  tp.path_point.kappa = kappa;
+  tp.path_point.dkappa = 0.0;
+  tp.path_point.s = 0.0;
+  tp.vel = v;
+  tp.acc = a;
+  tp.steer_angle = steer;
+  tp.jerk = 0.0;
+  tp.relative_time = relative_time;
+  return tp;
+}
+
+void KinoDynamicState::ShiftState(const Eigen::Vector2d &shift_vec) {
+  x += shift_vec.x();
+  y += shift_vec.y();
 }
 }
 

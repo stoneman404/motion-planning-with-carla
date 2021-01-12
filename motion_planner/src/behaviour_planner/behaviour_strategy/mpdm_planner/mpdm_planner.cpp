@@ -5,7 +5,7 @@
 #include "name/string_name.hpp"
 
 namespace planning {
-MPDMPlanner::MPDMPlanner(const PolicySimulateConfig &config,
+MPDMPlanner::MPDMPlanner(const SimulationParams &config,
                          common::ThreadPool *thread_pool)
     : thread_pool_(thread_pool) {
   behavior_.longitudinal_behaviour = LongitudinalBehaviour::STOPPING;

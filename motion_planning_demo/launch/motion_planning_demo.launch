@@ -18,7 +18,7 @@
     <!--    <arg name='spawn_point' default='127.4,195.4,0,0,0,180'/>-->
     <arg name="spawn_point" default=""/>
     <!-- target speed that the agent tries to follow -->
-    <arg name="target_speed" default="30"/>
+    <arg name="target_speed" default="90"/>
     <!-- should the agent avoid crashs and respect red traffic lights? -->
     <arg name="avoid_risk" default="True"/>
     <!-- Should the manual control node be started? As rviz is used, disabled -->

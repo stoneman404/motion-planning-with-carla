@@ -40,6 +40,8 @@ class MotionPlanner {
   void InitSubscriber();
   void InitServiceClient();
 
+  SimulationParams GetSimulateParams() const;
+
   /**
    * @brief: make behaviour agent set for behaviour planning
    * @return: the behaviour agent set, std::unordered_map<int, Agent>

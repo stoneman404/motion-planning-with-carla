@@ -5,8 +5,8 @@ namespace control {
 
 PIDController::PIDController(const PIDConfigs &pid_configs, double loop_rate)
     : pid_configs_(pid_configs), loop_rate_(loop_rate) {
-  lat_error_buffer_.set_capacity(10);
-  lon_error_buffer_.set_capacity(30);
+  lat_error_buffer_.set_capacity(5);
+  lon_error_buffer_.set_capacity(5);
 }
 
 bool PIDController::Execute(double current_time_stamp,
