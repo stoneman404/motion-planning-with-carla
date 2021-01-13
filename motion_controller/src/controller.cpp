@@ -1,22 +1,32 @@
 #include <derived_object_msgs/ObjectArray.h>
 #include "controller.hpp"
-#include "pid_controller/pid_controller.hpp"
+#include "pid_pure_pursuit_controller/pid_pure_pursuit_controller.hpp"
 #include "name/string_name.hpp"
 #include "planning_msgs/Trajectory.h"
 namespace control {
 
 Controller::Controller(ros::NodeHandle &nh) : nh_(nh), vehicle_state_(std::make_unique<vehicle_state::VehicleState>()) {
   nh_.param<std::string>("/motion_control/controller_type", controller_type_, "pid");
-  nh_.param<double>("/motion_control/pid_lookahead_time", pid_configs_.lookahead_time, 1.0);
-  nh_.param<double>("/motion_control/lateral_pid_kp", pid_configs_.lat_configs.lat_kp, 1.95);
-  nh_.param<double>("/motion_control/lateral_pid_kd", pid_configs_.lat_configs.lat_kd, 0.01);
-  nh_.param<double>("/motion_control/lateral_pid_ki", pid_configs_.lat_configs.lat_ki, 1.4);
-  nh_.param<double>("/motion_control/longitudinal_pid_kp", pid_configs_.lon_configs.lon_kp, 0.72);
-  nh_.param<double>("/motion_control/longitudinal_pid_kd", pid_configs_.lon_configs.lon_kd, 0.2);
-  nh_.param<double>("/motion_control/longitudinal_pid_ki", pid_configs_.lon_configs.lon_ki, 0.36);
+  nh_.param<double>("/motion_control/pid_lookahead_time", control_configs_.lookahead_time, 1.0);
+//  nh_.param<double>("/motion_control/lateral_pid_kp", control_configs_.lat_configs.lat_kp, 1.95);
+//  nh_.param<double>("/motion_control/lateral_pid_kd", control_configs_.lat_configs.lat_kd, 0.01);
+//  nh_.param<double>("/motion_control/lateral_pid_ki", control_configs_.lat_configs.lat_ki, 1.4);
+  nh_.param<double>("/motion_control/steer_control_gain",
+                    control_configs_.pure_pursuit_configs.steer_control_gain,
+                    1.5);
+  nh_.param<double>("/motion_control/steer_control_max_lookahead_dist",
+                    control_configs_.pure_pursuit_configs.steer_control_max_lookahead_dist,
+                    50);
+  nh_.param<double>("/motion_control/steer_control_min_lookahead_dist",
+                    control_configs_.pure_pursuit_configs.steer_control_min_lookahead_dist,
+                    3);
+
+  nh_.param<double>("/motion_control/longitudinal_pid_kp", control_configs_.lon_configs.lon_kp, 0.72);
+  nh_.param<double>("/motion_control/longitudinal_pid_kd", control_configs_.lon_configs.lon_kd, 0.2);
+  nh_.param<double>("/motion_control/longitudinal_pid_ki", control_configs_.lon_configs.lon_ki, 0.36);
   nh_.param<double>("/motion_control/loop_rate", loop_rate_, 50.0);
   if (controller_type_ == "pid") {
-    control_strategy_ = std::make_unique<PIDController>(pid_configs_, loop_rate_);
+    control_strategy_ = std::make_unique<PIDPurePursuitController>(control_configs_, loop_rate_);
   } else {
     ROS_FATAL("No such controller... [%s]", controller_type_.c_str());
     ROS_ASSERT(false);
@@ -68,7 +78,7 @@ void Controller::RunOnce() {
     carla_control_publisher_.publish(control);
     return;
   }
-  if (trajectory_.status != planning_msgs::Trajectory::NORMAL){
+  if (trajectory_.status != planning_msgs::Trajectory::NORMAL) {
     Controller::EmergencyStopControl(control);
     carla_control_publisher_.publish(control);
     return;
@@ -95,7 +105,7 @@ void Controller::EmergencyStopControl(carla_msgs::CarlaEgoVehicleControl &contro
 
 void Controller::Launch() {
   ros::WallRate loop_rate(loop_rate_);
-  while (ros::ok()){
+  while (ros::ok()) {
     ros::spinOnce();
     RunOnce();
     loop_rate.sleep();

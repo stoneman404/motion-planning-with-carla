@@ -6,11 +6,11 @@
 #include <boost/circular_buffer.hpp>
 
 namespace control {
-class PIDController : public ControlStrategy {
+class PIDPurePursuitController : public ControlStrategy {
  public:
-  PIDController() = default;
-  PIDController(const PIDConfigs &pid_configs, double loop_rate);
-  ~PIDController() override = default;
+  PIDPurePursuitController() = default;
+  PIDPurePursuitController(const ControlConfigs &control_configs, double loop_rate);
+  ~PIDPurePursuitController() override = default;
   bool Execute(double current_time_stamp,
                const vehicle_state::VehicleState &vehicle_state,
                const planning_msgs::Trajectory &trajectory,
@@ -18,10 +18,16 @@ class PIDController : public ControlStrategy {
 
  private:
   bool LongitudinalControl(double current_speed, double target_speed, double delta_t, double *throttle);
-  bool LateralControl(const Eigen::Vector3d &current_pose,
-                      const Eigen::Vector3d &target_pose,
-                      double delta_t,
-                      double *steer);
+//  bool LateralControl(const Eigen::Vector3d &current_pose,
+//                      const Eigen::Vector3d &target_pose,
+//                      double delta_t,
+//                      double *steer);
+  bool PurePursuitSteerControl(double max_steer,
+                               double wheelbase,
+                               const vehicle_state::KinoDynamicState &vehicle_state,
+                               const planning_msgs::TrajectoryPoint &target_tp,
+                               const planning_msgs::Trajectory &trajectory,
+                               double *steer);
   template<class T>
   inline T Clamp(const T &value, const T &lower, const T &upper);
 
@@ -36,10 +42,15 @@ class PIDController : public ControlStrategy {
   static inline bool GetMatchedPointByRelativeTime(double relative_time, const planning_msgs::Trajectory& trajectory,
                                                    planning_msgs::TrajectoryPoint& matched_tp);
 
+  static inline bool GetMatchedPointByS(double s, const planning_msgs::Trajectory& trajectory,
+                                        planning_msgs::TrajectoryPoint& matched_tp);
+
+
+
 
  private:
-  PIDConfigs pid_configs_;
-  double loop_rate_;
+  ControlConfigs control_configs_;
+  double loop_rate_{};
   boost::circular_buffer<double> lat_error_buffer_{};
   boost::circular_buffer<double> lon_error_buffer_{};
 

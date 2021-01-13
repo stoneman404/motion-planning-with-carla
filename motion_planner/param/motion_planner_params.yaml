@@ -40,7 +40,7 @@
 /motion_planner/preserve_history_trajectory_point_num: 25
 
 /motion_planner/behaviour_planner_type: "mpdm"
-/motion_planner/desired_velocity: 30
+/motion_planner/desired_velocity: 25
 #/motion_planner/max_lat_acc: 0.8
 /motion_planner/sim_horizon: 10.0
 /motion_planner/sim_step: 0.25

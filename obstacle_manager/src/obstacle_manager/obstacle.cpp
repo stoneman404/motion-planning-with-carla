@@ -160,11 +160,11 @@ Obstacle::Obstacle(const carla_msgs::CarlaTrafficLightInfo &traffic_light_info,
   }
   double box_length = traffic_light_info.trigger_volume.size.x;
   double box_width = traffic_light_info.trigger_volume.size.y;
-  center_ << traffic_light_info.transform.position.x + traffic_light_info.trigger_volume.center.x,
-      traffic_light_info.transform.position.y + traffic_light_info.trigger_volume.center.y;
+  center_ <<  traffic_light_info.trigger_volume.center.x, traffic_light_info.trigger_volume.center.y;
   heading_ = tf::getYaw(traffic_light_info.transform.orientation);
   bounding_box_ = common::Box2d(center_, heading_, box_length, box_width);
 }
+
 void Obstacle::SetTrajectory(const planning_msgs::Trajectory &trajectory) {
   this->trajectory_ = trajectory;
 }

@@ -12,10 +12,12 @@ using namespace common;
 
 FrenetLatticePlanner::FrenetLatticePlanner(ThreadPool *thread_pool) : thread_pool_(thread_pool) {}
 
-bool FrenetLatticePlanner::Process(const planning_msgs::TrajectoryPoint &init_trajectory_point,
+bool FrenetLatticePlanner::Process(const std::vector<std::shared_ptr<Obstacle>> &obstacles,
+                                   const planning_msgs::TrajectoryPoint &init_trajectory_point,
                                    const std::vector<PlanningTarget> &planning_targets,
                                    planning_msgs::Trajectory &pub_trajectory,
                                    std::vector<planning_msgs::Trajectory> *valid_trajectories) {
+  obstacles_.assign(obstacles.begin(), obstacles.end());
   if (planning_targets.empty()) {
     ROS_FATAL("[FrenetLatticePlanner::Process]: ******No planning_targets provided*********");
     return false;
@@ -61,8 +63,8 @@ bool FrenetLatticePlanner::PlanningOnRef(const planning_msgs::TrajectoryPoint &i
   std::array<double, 3> init_s{};
   std::array<double, 3> init_d{};
   FrenetLatticePlanner::GetInitCondition(ref_line, init_trajectory_point, &init_s, &init_d);
-  auto obstacle_vec = planning_target.obstacles;
-  auto st_graph = std::make_shared<STGraph>(obstacle_vec, ref_line,
+//  auto obstacle_vec = planning_target.obstacles;
+  auto st_graph = std::make_shared<STGraph>(obstacles_, ref_line,
                                             init_s[0],
                                             init_s[0] + PlanningConfig::Instance().max_lookahead_distance(),
                                             0.0, PlanningConfig::Instance().max_lookahead_time(),
@@ -73,7 +75,7 @@ bool FrenetLatticePlanner::PlanningOnRef(const planning_msgs::TrajectoryPoint &i
   std::vector<std::shared_ptr<Polynomial>> lat_traj_vec;
 
   auto end_condition_sampler =
-      std::make_shared<EndConditionSampler>(init_s, init_d, ref_line, planning_target.obstacles, st_graph);
+      std::make_shared<EndConditionSampler>(init_s, init_d, ref_line, obstacles_, st_graph);
   FrenetLatticePlanner::GenerateLonTrajectories(planning_target, init_s, end_condition_sampler, &lon_traj_vec);
   FrenetLatticePlanner::GenerateLatTrajectories(init_d, end_condition_sampler, &lat_traj_vec);
   ROS_INFO("[PlanningOnRef] : the lon end conditions size is %zu, the lat end_conditions size is %zu",
@@ -87,7 +89,7 @@ bool FrenetLatticePlanner::PlanningOnRef(const planning_msgs::TrajectoryPoint &i
                                                                                      ref_line, st_graph,
                                                                                      thread_pool_);
   std::unordered_map<int, std::shared_ptr<Obstacle>> obstacle_map;
-  for (const auto &obstacle : planning_target.obstacles) {
+  for (const auto &obstacle : obstacles_) {
     obstacle_map.emplace(obstacle->Id(), obstacle);
   }
   CollisionChecker collision_checker = CollisionChecker(obstacle_map,
@@ -340,9 +342,10 @@ void FrenetLatticePlanner::GenerateLonTrajectories(const PlanningTarget &plannin
   auto ref_line = planning_target.ref_lane;
   auto matched_ref_point = ref_line.GetReferencePoint(init_s[0]);
 //  std::cout << "=========== matched_ref_point: kappa: " << matched_ref_point.kappa() << std::endl;
-  double cruise_speed = std::min(PlanningConfig::Instance().max_lon_velocity() * 0.9,
-                                 PlanningConfig::Instance().max_lat_acc()
-                                     / (std::fabs(matched_ref_point.kappa()) + 1e-6));
+//  double cruise_speed = std::min(PlanningConfig::Instance().max_lon_velocity() * 0.9,
+//                                 PlanningConfig::Instance().max_lat_acc()
+//                                     / (std::fabs(matched_ref_point.kappa()) + 1e-6));
+  double cruise_speed = planning_target.desired_vel;
 //  std::cout << " -==========================-- cruise speed is: " << cruise_speed << "m/s==============-" << std::endl;
   FrenetLatticePlanner::GenerateCruisingLonTrajectories(cruise_speed, init_s,
                                                         end_condition_sampler, ptr_lon_traj_vec);

@@ -3,7 +3,7 @@ project(motion_planner)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
 #add_compile_options(-std=c++14 -g -Werror -Wall -Wno-unused -Wno-sign-compare)
-add_compile_options(-std=c++14 -O3 -Werror -Wall -Wno-unused -Wno-sign-compare)
+add_compile_options(-std=c++14 -O2 -Werror -Wall -Wno-unused -Wno-sign-compare)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)
@@ -159,12 +159,6 @@ include_directories(
 ## The recommended prefix ensures that target names across packages don't collide
 
 set(planning_SRC
-        src/behaviour_planner/agent/agent.cpp
-        src/behaviour_planner/agent/behaviour.cpp
-        src/behaviour_planner/behaviour_strategy/behaviour_strategy.hpp
-        src/behaviour_planner/behaviour_strategy/mpdm_planner/mpdm_planner.cpp
-        src/behaviour_planner/behaviour_strategy/mpdm_planner/policy_decider.cpp
-        src/behaviour_planner/forward_simulator/on_lane_forward_simulator.cpp
         src/frenet_lattice_planner/constraint_checker.cpp
         src/frenet_lattice_planner/end_condition_sampler.cpp
         src/frenet_lattice_planner/polynomial_trajectory_evaluator.cpp
@@ -173,8 +167,7 @@ set(planning_SRC
         src/motion_planner.cpp
         src/planning_config.cpp
         src/motion_planner_node.cpp
-        src/behaviour_planner/forward_simulator/pure_pursuit_control.cpp
-        src/behaviour_planner/forward_simulator/intelligent_velocity_control.cpp)
+        src/reference_generator/reference_generator.cpp)
 
 add_executable(motion_planning_node ${planning_SRC})
 

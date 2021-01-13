@@ -10,17 +10,16 @@
 #include "planning_msgs/LateralBehaviour.h"
 #include "planning_msgs/LongitudinalBehaviour.h"
 #include "obstacle_manager/obstacle.hpp"
-#include "behaviour_planner/agent/behaviour.hpp"
 
 namespace planning {
 
 struct PlanningTarget {
   double desired_vel{};
   ReferenceLine ref_lane{};
-  planning_msgs::Trajectory behaviour_trajectory{};
-  std::vector<std::shared_ptr<Obstacle>> obstacles;
-  LateralBehaviour lateral_behaviour{};
-  LongitudinalBehaviour longitudinal_behaviour{};
+//  planning_msgs::Trajectory behaviour_trajectory{};
+//  std::vector<std::shared_ptr<Obstacle>> obstacles;
+//  LateralBehaviour lateral_behaviour{};
+//  LongitudinalBehaviour longitudinal_behaviour{};
   bool is_best_behaviour = false;
   bool has_stop_point = false;
   double stop_s{};

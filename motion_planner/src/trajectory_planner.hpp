@@ -23,7 +23,8 @@ class TrajectoryPlanner {
    * @param valid_trajectories: for visualization
    * @return
    */
-  virtual bool Process(const planning_msgs::TrajectoryPoint &init_trajectory_point,
+  virtual bool Process(const std::vector<std::shared_ptr<Obstacle>> &obstacles,
+                       const planning_msgs::TrajectoryPoint &init_trajectory_point,
                        const std::vector<PlanningTarget> &planning_targets,
                        planning_msgs::Trajectory &optimal_trajectory,
                        std::vector<planning_msgs::Trajectory> *valid_trajectories) = 0;

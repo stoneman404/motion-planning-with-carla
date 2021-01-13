@@ -143,7 +143,7 @@ include_directories(
 set(control_SRC
         src/motion_controller_node.cpp
         src/controller.cpp
-        src/pid_controller/pid_controller.cpp )
+        src/pid_pure_pursuit_controller/pid_pure_pursuit_controller.cpp)
 
 add_executable(${PROJECT_NAME}_node
        ${control_SRC})

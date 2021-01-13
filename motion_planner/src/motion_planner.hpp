@@ -20,10 +20,11 @@
 #include <planning_msgs/Trajectory.h>
 #include <planning_msgs/Behaviour.h>
 #include <reference_line/reference_line.hpp>
+#include <reference_generator/reference_generator.hpp>
 #include "trajectory_planner.hpp"
 #include "frenet_lattice_planner/frenet_lattice_planner.hpp"
-#include "behaviour_planner/behaviour_strategy/behaviour_strategy.hpp"
-#include "behaviour_planner/behaviour_strategy/mpdm_planner/mpdm_planner.hpp"
+//#include "behaviour_planner/behaviour_strategy/behaviour_strategy.hpp"
+//#include "behaviour_planner/behaviour_strategy/mpdm_planner/mpdm_planner.hpp"
 
 namespace planning {
 
@@ -40,13 +41,16 @@ class MotionPlanner {
   void InitSubscriber();
   void InitServiceClient();
 
-  SimulationParams GetSimulateParams() const;
+  std::vector<PlanningTarget> GetPlanningTargets(const std::vector<ReferenceLine> &ref_lines,
+                                                 const planning_msgs::TrajectoryPoint &init_point);
+
+//  SimulationParams GetSimulateParams() const;
 
   /**
    * @brief: make behaviour agent set for behaviour planning
    * @return: the behaviour agent set, std::unordered_map<int, Agent>
    */
-  std::unordered_map<int, Agent> MakeBehaviourAgentSet();
+//  std::unordered_map<int, Agent> MakeBehaviourAgentSet();
 
   /**
    * @brief: get key agent set from behaviour agent set and ego agent state
@@ -54,17 +58,23 @@ class MotionPlanner {
    * @param ego_id
    * @return
    */
-  static std::unordered_map<int, Agent> GetKeyAgents(
-      const std::unordered_map<int, Agent> &agent_set, int ego_id);
-
+//  static std::unordered_map<int, Agent> GetKeyAgents(
+//      const std::unordered_map<int, Agent> &agent_set, int ego_id);
+  static std::vector<std::shared_ptr<Obstacle>> GetKeyObstacle(const std::unordered_map<int, derived_object_msgs::Object> &objects,
+                                                               const std::unordered_map<int,
+                                                                                        carla_msgs::CarlaTrafficLightStatus> &traffic_light_status_list,
+                                                               const std::unordered_map<int,
+                                                                                        carla_msgs::CarlaTrafficLightInfo> &traffic_lights_info_list,
+                                                               const planning_msgs::TrajectoryPoint &trajectory_point,
+                                                               int ego_id);
   /**
    * @brief: predict agent behaviour.
    * @param key_agent_set
    * @param ego_id
    * @return
    */
-  bool PredictAgentsBehaviours(
-      std::unordered_map<int, Agent> &key_agent_set, int ego_id);
+//  bool PredictAgentsBehaviours(
+//      std::unordered_map<int, Agent> &key_agent_set, int ego_id);
 
   /**
    * @brief: add agent potential reference line
@@ -121,8 +131,8 @@ class MotionPlanner {
    * @param planning_targets
    * @return
    */
-  bool GetPlanningTargetFromBehaviour(const Behaviour &behaviour,
-                                      std::vector<PlanningTarget> &planning_targets);
+//  bool GetPlanningTargetFromBehaviour(const Behaviour &behaviour,
+//                                      std::vector<PlanningTarget> &planning_targets);
 
   /**
    * @brief: stitching history trajectory and planned trajectory
@@ -211,6 +221,8 @@ class MotionPlanner {
    */
   void VisualizeReferenceLine(std::vector<ReferenceLine> &ref_lanes);
 
+  void VisualizeObstacleTrajectory(const std::vector<std::shared_ptr<Obstacle>>& obstacle) ;
+
   /**
    * @brief: get local goal
    * @param planning_target
@@ -223,6 +235,7 @@ class MotionPlanner {
   int ego_vehicle_id_ = -1;
   std::unique_ptr<vehicle_state::VehicleState> vehicle_state_;
   std::vector<std::shared_ptr<Obstacle>> obstacles_;
+  std::vector<derived_object_msgs::Object> objects_;
 //  planning_msgs::Behaviour behaviour_;
   carla_msgs::CarlaEgoVehicleInfo ego_vehicle_info_;
   carla_msgs::CarlaEgoVehicleStatus ego_vehicle_status_;
@@ -233,7 +246,7 @@ class MotionPlanner {
   ros::NodeHandle nh_;
   planning_msgs::Trajectory history_trajectory_;
   std::unique_ptr<TrajectoryPlanner> trajectory_planner_;
-  std::unique_ptr<BehaviourStrategy> behaviour_planner_;
+//  std::unique_ptr<BehaviourStrategy> behaviour_planner_;
 
   ////////////////// ServiceClinet //////////////////////
   ros::ServiceClient get_actor_waypoint_client_;
@@ -257,13 +270,15 @@ class MotionPlanner {
   ros::Publisher visualized_reference_lines_publisher_;
   ros::Publisher visualized_traffic_light_box_publisher_;
   ros::Publisher visualized_obstacle_trajectory_publisher_;
+  ros::Publisher visualized_obstacle_info_publisher_;
 
   /////////////////// thread pool///////////////////
   size_t thread_pool_size_ = 6;
   std::unique_ptr<common::ThreadPool> thread_pool_;
-  std::unique_ptr<ReferenceInfo> reference_info_;
+  std::unique_ptr<ReferenceGenerator> reference_generator_;
 
   std::vector<PlanningTarget> planning_targets_;
+//  std::vector<std::shared_ptr<Obstacle>> obstacles_;
 
 };
 }

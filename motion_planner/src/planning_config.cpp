@@ -34,7 +34,7 @@ void PlanningConfig::UpdateParams(const ros::NodeHandle &nh) {
   nh.param<double>("/motion_planner/max_kappa", max_kappa_, 2.0);
   nh.param<double>("/motion_planner/min_lat_acc", min_lat_acc_, -4.0);
   nh.param<double>("/motion_planner/max_lat_acc", max_lat_acc_, 4.0);
-  nh.param<double>("/motion_planner/target_speed", desired_velocity_, 8.333);
+  nh.param<double>("/motion_planner/desired_velocity", desired_velocity_, 8.333);
   nh.param<double>("/motion_planner/lattice_weight_opposite_side_offset",
                    lattice_weight_opposite_side_offset_,10.0);
   nh.param<double>("/motion_planner/lattice_weight_same_side_offset",

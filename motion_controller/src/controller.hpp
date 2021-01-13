@@ -30,7 +30,7 @@ class Controller {
   ros::Subscriber ref_lane_subscriber_;
   ros::Subscriber objects_subscriber_;
   std::string controller_type_{"pid"};
-  PIDConfigs pid_configs_;
+  ControlConfigs control_configs_;
   std::unique_ptr<ControlStrategy> control_strategy_;
   planning_msgs::Trajectory trajectory_;
   carla_msgs::CarlaEgoVehicleInfo ego_vehicle_info_;

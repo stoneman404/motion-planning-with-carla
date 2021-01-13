@@ -62,7 +62,6 @@ bool CollisionChecker::IsCollision(const planning_msgs::Trajectory &trajectory) 
         };
         futures.emplace_back(thread_pool_->PushTask(task));
       }
-
     }
     for (auto &future : futures) {
       if (future.get()) {
@@ -71,8 +70,8 @@ bool CollisionChecker::IsCollision(const planning_msgs::Trajectory &trajectory) 
     }
     return false;
   }
-
 }
+
 void CollisionChecker::Init(const std::unordered_map<int, std::shared_ptr<Obstacle>> &obstacles,
                             double ego_vehicle_s,
                             double ego_vehicle_d,

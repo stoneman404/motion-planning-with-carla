@@ -27,7 +27,8 @@ class FrenetLatticePlanner : public TrajectoryPlanner {
    * @param[out] pub_trajectory
    * @return
    */
-  bool Process(const planning_msgs::TrajectoryPoint &init_trajectory_point,
+  bool Process(const std::vector<std::shared_ptr<Obstacle>> &obstacles,
+               const planning_msgs::TrajectoryPoint &init_trajectory_point,
                const std::vector<PlanningTarget> &planning_targets,
                planning_msgs::Trajectory &pub_trajectory,
                std::vector<planning_msgs::Trajectory> *valid_trajectories) override;
@@ -127,6 +128,7 @@ class FrenetLatticePlanner : public TrajectoryPlanner {
                                              std::vector<std::shared_ptr<common::Polynomial>> *ptr_traj_vec);
  private:
   common::ThreadPool *thread_pool_ = nullptr;
+  std::vector<std::shared_ptr<Obstacle>> obstacles_;
 };
 
 }
