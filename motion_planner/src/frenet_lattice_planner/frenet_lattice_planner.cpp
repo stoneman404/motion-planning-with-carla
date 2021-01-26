@@ -121,18 +121,6 @@ bool FrenetLatticePlanner::PlanningOnRef(const planning_msgs::TrajectoryPoint &i
     auto trajectory_pair = trajectory_evaluator.next_top_trajectory_pair();
     auto combined_trajectory = CombineTrajectories(ref_line, *trajectory_pair.first, *trajectory_pair.second,
                                                    init_trajectory_point.relative_time);
-//    std::cout << " ===========the lat and lon traj is : " << std::endl;
-//    for (double t = 0; t < PlanningConfig::Instance().max_lookahead_time(); t += 0.5) {
-//      double s = trajectory_pair.first->Evaluate(0, t);
-//      std::cout << "lon: t: " << t << ", s: " << s << ", s_dot: "
-//                << trajectory_pair.first->Evaluate(1, t)
-//                << ", s_ddot: " << trajectory_pair.first->Evaluate(2, t) << ", jerk: "
-//                << trajectory_pair.first->Evaluate(3, t) << " lat d(s): " << trajectory_pair.second->Evaluate(0, s)
-//                << ", d(s)': " << trajectory_pair.second->Evaluate(2, s) << ", d''(s): "
-//                << trajectory_pair.second->Evaluate(2, s) << ", d'''(s): " << trajectory_pair.second->Evaluate(3, s)
-//                << " the cost: " << trajectory_pair_cost << std::endl;
-//    }
-
     auto result = ConstraintChecker::ValidTrajectory(combined_trajectory);
     if (result != ConstraintChecker::Result::VALID) {
       ++combined_constraint_failure_count;
@@ -187,15 +175,15 @@ bool FrenetLatticePlanner::PlanningOnRef(const planning_msgs::TrajectoryPoint &i
       lat_jerk_failure_count);
   ros::Time end = ros::Time::now();
   ROS_INFO("[FrenetLatticePlanner::PlanningOnRef], the total time elapsed is %lf s", (end - begin).toSec());
-#ifdef DEBUG
-  std::cout << "---------the optimal trajectory is : ----------------" << std::endl;
-  for (const auto &tp : optimal_trajectory.first.trajectory_points) {
-    std::cout << " relative_time : " << tp.relative_time << ", s : " << tp.path_point.s << ", x : " << tp.path_point.x
-              << " , y: " << tp.path_point.y << ", theta" << tp.path_point.theta << ", v : " << tp.vel << ", a: "
-              << tp.acc << std::endl;
-
-  }
-#endif
+//#ifdef DEBUG
+//  std::cout << "---------the optimal trajectory is : ----------------" << std::endl;
+//  for (const auto &tp : optimal_trajectory.first.trajectory_points) {
+//    std::cout << " relative_time : " << tp.relative_time << ", s : " << tp.path_point.s << ", x : " << tp.path_point.x
+//              << " , y: " << tp.path_point.y << ", theta" << tp.path_point.theta << ", v : " << tp.vel << ", a: "
+//              << tp.acc << std::endl;
+//
+//  }
+//#endif
   return num_lattice_traj > 0;
 }
 
@@ -263,27 +251,6 @@ planning_msgs::Trajectory FrenetLatticePlanner::CombineTrajectories(const Refere
     t_param += PlanningConfig::Instance().delta_t();
     prev_path_point = tp.path_point;
   }
-#if 0
-  std::cout << "====== the lon trajectory to evaluated is =========" << std::endl;
-  double lon_end_s = lon_traj.Evaluate(0, lon_traj.ParamLength());
-  for (double t = 0; t < lon_traj.ParamLength(); t += 0.2) {
-    std::cout << "s : " << lon_traj.Evaluate(0, t) << ", dot_s: " << lon_traj.Evaluate(1, t) << ", ddot_s: "
-              << lon_traj.Evaluate(2, t) << std::endl;
-  }
-
-  std::cout << "====== the lat trajectory to evaluated is =========" << std::endl;
-  for (double s = 0; s < lon_end_s; s += 0.1) {
-    std::cout << "l : " << lat_traj.Evaluate(0, s) << ", l_prime: " << lat_traj.Evaluate(1, s) << ", l_prime_prime: "
-              << lat_traj.Evaluate(2, s) << std::endl;
-  }
-
-  std::cout << "========== the combined_trajectory is ==============" << std::endl;
-  for (const auto &tp : combined_trajectory.trajectory_points) {
-    std::cout << "relative_time: " << tp.relative_time << ", s: " << tp.path_point.s << ", x: " << tp.vel << ", a: "
-              << tp.acc << std::endl;
-  }
-#endif
-
   return combined_trajectory;
 }
 
@@ -299,24 +266,6 @@ void FrenetLatticePlanner::GenerateLatTrajectories(const std::array<double, 3> &
 
   FrenetLatticePlanner::GeneratePolynomialTrajectories(init_d, lat_end_conditions, 5, ptr_lat_traj_vec);
 
-#if 0
-  std::cout << "=============== the lat conditions is ============" << std::endl;
-  for (const auto &lat_condition : lat_end_conditions) {
-    std::cout << "d: " << lat_condition.first[0] << " d_prime: " << lat_condition.first[1] << ", d_prime_prime: "
-              << lat_condition.first[2] << ", s: " << lat_condition.second << std::endl;
-  }
-  std::cout << "======= init d ======" << std::endl;
-  std::cout << " init d : " << "l : " << init_d[0] << ", l_prime : " << init_d[1] << ", l_prime_prime: " << init_d[2]
-            << std::endl;
-
-  for (const auto &lat_traj : *ptr_lat_traj_vec) {
-    std::cout << "the lat traj:" << std::endl;
-    for (double s = 0; s < lat_traj->ParamLength(); s += 1) {
-      std::cout << "s: " << s << ", l: " << lat_traj->Evaluate(0, s) << ", l_prime: " << lat_traj->Evaluate(1, s)
-                << ", l_prime_prime: " << lat_traj->Evaluate(2, s) << std::endl;
-    }
-  }
-#endif
 }
 
 void FrenetLatticePlanner::GenerateLonTrajectories(const PlanningTarget &planning_target,

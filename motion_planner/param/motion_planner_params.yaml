@@ -1,12 +1,12 @@
 /motion_planner/planner_type: "frenet_lattice"
 /motion_planner/loop_rate: 10
 /motion_planner/delta_t: 0.1
-/motion_planner/reference_smoother_deviation_weight: 1.0
+/motion_planner/reference_smoother_deviation_weight: 13.5
 /motion_planner/reference_smoother_curvature_weight: 1.0
-/motion_planner/reference_smoother_heading_weight: 5.5
+/motion_planner/reference_smoother_heading_weight: 100.0
 /motion_planner/reference_smoother_distance_weight: 1.0
-/motion_planner/reference_smoother_max_curvature: 6.0
-/motion_planner/reference_smoother_slack_weight: 2.0
+/motion_planner/reference_smoother_max_curvature: 5.0
+/motion_planner/reference_smoother_slack_weight: 5.0
 /motion_planner/spline_order: 3
 /motion_planner/max_lookahead_time: 8.0
 /motion_planner/min_lookahead_time: 0.1

@@ -2,7 +2,6 @@
 #include <obstacle_manager/st_graph.hpp>
 #include "obstacle_manager/obstacle.hpp"
 #include "planning_config.hpp"
-
 #include <utility>
 
 namespace planning {
@@ -87,7 +86,7 @@ std::vector<EndCondition> EndConditionSampler::SampleLonEndConditionForCruising(
     }
 
   }
-#ifdef DEBUG
+#if DEBUG
   for (const auto &end_s : end_s_conditions) {
     std::cout << " end_conditions for cruising : s: " << end_s.first[0] << ", s_dot: " << end_s.first[1] << ", s_ddot: "
               << end_s.first[2] << ", time: " << end_s.second << std::endl;
@@ -134,6 +133,7 @@ std::vector<EndCondition> EndConditionSampler::SampleLonEndConditionWithSTGraph(
     sample_points.insert(sample_points.end(), sample_points_overtake.begin(),
                          sample_points_overtake.end());
   }
+
   for (const auto &sample_point : sample_points) {
     if (sample_point.first.t() < PlanningConfig::Instance().min_lookahead_time()) {
       continue;
@@ -147,13 +147,32 @@ std::vector<EndCondition> EndConditionSampler::SampleLonEndConditionWithSTGraph(
     State end_state = {s, v, 0.0};
     end_s_conditions.emplace_back(end_state, t);
   }
+
+#if DEBUG
+  for (const auto &sample_point : sample_points_overtake) {
+    std::cout << "overtake sample_point: s: " << sample_point.first.s() << ", t: " << sample_point.first.t() << ", v: "
+              << sample_point.second << std::endl;
+  }
+  std::cout << "----------------------------------" << std::endl;
+  for (const auto &sample_point : sample_points_follow) {
+    std::cout << "following sample_point: s: " << sample_point.first.s() << ", t: " << sample_point.first.t() << ", v: "
+              << sample_point.second << std::endl;
+  }
+  std::cout << "---------------------------------" << std::endl;
+  for (const auto &end_condition : end_s_conditions) {
+    std::cout << "overtake-following end conditions: " << " s: " << end_condition.first[0]
+              << " s_dot: " << end_condition.first[1] << " s_ddot: " << end_condition.first[2] <<
+              " t: " << end_condition.second << std::endl;
+  }
+#endif
+
   return end_s_conditions;
 }
 
 std::vector<std::pair<STPoint, double>> EndConditionSampler::OvertakeSamplePoints(int obstacle_id) const {
   std::vector<std::pair<STPoint, double>> sample_points{};
   std::vector<STPoint> overtake_st_points = ptr_st_graph_->GetObstacleSurroundingPoints(
-      obstacle_id, 1e-3, PlanningConfig::Instance().delta_t());
+      obstacle_id, 1e-3, 0.4);
   for (const auto &st_point : overtake_st_points) {
     double v = GetObstacleSpeedAlongReferenceLine(obstacle_id, st_point.s(), st_point.t(), ref_line_);
     std::pair<STPoint, double> sample_point;
@@ -162,12 +181,7 @@ std::vector<std::pair<STPoint, double>> EndConditionSampler::OvertakeSamplePoint
     sample_point.second = v;
     sample_points.push_back(sample_point);
   }
-#ifdef DEBUG
-  for (const auto &sample_point : sample_points) {
-    std::cout << "overtake sample_point: s: " << sample_point.first.s() << ", t: " << sample_point.first.t() << ", v: "
-              << sample_point.second << std::endl;
-  }
-#endif
+
   return sample_points;
 }
 
@@ -175,7 +189,7 @@ std::vector<std::pair<STPoint, double>> EndConditionSampler::FollowingSamplePoin
   constexpr size_t num_sample_follow_per_timestamp = 3;
   std::vector<std::pair<STPoint, double>> sample_points{};
   std::vector<STPoint> follow_st_points = ptr_st_graph_->GetObstacleSurroundingPoints(
-      obstacle_id, -1e-3, PlanningConfig::Instance().delta_t());
+      obstacle_id, -1e-3, 0.4);
   for (const auto &st_point : follow_st_points) {
     double v = GetObstacleSpeedAlongReferenceLine(obstacle_id, st_point.s(), st_point.t(), ref_line_);
     double s_upper = st_point.s() - PlanningConfig::Instance().vehicle_params().half_length
@@ -192,12 +206,6 @@ std::vector<std::pair<STPoint, double>> EndConditionSampler::FollowingSamplePoin
       sample_points.push_back(sample_point);
     }
   }
-#ifdef DEBUG
-  for (const auto &sample_point : sample_points) {
-    std::cout << "following sample_point: s: " << sample_point.first.s() << ", t: " << sample_point.first.t() << ", v: "
-              << sample_point.second << std::endl;
-  }
-#endif
 
   return sample_points;
 }

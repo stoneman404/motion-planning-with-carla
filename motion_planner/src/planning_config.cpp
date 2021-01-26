@@ -17,6 +17,7 @@ void PlanningConfig::UpdateParams(const ros::NodeHandle &nh) {
   nh.param<double>("/motion_planner/reference_smoother_heading_weight", reference_smoother_heading_weight_, 9.5);
   nh.param<double>("/motion_planner/reference_smoother_distance_weight", reference_smoother_distance_weight_, 6);
   nh.param<double>("/motion_planner/reference_smoother_max_curvature", reference_smoother_max_curvature_, 6);
+  nh.param<double>("/motion_planner//reference_smoother_slack_weight", reference_smoother_slack_weight_, 5.0);
   nh.param<int>("/motion_planner/spline_order", spline_order_, 3);
   nh.param<double>("/motion_planner/max_lookahead_time", max_lookahead_time_, 8.0);
   nh.param<double>("/motion_planner/min_lookahead_time", min_lookahead_time_, 1.0);

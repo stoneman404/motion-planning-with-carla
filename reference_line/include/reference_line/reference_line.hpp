@@ -53,6 +53,7 @@ class ReferenceLine {
   bool Smooth(const double deviation_weight,
               const double heading_weight,
               const double distance_weight,
+              const double slack_weight,
               const double max_curvature);
 
   /**

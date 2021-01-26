@@ -38,11 +38,11 @@ void ReferenceLineSmoothIpoptInterface::operator()(
     fg[0] += slack_weight_ * x[i];
   }
 
-  for (size_t i = 0; i < num_of_points_; ++i) {
-    size_t index = i * 2;
-    fg[index + 1] = x[index];
-    fg[index + 2] = x[index + 1];
-  }
+//  for (size_t i = 0; i < num_of_points_; ++i) {
+//    size_t index = i * 2;
+//    fg[index + 1] = x[index];
+//    fg[index + 2] = x[index + 1];
+//  }
   // the constraint function
   for (size_t i = 0; i + 2 < num_of_points_; ++i) {
     size_t findex = i * 2;
@@ -52,14 +52,14 @@ void ReferenceLineSmoothIpoptInterface::operator()(
     fg[curvature_constraint_start_index_ + 1 + i] = (((x[findex] + x[lindex]) - 2.0 * x[mindex]) *
         ((x[findex] + x[lindex]) - 2.0 * x[mindex]) +
         ((x[findex + 1] + x[lindex + 1]) - 2.0 * x[mindex + 1]) *
-            ((x[findex + 1] + x[lindex + 1]) - 2.0 * x[mindex + 1])) - x[slack_variable_start_index_ + i];
+            ((x[findex + 1] + x[lindex + 1]) - 2.0 * x[mindex + 1]))  /*+  x[slack_variable_start_index_ + i] */;
   }
 
-  size_t slack_var_index = 0;
-  for (size_t i = slack_constraint_start_index_; i < slack_constraint_end_index_; ++i) {
-    fg[i + 1] = x[slack_variable_start_index_ + slack_var_index];
-    ++slack_var_index;
-  }
+//  size_t slack_var_index = 0;
+//  for (size_t i = slack_constraint_start_index_; i < slack_constraint_end_index_; ++i) {
+//    fg[i + 1] = x[slack_variable_start_index_ + slack_var_index];
+//    ++slack_var_index;
+//  }
 }
 
 ReferenceLineSmoothIpoptInterface::ReferenceLineSmoothIpoptInterface(const std::vector<std::pair<double,
@@ -73,12 +73,13 @@ ReferenceLineSmoothIpoptInterface::ReferenceLineSmoothIpoptInterface(const std::
   slack_variable_start_index_ = num_of_points_ * 2;
   slack_variable_end_index_ = slack_variable_start_index_ + num_of_slack_variable_;
 
-  num_of_slack_constr_ = num_of_points_ - 2;
-  num_of_constraint_ = num_of_points_ * 2 + num_of_slack_constr_ + num_curvature_constraint_;
-  curvature_constraint_start_index_ = num_of_points_ * 2;
+  num_of_constraint_ = num_curvature_constraint_;
+//  num_of_slack_constr_ = num_of_points_ - 2;
+//  num_of_constraint_ = num_of_points_ * 2 + num_of_slack_constr_ + num_curvature_constraint_;
+  curvature_constraint_start_index_ = 0;
   curvature_constraint_end_index_ = curvature_constraint_start_index_ + num_curvature_constraint_;
-  slack_constraint_start_index_ = curvature_constraint_end_index_;
-  slack_constraint_end_index_ = slack_constraint_start_index_ + num_of_slack_constr_;
+//  slack_constraint_start_index_ = curvature_constraint_end_index_;
+//  slack_constraint_end_index_ = slack_constraint_start_index_ + num_of_slack_constr_;
 
 }
 }

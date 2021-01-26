@@ -29,12 +29,13 @@ bool ReferenceLineSmoother::SmoothReferenceLine(const std::vector<ReferencePoint
   slack_variable_start_index_ = num_of_points_ * 2;
   slack_variable_end_index_ = slack_variable_start_index_ + num_of_slack_variable_;
 
-  num_of_slack_constr_ = num_of_points_ - 2;
-  num_of_constraint_ = num_of_points_ * 2 + num_of_slack_constr_ + num_curvature_constraint_;
-  curvature_constraint_start_index_ = num_of_points_ * 2;
+  num_of_constraint_ = num_curvature_constraint_;
+//  num_of_slack_constr_ = num_of_points_ - 2;
+//  num_of_constraint_ = num_of_points_ * 2 + num_of_slack_constr_ + num_curvature_constraint_;
+  curvature_constraint_start_index_ = 0;
   curvature_constraint_end_index_ = curvature_constraint_start_index_ + num_curvature_constraint_;
-  slack_constraint_start_index_ = curvature_constraint_end_index_;
-  slack_constraint_end_index_ = slack_constraint_start_index_ + num_of_slack_constr_;
+//  slack_constraint_start_index_ = curvature_constraint_end_index_;
+//  slack_constraint_end_index_ = slack_constraint_start_index_ + num_of_slack_constr_;
   std::vector<std::pair<double, double>> xy;
   for (const auto &ref_point : ref_points_) {
     xy.emplace_back(ref_point.x(), ref_point.y());
@@ -71,55 +72,31 @@ bool ReferenceLineSmoother::SetUpConstraint() {
   x_u_.resize(num_of_variables_);
   g_l_.resize(num_of_constraint_);
   g_u_.resize(num_of_constraint_);
-  double boundary_radius = 1.5;
+  double boundary_radius = 1.0;
 
 //  std::cout << "number_of_curvature_constraints: " << number_of_curvature_constraints << std::endl;
+  std::vector<double> boundary_bound(num_of_points_, 0.0);
+  for (size_t i = 0; i < num_of_points_; ++i) {
+    if (i == 0 || i == num_of_points_ - 1) {
+      boundary_bound[i] = 0.4;
+    } else {
+      boundary_bound[i] = boundary_radius;
+    }
+  }
   for (size_t i = 0; i < num_of_points_; ++i) {
     size_t index = i * 2;
-//    x_l_[index] = ref_points_[i].x() - boundary_radius;
-//    x_u_[index] = ref_points_[i].x() + boundary_radius;
-//    x_l_[index + 1] = ref_points_[i].y() - boundary_radius;
-//    x_u_[index + 1] = ref_points_[i].y() + boundary_radius;
-    x_l_[index] = -1e20;
-    x_u_[index] = 1e20;
-    x_l_[index + 1] = -1e20;
-    x_u_[index + 1] = 1e20;
-  }
 
-  // for the last and begin point
-//  x_l_[0] = ref_points_.front().x() - 0.1;
-//  x_u_[0] = ref_points_.front().x() + 0.1;
-//  x_l_[1] = ref_points_.front().y() - 0.1;
-//  x_u_[1] = ref_points_.front().y() + 0.1;
-//  x_l_[2 * (num_of_points_ - 1)] = ref_points_.back().x() - 0.3;
-//  x_u_[2 * (num_of_points_ - 1)] = ref_points_.back().y() + 0.3;
-//  x_l_[2 * (num_of_points_ - 1) + 1] = ref_points_.back().y() - 0.3;
-//  x_u_[2 * (num_of_points_ - 1) + 1] = ref_points_.back().y() + 0.3;
+    x_l_[index] = ref_points_[i].x() - boundary_bound[i];
+    x_u_[index] = ref_points_[i].x() + boundary_bound[i];
+    x_l_[index + 1] = ref_points_[i].y() - boundary_bound[i];
+    x_u_[index + 1] = ref_points_[i].y() + boundary_bound[i];
+  }
 
   // slack variable
   for (size_t i = slack_variable_start_index_; i < slack_variable_end_index_; ++i) {
-    x_l_[i] = -1e20;
+    x_l_[i] = 0.0;
     x_u_[i] = 1e20;
   }
-
-  for (size_t i = 0; i < num_of_points_; ++i) {
-    size_t index = i * 2;
-    // x
-    g_l_[index] = ref_points_[i].x() - boundary_radius;
-    g_u_[index] = ref_points_[i].x() + boundary_radius;
-
-    // y
-    g_l_[index + 1] = ref_points_[i].y() - boundary_radius;
-    g_u_[index + 1] = ref_points_[i].y() + boundary_radius;
-  }
-//  g_l_[0] = ref_points_.front().x() - 0.1;
-//  g_u_[0] = ref_points_.front().x() + 0.1;
-//  g_l_[1] = ref_points_.front().y() - 0.1;
-//  g_u_[1] = ref_points_.front().y() + 0.1;
-//  g_l_[2 * (num_of_points_ - 1)] = ref_points_.back().x() - 0.3;
-//  g_u_[2 * (num_of_points_ - 1)] = ref_points_.back().y() + 0.3;
-//  g_l_[2 * (num_of_points_ - 1) + 1] = ref_points_.back().y() - 0.3;
-//  g_u_[2 * (num_of_points_ - 1) + 1] = ref_points_.back().y() + 0.3;
 
   // calculate curvature upper constraints
   double ref_line_total_length = 0.0;
@@ -136,26 +113,20 @@ bool ReferenceLineSmoother::SetUpConstraint() {
     g_l_[i] = -1e20;
     g_u_[i] = curvature_upper * curvature_upper;
   }
-
-  for (size_t i = slack_constraint_start_index_; i < slack_constraint_end_index_; ++i) {
-    g_l_[i] = 0.0;
-    g_u_[i] = 1e20;
-  }
   return true;
 }
 
 void ReferenceLineSmoother::SetUpOptions() {
   options_.clear();
   options_ += "Integer print_level  3\n";
-  options_ += "Sparse  true        forward\n";
   options_ += "Sparse  true        reverse\n";
-//  options_ += "Numeric max_cpu_time  0.05\n";
+  options_ += "Numeric tol          1e-5\n";
   options_ += "Integer max_iter    15\n";
 }
 
 void ReferenceLineSmoother::SetUpInitValue() {
 
-  xi_.resize(num_of_points_ * 2 + num_of_slack_variable_);
+  xi_.resize(num_of_variables_);
   for (size_t i = 0; i < num_of_points_; ++i) {
     size_t index = i * 2;
     xi_[index] = ref_points_[i].x();
@@ -163,7 +134,7 @@ void ReferenceLineSmoother::SetUpInitValue() {
   }
   // slack variables
   for (size_t i = slack_variable_start_index_; i < slack_variable_end_index_; ++i) {
-    xi_[i] = 0.0;
+    xi_[i] = .0;
   }
 }
 
@@ -202,14 +173,16 @@ ReferenceLineSmoother::ReferenceLineSmoother(const double deviation_weight,
 
 }
 
-void ReferenceLineSmoother::SetSmoothParams(const double deviation_weight,
-                                            const double heading_weight,
-                                            const double distance_weight,
-                                            const double max_curvature) {
+void ReferenceLineSmoother::SetSmoothParams(double deviation_weight,
+                                            double distance_weight,
+                                            double heading_weight,
+                                            double slack_weight,
+                                            double max_curvature) {
   deviation_weight_ = deviation_weight;
   heading_weight_ = heading_weight;
   distance_weight_ = distance_weight;
   max_curvature_ = max_curvature;
+  slack_weight_ = slack_weight;
 }
 
 }

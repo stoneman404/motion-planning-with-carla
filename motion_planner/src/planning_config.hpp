@@ -11,7 +11,7 @@
 #include "planning_msgs/LongitudinalBehaviour.h"
 #include "obstacle_manager/obstacle.hpp"
 
-#define DEBUG
+#define DEBUG 1
 namespace planning {
 
 struct PlanningTarget {
@@ -39,6 +39,7 @@ class PlanningConfig {
   double reference_smoother_deviation_weight() const;
   double reference_smoother_heading_weight() const;
   double reference_smoother_max_curvature() const;
+  double reference_smoother_slack_weight() const { return reference_smoother_slack_weight_; }
   const std::string &behaviour_planner_type() const { return behaviour_planner_type_; }
   double desired_velocity() const { return desired_velocity_; }
   double sim_horizon() const { return sim_horizon_; }
@@ -97,6 +98,7 @@ class PlanningConfig {
   double reference_smoother_deviation_weight_ = 8.0;
   double reference_smoother_heading_weight_ = 50.0;
   double reference_smoother_max_curvature_ = 100;
+  double reference_smoother_slack_weight_{5.0};
   int spline_order_ = 3;
   double max_lon_acc_ = 1.0;
   double min_lon_acc_{};

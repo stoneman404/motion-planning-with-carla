@@ -33,6 +33,7 @@ MotionPlanner::MotionPlanner(const ros::NodeHandle &nh) : nh_(nh), thread_pool_s
       PlanningConfig::Instance().reference_smoother_distance_weight();
   reference_line_config.reference_smooth_max_curvature_ =
       PlanningConfig::Instance().reference_smoother_max_curvature();
+  reference_line_config.reference_smooth_slack_weight_ = PlanningConfig::Instance().reference_smoother_slack_weight();
   double lookahead_length = 300.0;
   double lookback_length = 30.0;
   reference_generator_ = std::make_unique<ReferenceGenerator>(reference_line_config, lookahead_length, lookback_length);

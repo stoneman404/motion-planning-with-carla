@@ -13,11 +13,13 @@ struct ReferenceLineConfig {
       : reference_smooth_max_curvature_(0.0),
         reference_smooth_deviation_weight_(0.0),
         reference_smooth_heading_weight_(0.0),
-        reference_smooth_length_weight_(0.0) {}
+        reference_smooth_length_weight_(0.0),
+        reference_smooth_slack_weight_(0.0) {}
   double reference_smooth_max_curvature_{0.0};
   double reference_smooth_deviation_weight_{0.0};
   double reference_smooth_heading_weight_{0.0};
   double reference_smooth_length_weight_{0.0};
+  double reference_smooth_slack_weight_{};
 
 };
 

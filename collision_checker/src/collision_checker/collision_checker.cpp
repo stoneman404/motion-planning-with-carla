@@ -113,13 +113,12 @@ bool CollisionChecker::IsEgoVehicleInLane(double ego_vehicle_s, double ego_vehic
 bool CollisionChecker::IsObstacleBehindEgoVehicle(const std::shared_ptr<Obstacle> &obstacle,
                                                   double ego_s,
                                                   const ReferenceLine &ref_line) const {
-  double default_lane_width = 3.5;
+  constexpr double kDefaultLaneWidth = 3.5;
   planning_msgs::TrajectoryPoint point = obstacle->GetPointAtTime(0.0);
   ReferencePoint matched_ref_point;
-  double matched_s;
   SLPoint sl_point;
   ref_line.XYToSL(point.path_point.x, point.path_point.y, &sl_point);
-  if (ego_s > sl_point.s && std::fabs(sl_point.l) < default_lane_width / 2.0) {
+  if (ego_s > sl_point.s && std::fabs(sl_point.l) < kDefaultLaneWidth / 2.0) {
     return true;
   }
   return false;

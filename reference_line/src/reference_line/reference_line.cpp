@@ -368,12 +368,13 @@ bool ReferenceLine::BuildReferenceLineWithSpline() {
 bool ReferenceLine::Smooth(const double deviation_weight,
                            const double heading_weight,
                            const double distance_weight,
+                           const double slack_weight,
                            const double max_curvature) {
   const auto way_points = way_points_;
   std::vector<ReferencePoint> ref_point;
-  reference_smoother_->SetSmoothParams(deviation_weight, heading_weight, distance_weight, max_curvature);
+  reference_smoother_->SetSmoothParams(deviation_weight, distance_weight, heading_weight, slack_weight, max_curvature);
   bool result = reference_smoother_->SmoothReferenceLine(reference_points_, &ref_point);
-  if (way_points.size() != ref_point.size()) {
+  if (reference_points_.size() != ref_point.size()) {
     return false;
   }
   if (!result) {

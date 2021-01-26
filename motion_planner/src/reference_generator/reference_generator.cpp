@@ -169,7 +169,7 @@ bool ReferenceGenerator::RetriveReferenceLine(ReferenceLine &ref_lane,
   if (smooth) {
     if (!ref_lane.Smooth(smooth_config.reference_smooth_deviation_weight_,
                          smooth_config.reference_smooth_heading_weight_,
-                         smooth_config.reference_smooth_length_weight_,
+                         smooth_config.reference_smooth_length_weight_, 0,
                          smooth_config.reference_smooth_max_curvature_)) {
       ROS_WARN("Failed to Smooth Reference Line");
     }
@@ -297,7 +297,7 @@ bool ReferenceGenerator::GetReferenceLines(std::vector<ReferenceLine> *reference
 
 void ReferenceGenerator::GenerateThread() {
   while (!is_stop_) {
-    static constexpr int32_t kSleepTime = 60;  // milliseconds
+    static constexpr int32_t kSleepTime = 50;  // milliseconds
     std::this_thread::sleep_for(std::chrono::milliseconds(kSleepTime));
     auto start_time = std::chrono::system_clock::now();
     if (!has_route_) {

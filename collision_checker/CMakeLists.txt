@@ -116,9 +116,9 @@ find_package(catkin REQUIRED COMPONENTS
 ## CATKIN_DEPENDS: catkin_packages dependent projects also need
 ## DEPENDS: system dependencies of this project that dependent projects also need
 catkin_package(
-          INCLUDE_DIRS include
-          LIBRARIES collision_checker
-#          CATKIN_DEPENDS other_catkin_pkg
+        INCLUDE_DIRS include
+        LIBRARIES collision_checker
+        #          CATKIN_DEPENDS other_catkin_pkg
         #  DEPENDS system_lib
 )
 
@@ -129,14 +129,14 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
-         include
-         ${catkin_INCLUDE_DIRS}
+        include
+        ${catkin_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library
 add_library(collision_checker
-   src/collision_checker/collision_checker.cpp
- )
+        src/collision_checker/collision_checker.cpp
+        )
 
 target_link_libraries(collision_checker
         ${catkin_LIBRARIES}
@@ -215,10 +215,15 @@ add_dependencies(collision_checker ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_
 #############
 
 ## Add gtest based cpp test target and link libraries
-# catkin_add_gtest(${PROJECT_NAME}-test test/test_collision_checker.cpp)
-# if(TARGET ${PROJECT_NAME}-test)
-#   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
-# endif()
+catkin_add_gtest(collision_checker_test
+        src/collision_checker/collision_checker.cpp
+        src/collision_checker/collision_checker_test.cpp)
+
+if (TARGET collision_checker_test)
+    target_link_libraries(collision_checker_test
+            ${catkin_LIBRARIES}
+            ${Eigen3_LIBRARIES})
+endif ()
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)

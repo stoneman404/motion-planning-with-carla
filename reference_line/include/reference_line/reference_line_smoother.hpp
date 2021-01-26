@@ -26,8 +26,9 @@ class ReferenceLineSmoother {
 //    bool GetSmoothReferenceLine(const ReferenceLine &raw_ref_line,
 //                                ReferenceLine *smoothed_ref_line);
   void SetSmoothParams(double deviation_weight,
-                       double heading_weight,
                        double distance_weight,
+                       double heading_weight,
+                       double slack_weight,
                        double max_curvature);
  private:
   bool SetUpConstraint();
@@ -45,11 +46,11 @@ class ReferenceLineSmoother {
   DVector g_l_;
   DVector g_u_;
   DVector xi_;
-  double deviation_weight_ = 5.5;
-  double heading_weight_ = 9.5;
-  double distance_weight_ = 6.0;
-  double max_curvature_ = 6.0;
-  double slack_weight_ = 3.0;
+  double deviation_weight_ = 7.5;
+  double heading_weight_ = 60.0;
+  double distance_weight_ = 1.0;
+  double max_curvature_ = 5.0;
+  double slack_weight_ = 5.0;
   size_t num_of_points_{};
   size_t slack_variable_start_index_{};
   size_t num_of_slack_variable_{};
