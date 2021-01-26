@@ -372,7 +372,7 @@ bool ReferenceLine::Smooth(const double deviation_weight,
   const auto way_points = way_points_;
   std::vector<ReferencePoint> ref_point;
   reference_smoother_->SetSmoothParams(deviation_weight, heading_weight, distance_weight, max_curvature);
-  bool result = reference_smoother_->SmoothReferenceLine(way_points, &ref_point);
+  bool result = reference_smoother_->SmoothReferenceLine(reference_points_, &ref_point);
   if (way_points.size() != ref_point.size()) {
     return false;
   }
@@ -507,31 +507,4 @@ bool ReferenceLine::HasJunctionInFront(double x, double y, double distance_thres
   }
   return false;
 }
-//bool ReferenceLine::ExtendReferenceLine(double length) {
-//  if (length < std::numeric_limits<double>::epsilon()){
-//    return false;
-//  }
-//  auto end_ref_point = this->GetReferencePoint(length_);
-//
-//  constexpr double s_step = 2.0;
-//  auto last_ref_point = end_ref_point;
-//  for (double s = 0.0; s < length; s += s_step){
-//    const double cos_theta = std::cos(last_ref_point.theta());
-//    const double sin_theta = std::sin(last_ref_point.theta());
-//    double x = last_ref_point.x() + s_step * cos_theta;
-//    double y = last_ref_point.y() + s_step * sin_theta;
-//    double theta = last_ref_point.theta();
-//    double kappa = last_ref_point.kappa();
-//    double dkappa = last_ref_point.dkappa();
-//    double ddkappa = last_ref_point.ddkappa();
-//    this->left_boundary_.emplace_back(left_boundary_.back());
-//    this->right_boundary_.emplace_back(right_boundary_.back());
-//    reference_points_.emplace_back(x, y, theta, kappa, dkappa, ddkappa);
-//    last_ref_point = reference_points_.back();
-//    length_ += s_step;
-//  }
-//
-//
-//}
-
 }

@@ -1,4 +1,5 @@
 #include "reference_generator.hpp"
+#include "planning_config.hpp"
 namespace planning {
 /********************************** ReferenceGenerator ******************************/
 ReferenceGenerator::ReferenceGenerator(const ReferenceLineConfig &config,
@@ -228,7 +229,9 @@ bool ReferenceGenerator::UpdateRouteResponse(const planning_srvs::RoutePlanServi
   route_info_.main_lane = raw_ref_lane.way_points;
   route_info_.right_lanes = ReferenceGenerator::SplitRawLane(raw_right_lane);
   route_info_.left_lanes = ReferenceGenerator::SplitRawLane(raw_right_lane);
+#ifdef DEBUG
   route_info_.PrintRouteInfo();
+#endif
   has_route_ = true;
   return true;
 }

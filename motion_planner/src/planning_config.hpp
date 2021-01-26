@@ -11,6 +11,7 @@
 #include "planning_msgs/LongitudinalBehaviour.h"
 #include "obstacle_manager/obstacle.hpp"
 
+#define DEBUG
 namespace planning {
 
 struct PlanningTarget {

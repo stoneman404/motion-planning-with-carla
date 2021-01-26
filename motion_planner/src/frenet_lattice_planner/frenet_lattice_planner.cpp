@@ -175,18 +175,6 @@ bool FrenetLatticePlanner::PlanningOnRef(const planning_msgs::TrajectoryPoint &i
     optimal_trajectory.second = trajectory_pair_cost;
     optimal_trajectory.first = combined_trajectory;
     break;
-    // set visualized trajectory vectors
-//    if (valid_trajectories != nullptr) {
-//      valid_trajectories->push_back(combined_trajectory);
-//      if (num_lattice_traj == 1) {
-//        optimal_trajectory.second = trajectory_pair_cost;
-//        optimal_trajectory.first = combined_trajectory;
-//      }
-//    } else {
-//      optimal_trajectory.second = trajectory_pair_cost;
-//      optimal_trajectory.first = combined_trajectory;
-//      break;
-//    }
   }
   ROS_WARN(
       "[PlanningOnRef]: the lon_vel_failure_count:%zu,  lon_acc_failure_count: %zu,  lon_jerk_failure_count: %zu,  curvature_failure_count: %zu,"
@@ -199,7 +187,7 @@ bool FrenetLatticePlanner::PlanningOnRef(const planning_msgs::TrajectoryPoint &i
       lat_jerk_failure_count);
   ros::Time end = ros::Time::now();
   ROS_INFO("[FrenetLatticePlanner::PlanningOnRef], the total time elapsed is %lf s", (end - begin).toSec());
-#if 0
+#ifdef DEBUG
   std::cout << "---------the optimal trajectory is : ----------------" << std::endl;
   for (const auto &tp : optimal_trajectory.first.trajectory_points) {
     std::cout << " relative_time : " << tp.relative_time << ", s : " << tp.path_point.s << ", x : " << tp.path_point.x

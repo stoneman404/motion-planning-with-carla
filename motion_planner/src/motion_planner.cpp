@@ -13,14 +13,6 @@ MotionPlanner::MotionPlanner(const ros::NodeHandle &nh) : nh_(nh), thread_pool_s
   PlanningConfig::Instance().UpdateParams(nh_);
   this->thread_pool_ = std::make_unique<common::ThreadPool>(thread_pool_size_);
   this->vehicle_state_ = std::make_unique<vehicle_state::VehicleState>();
-//  if (PlanningConfig::Instance().behaviour_planner_type() == "mpdm") {
-//    SimulationParams config = GetSimulateParams();
-//    behaviour_planner_ = std::make_unique<MPDMPlanner>(config, nullptr);
-//  } else {
-//    ROS_FATAL("MotionPlanner, no such [%s] trajectory planner at now",
-//              PlanningConfig::Instance().behaviour_planner_type().c_str());
-//    ROS_ASSERT(false);
-//  }
   if (PlanningConfig::Instance().planner_type() == "frenet_lattice") {
     trajectory_planner_ = std::make_unique<FrenetLatticePlanner>(thread_pool_.get());
   } else {
@@ -47,37 +39,11 @@ MotionPlanner::MotionPlanner(const ros::NodeHandle &nh) : nh_(nh), thread_pool_s
   reference_generator_->Start();
 }
 //
-//SimulationParams MotionPlanner::GetSimulateParams() const {
-//  SimulationParams config;
-//  config.sim_step_ = PlanningConfig::Instance().sim_step();
-//  config.sim_horizon_ = PlanningConfig::Instance().sim_horizon();
-//  config.idm_params.acc_exponent = PlanningConfig::Instance().acc_exponet();
-////  config.cutting_in_lateral_approach_ratio = PlanningConfig::Instance().cutting_in_lateral_approach_ratio();
-////  config.default_lat_approach_ratio = PlanningConfig::Instance().default_lateral_approach_ratio();
-//  config.idm_params.desired_velocity = PlanningConfig::Instance().desired_velocity();
-//  config.idm_params.max_acc = PlanningConfig::Instance().max_lon_acc();
-//  config.idm_params.max_decel = -1.0 * PlanningConfig::Instance().min_lon_acc();
-//  config.idm_params.comfortable_decel = 3.0;
-//  config.idm_params.s0 = PlanningConfig::Instance().s0();
-//  config.idm_params.s1 = PlanningConfig::Instance().s1();
-//  config.idm_params.safe_time_headway = PlanningConfig::Instance().safe_time_headway();
-//  config.steer_control_gain = 1.5;
-//  config.steer_control_max_lookahead_dist = 50.0;
-//  config.steer_control_min_lookahead_dist = 3.0;
-//  config.max_lat_acceleration_abs = 1.5;
-//  config.max_lat_jerk_abs = 3.0;
-//  config.max_curvature_abs = 0.33;
-//  config.max_lon_acc_jerk = 5.0;
-//  config.max_lon_brake_jerk = 5.0;
-//  config.max_steer_angle_abs = 0.25 * M_PI;
-//  config.max_steer_rate = 0.39;
-//  return config;
-//}
+
 
 void MotionPlanner::Launch() {
 
   ros::Rate loop_rate(PlanningConfig::Instance().loop_rate());
-
   while (ros::ok()) {
     auto begin = ros::Time::now();
     ros::spinOnce();
@@ -781,9 +747,12 @@ std::vector<std::shared_ptr<Obstacle>> MotionPlanner::GetKeyObstacle(
                              trajectory_point.path_point.y - object.second.pose.position.y);
     double height_diff = std::fabs(object.second.pose.position.z - ego_object.pose.position.z);
     if (dist < radius && height_diff < 1.5) {
-      obstacles.emplace_back(std::make_shared<Obstacle>(object.second));
-      obstacles.back()->PredictTrajectory(PlanningConfig::Instance().max_lookahead_time(),
-                                          PlanningConfig::Instance().delta_t());
+      auto obstacle = std::make_shared<Obstacle>(object.second);
+      obstacle->PredictTrajectory(PlanningConfig::Instance().max_lookahead_time(),
+                                  PlanningConfig::Instance().delta_t());
+      obstacles.emplace_back(obstacle);
+//      obstacles.back()->PredictTrajectory(PlanningConfig::Instance().max_lookahead_time(),
+//                                          PlanningConfig::Instance().delta_t());
     }
   }
 
@@ -812,9 +781,12 @@ std::vector<std::shared_ptr<Obstacle>> MotionPlanner::GetKeyObstacle(
     double height_diff = std::fabs(z - ego_object.pose.position.z);
 
     if (dist < radius && height_diff < 1.5) {
-      obstacles.emplace_back(std::make_shared<Obstacle>(light_info.second, light_status));
-      obstacles.back()->PredictTrajectory(PlanningConfig::Instance().max_lookahead_time(),
-                                          PlanningConfig::Instance().delta_t());
+      auto obstacle = std::make_shared<Obstacle>(light_info.second, light_status);
+      obstacle->PredictTrajectory(PlanningConfig::Instance().max_lookahead_time(),
+                                  PlanningConfig::Instance().delta_t());
+      obstacles.emplace_back(obstacle);
+//      obstacles.back()->PredictTrajectory(PlanningConfig::Instance().max_lookahead_time(),
+//                                          PlanningConfig::Instance().delta_t());
     }
   }
   return obstacles;

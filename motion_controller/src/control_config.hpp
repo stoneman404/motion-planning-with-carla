@@ -18,6 +18,7 @@ struct PurePursuitConfigs {
   double steer_control_gain = 1.5;
   double steer_control_max_lookahead_dist = 50.0;
   double steer_control_min_lookahead_dist = 3.0;
+  double steer_weight = 1.3;
 };
 
 struct ControlConfigs {

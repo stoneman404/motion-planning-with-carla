@@ -51,10 +51,11 @@ void STGraph::SetUpStaticObstacle(const std::shared_ptr<Obstacle> &obstacle,
     ROS_DEBUG("[STGraph::SetUpStaticObstacle] Failed to GetSLBoundary.");
     return;
   }
-  double left_width;
-  double right_width;
+  constexpr double kDefaultLaneWidth = 3.5;
+  double left_width = kDefaultLaneWidth;
+  double right_width = kDefaultLaneWidth;
   int obstacle_id = obstacle->Id();
-  ref_line.GetLaneWidth(sl_boundary.start_s, &left_width, &right_width);
+//  ref_line.GetLaneWidth(sl_boundary.start_s, &left_width, &right_width);
   if (sl_boundary.start_s > s_range_.second ||
       sl_boundary.end_s < s_range_.first ||
       sl_boundary.start_l > left_width ||
@@ -83,9 +84,11 @@ void STGraph::SetUpDynamicObstacle(const std::shared_ptr<Obstacle> &obstacle,
       ROS_FATAL("[STGraph::SetUpDynamicObstacle]: failed to get sl_boundary");
       return;
     }
-    double left_width;
-    double right_width;
-    ref_line.GetLaneWidth(sl_boundary.start_s, &left_width, &right_width);
+    constexpr double kDefaultLaneWidth = 3.5;
+
+    double left_width = kDefaultLaneWidth;
+    double right_width = kDefaultLaneWidth;
+//    ref_line.GetLaneWidth(sl_boundary.start_s, &left_width, &right_width);
 
     // The obstacle is not shown on the region to be considered.
     if (sl_boundary.start_s > s_range_.second || sl_boundary.end_s < s_range_.first ||

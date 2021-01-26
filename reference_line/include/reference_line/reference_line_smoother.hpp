@@ -3,7 +3,6 @@
 #include "math/math_utils.hpp"
 #include <cppad/ipopt/solve.hpp>
 #include <glog/logging.h>
-//#include <planning_srvs/RouteResponse.h>
 #include "reference_point.hpp"
 #include <planning_msgs/WayPoint.h>
 
@@ -14,32 +13,32 @@ class ReferenceLineSmoother {
   typedef CPPAD_TESTVECTOR(double) DVector;
   ReferenceLineSmoother() = default;
   ~ReferenceLineSmoother() = default;
-  ReferenceLineSmoother(const double deviation_weight,
-                        const double heading_weight,
-                        const double distance_weight,
-                        const double max_curvature);
+  ReferenceLineSmoother(double deviation_weight,
+                        double heading_weight,
+                        double distance_weight,
+                        double max_curvature);
 
 //  bool SmoothReferenceLine(const planning_srvs::RouteResponse &route_response,
 //                           std::vector<ReferencePoint> *const smoothed_ref_points);
-  bool SmoothReferenceLine(const std::vector<planning_msgs::WayPoint> &waypoints,
-                           std::vector<ReferencePoint> *const smoothed_ref_points);
+  bool SmoothReferenceLine(const std::vector<ReferencePoint> &raw_points,
+                           std::vector<ReferencePoint> *smoothed_ref_points);
 
 //    bool GetSmoothReferenceLine(const ReferenceLine &raw_ref_line,
 //                                ReferenceLine *smoothed_ref_line);
-  void SetSmoothParams(const double deviation_weight,
-                       const double heading_weight,
-                       const double distance_weight,
-                       const double max_curvature);
+  void SetSmoothParams(double deviation_weight,
+                       double heading_weight,
+                       double distance_weight,
+                       double max_curvature);
  private:
   bool SetUpConstraint();
   void SetUpOptions();
   void SetUpInitValue();
   bool TraceSmoothReferenceLine(
       const CppAD::ipopt::solve_result<DVector> &result,
-      std::vector<ReferencePoint> *const smoothed_ref_line) const;
+      std::vector<ReferencePoint> *smoothed_ref_line) const;
 
  private:
-  std::vector<planning_msgs::WayPoint> way_points_;
+  std::vector<ReferencePoint> ref_points_;
   std::string options_;
   DVector x_l_;
   DVector x_u_;
@@ -50,6 +49,19 @@ class ReferenceLineSmoother {
   double heading_weight_ = 9.5;
   double distance_weight_ = 6.0;
   double max_curvature_ = 6.0;
+  double slack_weight_ = 3.0;
+  size_t num_of_points_{};
+  size_t slack_variable_start_index_{};
+  size_t num_of_slack_variable_{};
+  size_t slack_variable_end_index_{};
+  size_t num_curvature_constraint_{};
+  size_t curvature_constraint_start_index_{};
+  size_t curvature_constraint_end_index_{};
+  size_t num_of_variables_{};
+  size_t num_of_slack_constr_{};
+  size_t num_of_constraint_{};
+  size_t slack_constraint_start_index_{};
+  size_t slack_constraint_end_index_{};
 };
 
 }

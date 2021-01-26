@@ -57,7 +57,7 @@ class PolynomialTrajectoryEvaluator {
 
   static bool IsValidLongitudinalTrajectory(const common::Polynomial &lon_traj);
 
-  static bool IsValidLateralTrajectory(const common::Polynomial& lat_traj);
+  static bool IsValidLateralTrajectory(const common::Polynomial &lon_traj, const common::Polynomial &lat_traj);
 
   double Evaluate(const PlanningTarget &planning_target, const std::shared_ptr<common::Polynomial> &lon_traj,
                   const std::shared_ptr<common::Polynomial> &lat_traj);

@@ -12,7 +12,8 @@ Obstacle::Obstacle(const derived_object_msgs::Object &object) {
   this->speed_ = std::sqrt(object.twist.linear.x +
       object.twist.linear.y + object.twist.linear.z);
   this->angular_speed_ = object.twist.angular.z;
-  this->is_static_ = std::fabs(this->speed_) < 0.1 && std::fabs(this->angular_speed_) < 0.1;
+//  this->is_static_ = std::fabs(this->speed_) < 0.1 && std::fabs(this->angular_speed_) < 0.1;
+  this->is_static_ = false;
   this->heading_ = tf::getYaw(object.pose.orientation);
   center_ = Eigen::Vector2d(object.pose.position.x, object.pose.position.y);
   this->bounding_box_ = Box2d(center_, heading_, object.shape.dimensions[0], object.shape.dimensions[1]);
@@ -135,7 +136,7 @@ void Obstacle::PredictTrajectory(double predict_horizon, double predict_step) {
       trajectory_point.path_point.kappa = 0.0;
       trajectory_point.path_point.dkappa = 0.0;
       trajectory_point.relative_time = predict_step * static_cast<double>(i);
-      trajectory_point.vel = speed_;
+      trajectory_point.vel = last_trajectory_point.vel + predict_step * acc_;
       trajectory_point.acc = acc_;
       trajectory_point.jerk = 0.0;
       trajectory_point.steer_angle = 0.0;

@@ -3,7 +3,9 @@
 #include <tf/transform_datatypes.h>
 
 #include <memory>
+#define private public
 #include "reference_line/reference_line.hpp"
+#undef private
 
 namespace planning {
 class ReferenceLineSmootherTest : public testing::Test {
@@ -47,18 +49,19 @@ TEST_F(ReferenceLineSmootherTest, line_ref_test) {
     y += ds * std::sin(heading);
   }
   std::cout << "waypoints.size() " << way_points.size() << std::endl;
-//  auto smoothed_ref_line = ReferenceLine(way_points);
+  auto smoothed_ref_line = ReferenceLine(way_points);
+
   std::vector<ReferencePoint> smoothed_ref_points;
-  EXPECT_EQ(smoother_->SmoothReferenceLine(way_points, &smoothed_ref_points), true);
-  for (size_t i = 0; i < way_points.size(); ++i) {
-    std::cout << "x: " << way_points[i].pose.position.x << ", y: " << way_points[i].pose.position.y
-              << " heading: " << tf::getYaw(way_points[i].pose.orientation) << std::endl;
-  }
-  std::cout << " ========================= " << std::endl;
-  for (size_t i = 0; i < smoothed_ref_points.size(); ++i) {
-    std::cout << "x: " << smoothed_ref_points[i].x() << ", y: " << smoothed_ref_points[i].y()
-              << " heading: " << smoothed_ref_points[i].theta() << std::endl;
-  }
+  EXPECT_EQ(smoother_->SmoothReferenceLine(smoothed_ref_line.reference_points_, &smoothed_ref_points), true);
+//  for (size_t i = 0; i < way_points.size(); ++i) {
+//    std::cout << "x: " << way_points[i].pose.position.x << ", y: " << way_points[i].pose.position.y
+//              << " heading: " << tf::getYaw(way_points[i].pose.orientation) << std::endl;
+//  }
+//  std::cout << " ========================= " << std::endl;
+//  for (size_t i = 0; i < smoothed_ref_points.size(); ++i) {
+//    std::cout << "x: " << smoothed_ref_points[i].x() << ", y: " << smoothed_ref_points[i].y()
+//              << " heading: " << smoothed_ref_points[i].theta() << std::endl;
+//  }
 }
 
 TEST_F(ReferenceLineSmootherTest, waypoints_smooth) {
@@ -262,18 +265,18 @@ TEST_F(ReferenceLineSmootherTest, waypoints_smooth) {
     way_point.lane_width = 4.0;
     way_points.push_back(way_point);
   }
-
+  auto refer_line = ReferenceLine(way_points);
   std::vector<ReferencePoint> smoothed_ref_points;
-  EXPECT_EQ(smoother_->SmoothReferenceLine(way_points, &smoothed_ref_points), true);
-  for (size_t i = 0; i < way_points.size(); ++i) {
-    std::cout << "x: " << way_points[i].pose.position.x << ", y: " << way_points[i].pose.position.y
-              << " heading: " << tf::getYaw(way_points[i].pose.orientation) << std::endl;
-  }
-  std::cout << " ========================= " << std::endl;
-  for (size_t i = 0; i < smoothed_ref_points.size(); ++i) {
-    std::cout << "x: " << smoothed_ref_points[i].x() << ", y: " << smoothed_ref_points[i].y()
-              << " heading: " << smoothed_ref_points[i].theta() << std::endl;
-  }
+  EXPECT_EQ(smoother_->SmoothReferenceLine(refer_line.reference_points_, &smoothed_ref_points), true);
+//  for (size_t i = 0; i < way_points.size(); ++i) {
+//    std::cout << "x: " << way_points[i].pose.position.x << ", y: " << way_points[i].pose.position.y
+//              << " heading: " << tf::getYaw(way_points[i].pose.orientation) << std::endl;
+//  }
+//  std::cout << " ========================= " << std::endl;
+//  for (size_t i = 0; i < smoothed_ref_points.size(); ++i) {
+//    std::cout << "x: " << smoothed_ref_points[i].x() << ", y: " << smoothed_ref_points[i].y()
+//              << " heading: " << smoothed_ref_points[i].theta() << std::endl;
+//  }
 }
 
 TEST_F(ReferenceLineSmootherTest, spline2d_test) {
@@ -481,21 +484,21 @@ TEST_F(ReferenceLineSmootherTest, spline2d_test) {
 //  std::vector<ReferencePoint> smoothed_ref_points;
 //  EXPECT_EQ(smoother_->SmoothReferenceLine(way_points, &smoothed_ref_points), true);
   auto ref_line = ReferenceLine(way_points);
-  for (size_t i = 0; i < way_points.size(); ++i) {
-    std::cout << "x: " << way_points[i].pose.position.x << ", y: " << way_points[i].pose.position.y
-              << " heading: " << tf::getYaw(way_points[i].pose.orientation) << std::endl;
-  }
-//  std::cout << " ========================= " << std::endl;
-//  for (size_t i = 0; i < smoothed_ref_points.size(); ++i) {
-//    std::cout << "x: " << smoothed_ref_points[i].x() << ", y: " << smoothed_ref_points[i].y()
-//              << " heading: " << smoothed_ref_points[i].theta() << std::endl;
+//  for (size_t i = 0; i < way_points.size(); ++i) {
+//    std::cout << "x: " << way_points[i].pose.position.x << ", y: " << way_points[i].pose.position.y
+//              << " heading: " << tf::getYaw(way_points[i].pose.orientation) << std::endl;
 //  }
-std::cout << "=====================================" << std::endl;
-  for (double s = 0.0; s < ref_line.Length(); s+=0.2) {
-    auto matched_ref_point = ref_line.GetReferencePoint(s);
-    std::cout << "x: " << matched_ref_point.x() << ", y: " << matched_ref_point.y()
-              << " heading: " << matched_ref_point.theta() << std::endl;
-  }
+////  std::cout << " ========================= " << std::endl;
+////  for (size_t i = 0; i < smoothed_ref_points.size(); ++i) {
+////    std::cout << "x: " << smoothed_ref_points[i].x() << ", y: " << smoothed_ref_points[i].y()
+////              << " heading: " << smoothed_ref_points[i].theta() << std::endl;
+////  }
+//std::cout << "=====================================" << std::endl;
+//  for (double s = 0.0; s < ref_line.Length(); s+=0.2) {
+//    auto matched_ref_point = ref_line.GetReferencePoint(s);
+//    std::cout << "x: " << matched_ref_point.x() << ", y: " << matched_ref_point.y()
+//              << " heading: " << matched_ref_point.theta() << std::endl;
+//  }
 }
 
 }

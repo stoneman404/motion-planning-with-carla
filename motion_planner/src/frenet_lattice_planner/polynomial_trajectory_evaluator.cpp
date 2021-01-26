@@ -55,7 +55,11 @@ PolynomialTrajectoryEvaluator::PolynomialTrajectoryEvaluator(const std::array<do
         continue;
       }
 
+
       for (const auto &lat_traj : lat_trajectory_vec) {
+        if (!IsValidLateralTrajectory(*lon_traj, *lat_traj)) {
+          continue;
+        }
         double cost = Evaluate(planning_target, lon_traj, lat_traj);
         cost_queue_.emplace(TrajectoryPair(lon_traj, lat_traj), cost);
       }
@@ -98,8 +102,28 @@ bool PolynomialTrajectoryEvaluator::IsValidLongitudinalTrajectory(const common::
   return true;
 }
 
-bool PolynomialTrajectoryEvaluator::IsValidLateralTrajectory(const common::Polynomial &lat_traj) {
-  return false;
+bool PolynomialTrajectoryEvaluator::IsValidLateralTrajectory(const common::Polynomial &lon_traj,
+                                                             const common::Polynomial &lat_traj) {
+  double t = 0.0;
+  while (t < lon_traj.ParamLength()) {
+    double s = lon_traj.Evaluate(0, t);
+    double l = lat_traj.Evaluate(0, s);
+    double dsdt = lon_traj.Evaluate(1, t);
+    double dsddt = lon_traj.Evaluate(2, t);
+    double dlds = lat_traj.Evaluate(1, s);
+    double dldds = lat_traj.Evaluate(2, s);
+    double dldt = dlds * dsdt;
+    double dlddt = dldds * dsdt * dsdt + dlds * dsddt;
+    if (!ConstraintChecker::WithInRange(l, -4.0, 4.0)) {
+      return false;
+    }
+//    if (!ConstraintChecker::WithInRange(dlddt,
+//                                        PlanningConfig::Instance().min_lat_acc(),
+//                                        PlanningConfig::Instance().max_lat_acc())) {
+//      return false;
+//    }
+  }
+  return true;
 }
 
 double PolynomialTrajectoryEvaluator::Evaluate(const PlanningTarget &planning_target,

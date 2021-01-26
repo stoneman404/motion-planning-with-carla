@@ -20,10 +20,11 @@ Controller::Controller(ros::NodeHandle &nh) : nh_(nh), vehicle_state_(std::make_
   nh_.param<double>("/motion_control/steer_control_min_lookahead_dist",
                     control_configs_.pure_pursuit_configs.steer_control_min_lookahead_dist,
                     3);
-
+  nh_.param<double>("/motion_control/steer_weight", control_configs_.pure_pursuit_configs.steer_weight, 1.2);
   nh_.param<double>("/motion_control/longitudinal_pid_kp", control_configs_.lon_configs.lon_kp, 0.72);
   nh_.param<double>("/motion_control/longitudinal_pid_kd", control_configs_.lon_configs.lon_kd, 0.2);
   nh_.param<double>("/motion_control/longitudinal_pid_ki", control_configs_.lon_configs.lon_ki, 0.36);
+
   nh_.param<double>("/motion_control/loop_rate", loop_rate_, 50.0);
   if (controller_type_ == "pid") {
     control_strategy_ = std::make_unique<PIDPurePursuitController>(control_configs_, loop_rate_);

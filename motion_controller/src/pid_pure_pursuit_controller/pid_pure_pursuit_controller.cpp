@@ -218,7 +218,8 @@ bool PIDPurePursuitController::PurePursuitSteerControl(double max_steer,
       std::atan2(destination.y() - cur_xy.y(),
                  destination.x() - cur_xy.x()));
   double angle_diff = common::MathUtils::CalcAngleDist(vehicle_state.theta, cur_to_dest_angle);
-  double steer_tmp = std::atan2(2.0 * wheelbase * std::sin(angle_diff), lookahead_dist);
+  double steer_tmp = control_configs_.pure_pursuit_configs.steer_weight
+      * std::atan2(2.0 * wheelbase * std::sin(angle_diff), lookahead_dist);
   double normalized_steer = steer_tmp / max_steer;
   *steer = Clamp<double>(normalized_steer, -1.0, 1.0);
   return true;

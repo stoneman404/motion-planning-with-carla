@@ -184,7 +184,7 @@ class ReferenceLine {
 //      return true;
 //    }
 //    auto last_ref_point = reference_points_.back();
-//    auto last_waypoint = way_points_.back();
+//    auto last_waypoint = ref_points_.back();
 //    for (size_t i = 1; i < kExtendNum; ++i){
 //      length_ += kGap;
 //      double cos_theta = std::cos(last_ref_point.theta());

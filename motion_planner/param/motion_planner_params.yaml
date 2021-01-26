@@ -6,17 +6,18 @@
 /motion_planner/reference_smoother_heading_weight: 5.5
 /motion_planner/reference_smoother_distance_weight: 1.0
 /motion_planner/reference_smoother_max_curvature: 6.0
+/motion_planner/reference_smoother_slack_weight: 2.0
 /motion_planner/spline_order: 3
 /motion_planner/max_lookahead_time: 8.0
 /motion_planner/min_lookahead_time: 0.1
-/motion_planner/lon_safety_buffer: 2.0
-/motion_planner/lat_safety_buffer: 0.2
+/motion_planner/lon_safety_buffer: 1.5
+/motion_planner/lat_safety_buffer: 0.3
 /motion_planner/max_lookahead_distance: 80.0
 /motion_planner/max_lookback_distance: 30.0
 # 6.0
 /motion_planner/max_lon_acc: 6.0
 /motion_planner/min_lon_acc: -5.0
-/motion_planner/max_lon_velocity: 40.0
+/motion_planner/max_lon_velocity: 20.0
 /motion_planner/min_lon_velocity: -0.1
 /motion_planner/max_lon_jerk: 20.0
 /motion_planner/min_lon_jerk: -20.0
@@ -40,7 +41,7 @@
 /motion_planner/preserve_history_trajectory_point_num: 25
 
 /motion_planner/behaviour_planner_type: "mpdm"
-/motion_planner/desired_velocity: 25
+/motion_planner/desired_velocity: 11
 #/motion_planner/max_lat_acc: 0.8
 /motion_planner/sim_horizon: 10.0
 /motion_planner/sim_step: 0.25
