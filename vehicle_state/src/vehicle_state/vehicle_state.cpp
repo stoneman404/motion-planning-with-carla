@@ -14,14 +14,14 @@ VehicleState::VehicleState(const carla_msgs::CarlaEgoVehicleStatus &ego_vehicle_
   this->vehicle_params_.width = object.shape.dimensions[1];
   this->vehicle_params_.half_length = vehicle_params_.length / 2.0;
   this->vehicle_params_.half_width = vehicle_params_.width / 2.0;
-  this->vehicle_params_.back_axle_to_center_length = std::fabs(vehicle_info.wheels[3].position.x);
-  this->vehicle_params_.front_axle_to_center_length = std::fabs(vehicle_info.wheels[0].position.x);
+  this->vehicle_params_.back_axle_to_center_length = std::fabs(vehicle_info.wheels[3].position.y);
+  this->vehicle_params_.front_axle_to_center_length = std::fabs(vehicle_info.wheels[0].position.y);
   this->vehicle_params_.axle_length_ = this->vehicle_params_.front_axle_to_center_length +
       this->vehicle_params_.back_axle_to_center_length;
-  this->vehicle_params_.max_steer_angle_ = vehicle_info.wheels.front().max_steer_angle;
+  this->vehicle_params_.max_steer_angle_ = 0.5 * (vehicle_info.wheels[0].max_steer_angle + vehicle_info.wheels[1].max_steer_angle);
   this->vehicle_params_.min_r_ = this->vehicle_params_.axle_length_ / std::tan(this->vehicle_params_.max_steer_angle_);
-  this->vehicle_params_.lr_ = std::fabs(vehicle_info.wheels[3].position.x - vehicle_info.center_of_mass.x);
-  this->vehicle_params_.lf_ = std::fabs(vehicle_info.wheels[0].position.x - vehicle_info.center_of_mass.y);
+  this->vehicle_params_.lr_ = std::fabs(vehicle_info.wheels[3].position.y - vehicle_info.center_of_mass.y);
+  this->vehicle_params_.lf_ = std::fabs(vehicle_info.wheels[0].position.y - vehicle_info.center_of_mass.y);
   double ego_theta = tf::getYaw(object.pose.orientation);
   double ego_x = object.pose.position.x - vehicle_params_.back_axle_to_center_length * std::cos(ego_theta);
   double ego_y = object.pose.position.y - vehicle_params_.back_axle_to_center_length * std::sin(ego_theta);
@@ -59,14 +59,14 @@ void VehicleState::Update(const carla_msgs::CarlaEgoVehicleStatus &ego_vehicle_s
   this->vehicle_params_.width = object.shape.dimensions[1];
   this->vehicle_params_.half_length = vehicle_params_.length / 2.0;
   this->vehicle_params_.half_width = vehicle_params_.width / 2.0;
-  this->vehicle_params_.back_axle_to_center_length = std::fabs(vehicle_info.wheels[3].position.x);
-  this->vehicle_params_.front_axle_to_center_length = std::fabs(vehicle_info.wheels[0].position.x);
+  this->vehicle_params_.back_axle_to_center_length = std::fabs(vehicle_info.wheels[3].position.y);
+  this->vehicle_params_.front_axle_to_center_length = std::fabs(vehicle_info.wheels[0].position.y);
   this->vehicle_params_.axle_length_ =
       this->vehicle_params_.front_axle_to_center_length + this->vehicle_params_.back_axle_to_center_length;
   this->vehicle_params_.max_steer_angle_ = vehicle_info.wheels.front().max_steer_angle;
   this->vehicle_params_.min_r_ = this->vehicle_params_.axle_length_ / std::tan(this->vehicle_params_.max_steer_angle_);
-  this->vehicle_params_.lr_ = std::fabs(vehicle_info.wheels[3].position.x - vehicle_info.center_of_mass.x);
-  this->vehicle_params_.lf_ = std::fabs(vehicle_info.wheels[0].position.x - vehicle_info.center_of_mass.y);
+  this->vehicle_params_.lr_ = std::fabs(vehicle_info.wheels[3].position.y - vehicle_info.center_of_mass.y);
+  this->vehicle_params_.lf_ = std::fabs(vehicle_info.wheels[0].position.y - vehicle_info.center_of_mass.y);
   double ego_theta = tf::getYaw(object.pose.orientation);
 
   double ego_x = object.pose.position.x - vehicle_params_.back_axle_to_center_length * std::cos(ego_theta);

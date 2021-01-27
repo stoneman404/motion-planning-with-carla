@@ -732,7 +732,7 @@ std::vector<std::shared_ptr<Obstacle>> MotionPlanner::GetKeyObstacle(
 //  const double back_distance = front_distance / 2.0;
 //  Eigen::Vector2d ego_heading{std::cos(trajectory_point.path_point.theta), std::sin(trajectory_point.path_point.theta)};
 //
-  const double radius = 50.0;
+  const double radius = 100.0;
   for (const auto &object : objects) {
     if (object.first == ego_id) {
       continue;
