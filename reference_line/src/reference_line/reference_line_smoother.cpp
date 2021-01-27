@@ -118,7 +118,7 @@ bool ReferenceLineSmoother::SetUpConstraint() {
 
 void ReferenceLineSmoother::SetUpOptions() {
   options_.clear();
-  options_ += "Integer print_level  3\n";
+  options_ += "Integer print_level  0\n";
   options_ += "Sparse  true        reverse\n";
   options_ += "Numeric tol          1e-5\n";
   options_ += "Integer max_iter    15\n";

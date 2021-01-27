@@ -69,10 +69,8 @@
     <include file="$(find motion_planner)/launch/motion_planner.launch">
     </include>
 
-
-
-<!--     <include file="$(find motion_controller)/launch/motion_controller.launch"> -->
-<!--     </include> -->
+    <include file="$(find motion_controller)/launch/motion_controller.launch">
+    </include>
 
     <!-- To be able to maneuver with rviz, this node converts twist to vehicle control commands -->
     <node pkg="carla_twist_to_control" type="carla_twist_to_control.py" name="carla_twist_to_control">

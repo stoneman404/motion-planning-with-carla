@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.0.2)
 project(collision_checker)
 
 ## Compile as C++11, supported in ROS Kinetic and newer
-add_compile_options(-std=c++14 -g -Werror -Wall -Wno-unused -Wno-sign-compare)
+add_compile_options(-std=c++14 -O3 -Werror -Wall -Wno-unused -Wno-sign-compare)
 
 ## Find catkin macros and libraries
 ## if COMPONENTS list like find_package(catkin REQUIRED COMPONENTS xyz)

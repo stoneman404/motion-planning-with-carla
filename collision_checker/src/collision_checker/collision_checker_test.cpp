@@ -1,34 +1,27 @@
 #include <gtest/gtest.h>
+#define private public
 #include "collision_checker/collision_checker.hpp"
+#undef private
 #include <polygon/box2d.hpp>
 #include <derived_object_msgs/Object.h>
 #include <tf/transform_datatypes.h>
+#include <math/coordinate_transformer.hpp>
 
-TEST(Box2dTest, box2d_collision) {
-  const double len = 5.0;
-  const double width = 3.0;
-  const double theta1 = M_PI;
-  const double theta2 = /*0.25 * */ M_PI;
-  Eigen::Vector2d center1{0.0, 0.0};
-  Eigen::Vector2d center2{5.2, 0.0};
-  common::Box2d box1 = common::Box2d(center1, theta1, len, width);
-  common::Box2d box2 = common::Box2d(center2, theta2, len, width);
-  EXPECT_FALSE(box1.HasOverlapWithBox2d(box2));
-}
+
 
 class CollisionCheckTest : public ::testing::Test {
  public:
   planning::ReferenceLine reference_line_;
   std::shared_ptr<planning::Obstacle> obstacle_;
   derived_object_msgs::Object object_;
-  double start_s_{2.0};
+  double start_s_{6.0};
   double end_s_{100.0};
   double t_start_{0.0};
   double t_end_{8.0};
   std::array<double, 3> init_d_{0, 0, 0};
   double lookahead_time_{8.0};
   double delta_t_{0.1};
-  vehicle_state::VehicleParams vehicle_params_;
+  vehicle_state::VehicleParams vehicle_params_{};
   std::shared_ptr<planning::STGraph> st_graph_;
   std::shared_ptr<planning::CollisionChecker> collision_checker_;
  protected:
@@ -53,8 +46,8 @@ class CollisionCheckTest : public ::testing::Test {
                                                                       start_s_,
                                                                       init_d_[0],
                                                                       2.0,
-                                                                      0.3,);
-
+                                                                      0.3, lookahead_time_, 0.1, vehicle_params_,
+                                                                      nullptr);
   }
 
   void TearDown() override {}
@@ -62,8 +55,9 @@ class CollisionCheckTest : public ::testing::Test {
     object_.object_classified = derived_object_msgs::Object::OBJECT_DETECTED;
     object_.classification = derived_object_msgs::Object::CLASSIFICATION_CAR;
     object_.shape.type = shape_msgs::SolidPrimitive::BOX;
-    object_.shape.dimensions[0] = 5.0;
-    object_.shape.dimensions[1] = 3.0;
+    object_.shape.dimensions.resize(3);
+    object_.shape.dimensions[0] = 1.0;
+    object_.shape.dimensions[1] = 6.0;
     object_.shape.dimensions[2] = 1.5;
     object_.pose.position.x = 105.789;
     object_.pose.position.y = -193.267;
@@ -296,6 +290,45 @@ class CollisionCheckTest : public ::testing::Test {
 
   }
 };
+
+TEST_F(CollisionCheckTest, in_lane_test) {
+  EXPECT_TRUE(collision_checker_->IsEgoVehicleInLane(start_s_, init_d_[0]));
+}
+
+TEST_F(CollisionCheckTest, collision_test) {
+  auto predicted_obstacle_box = collision_checker_->predicted_obstacle_box_;
+  int i = 0;
+  for (const auto &obstacle_box_discrete_time : predicted_obstacle_box) {
+    EXPECT_TRUE(obstacle_box_discrete_time.size() == 1);
+    auto obstacle_box = obstacle_box_discrete_time.front();
+    std::cout << "i: " << i << "box center:" << obstacle_box.center_x() << ", " << obstacle_box.center_y() << std::endl;
+    ++i;
+  }
+
+  planning_msgs::Trajectory trajectory;
+  double t = 0.0;
+  double delta_t = delta_t_;
+  double s = start_s_;
+  while (t <= 8.0) {
+    auto ref_point = reference_line_.GetReferencePoint(s);
+    auto xy = common::CoordinateTransformer::CalcCatesianPoint(ref_point.theta(), ref_point.x(), ref_point.y(), 0.0);
+    planning_msgs::TrajectoryPoint tp;
+    tp.path_point.x = xy.x();
+    tp.path_point.y = xy.y();
+    tp.path_point.theta = ref_point.theta();
+    tp.vel = 3.0;
+    tp.acc = 0.0;
+    tp.jerk = 0.0;
+    tp.relative_time = t;
+    trajectory.trajectory_points.push_back(tp);
+    s += tp.vel * delta_t;
+    t += delta_t;
+  }
+  std::cout << "trajectory.trajectory_point.back(): x: " << trajectory.trajectory_points.back().path_point.x << ", y: "
+            << trajectory.trajectory_points.back().path_point.y << std::endl;
+  EXPECT_TRUE(collision_checker_->IsCollision(trajectory));
+
+}
 
 int main(int argc, char **argv) {
   ::testing::InitGoogleTest(&argc, argv);

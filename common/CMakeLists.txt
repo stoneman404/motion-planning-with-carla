@@ -122,5 +122,14 @@ add_dependencies(common ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TA
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()
 
+catkin_add_gtest(box2d_test
+        src/polygon/box2d.cpp
+        src/polygon/box2d_test.cpp
+        src/math/math_utils.cpp)
+if (TARGET box2d_test)
+    target_link_libraries(box2d_test
+            ${catkin_LIBRARIES}
+            ${Eigen3_LIBRARIES})
+endif ()
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)

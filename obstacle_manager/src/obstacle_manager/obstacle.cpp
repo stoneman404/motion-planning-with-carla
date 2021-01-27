@@ -95,6 +95,7 @@ const double &Obstacle::Heading() const { return heading_; }
 const double &Obstacle::AngularSpeed() const { return angular_speed_; }
 
 void Obstacle::PredictTrajectory(double predict_horizon, double predict_step) {
+  trajectory_ = decltype(trajectory_)();
   if (is_static_) {
     trajectory_.trajectory_points.emplace_back();
     auto &trajectory_point = trajectory_.trajectory_points.back();

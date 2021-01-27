@@ -56,10 +56,8 @@ void STGraph::SetUpStaticObstacle(const std::shared_ptr<Obstacle> &obstacle,
   double right_width = kDefaultLaneWidth;
   int obstacle_id = obstacle->Id();
 //  ref_line.GetLaneWidth(sl_boundary.start_s, &left_width, &right_width);
-  if (sl_boundary.start_s > s_range_.second ||
-      sl_boundary.end_s < s_range_.first ||
-      sl_boundary.start_l > left_width ||
-      sl_boundary.end_l < -right_width) {
+  if (sl_boundary.start_s > s_range_.second || sl_boundary.end_s < s_range_.first ||
+      sl_boundary.start_l > left_width || sl_boundary.end_l < -right_width) {
     ROS_DEBUG("[STGraph::SetUpStaticObstacle], obstacle[%i] is out of range. ", obstacle_id);
     return;
   }

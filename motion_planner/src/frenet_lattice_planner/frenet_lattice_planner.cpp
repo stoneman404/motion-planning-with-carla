@@ -18,6 +18,7 @@ bool FrenetLatticePlanner::Process(const std::vector<std::shared_ptr<Obstacle>> 
                                    planning_msgs::Trajectory &pub_trajectory,
                                    std::vector<planning_msgs::Trajectory> *valid_trajectories) {
   obstacles_.assign(obstacles.begin(), obstacles.end());
+
   if (planning_targets.empty()) {
     ROS_FATAL("[FrenetLatticePlanner::Process]: ******No planning_targets provided*********");
     return false;
@@ -71,6 +72,17 @@ bool FrenetLatticePlanner::PlanningOnRef(const planning_msgs::TrajectoryPoint &i
                                             init_d,
                                             PlanningConfig::Instance().max_lookahead_time(),
                                             PlanningConfig::Instance().delta_t());
+#if DEBUG
+  std::cout << " obstacles_.size()" << obstacles_.size() << std::endl;
+  for (const auto &obstacle : obstacles_) {
+    std::cout << "obstacle id: " << obstacle->Id() << " obstacle is static : "
+              << (obstacle->IsStatic() ? "true" : "false")
+              << ", length: " << obstacle->GetBoundingBox().length() << ", width: "
+              << obstacle->GetBoundingBox().width()
+              << ", theta: " << obstacle->GetBoundingBox().heading() << std::endl;
+  }
+#endif
+
   std::vector<std::shared_ptr<Polynomial>> lon_traj_vec;
   std::vector<std::shared_ptr<Polynomial>> lat_traj_vec;
 
@@ -92,6 +104,9 @@ bool FrenetLatticePlanner::PlanningOnRef(const planning_msgs::TrajectoryPoint &i
   for (const auto &obstacle : obstacles_) {
     obstacle_map.emplace(obstacle->Id(), obstacle);
   }
+#if DEBUG
+  std::cout << " ======== obstacle size : " << obstacle_map.size() << std::endl;
+#endif
   CollisionChecker collision_checker = CollisionChecker(obstacle_map,
                                                         ref_line,
                                                         st_graph,
@@ -102,7 +117,7 @@ bool FrenetLatticePlanner::PlanningOnRef(const planning_msgs::TrajectoryPoint &i
                                                         PlanningConfig::Instance().max_lookahead_time(),
                                                         PlanningConfig::Instance().delta_t(),
                                                         PlanningConfig::Instance().vehicle_params(),
-                                                        thread_pool_);
+                                                        nullptr);
   size_t collision_failure_count = 0;
   size_t combined_constraint_failure_count = 0;
   size_t lon_vel_failure_count = 0;
@@ -164,26 +179,26 @@ bool FrenetLatticePlanner::PlanningOnRef(const planning_msgs::TrajectoryPoint &i
     optimal_trajectory.first = combined_trajectory;
     break;
   }
+#if DEBUG
   ROS_WARN(
       "[PlanningOnRef]: the lon_vel_failure_count:%zu,  lon_acc_failure_count: %zu,  lon_jerk_failure_count: %zu,  curvature_failure_count: %zu,"
-      "lat_acc_failure_count: %zu, lat_jerk_failure_count: %zu",
+      "lat_acc_failure_count: %zu, lat_jerk_failure_count: %zu, collision_failure_count: %zu",
       lon_vel_failure_count,
       lon_acc_failure_count,
       lon_jerk_failure_count,
       curvature_failure_count,
       lat_acc_failure_count,
-      lat_jerk_failure_count);
+      lat_jerk_failure_count,
+      collision_failure_count);
   ros::Time end = ros::Time::now();
   ROS_INFO("[FrenetLatticePlanner::PlanningOnRef], the total time elapsed is %lf s", (end - begin).toSec());
-//#ifdef DEBUG
-//  std::cout << "---------the optimal trajectory is : ----------------" << std::endl;
-//  for (const auto &tp : optimal_trajectory.first.trajectory_points) {
-//    std::cout << " relative_time : " << tp.relative_time << ", s : " << tp.path_point.s << ", x : " << tp.path_point.x
-//              << " , y: " << tp.path_point.y << ", theta" << tp.path_point.theta << ", v : " << tp.vel << ", a: "
-//              << tp.acc << std::endl;
-//
-//  }
-//#endif
+  std::cout << "---------the optimal trajectory is : ----------------" << std::endl;
+  for (const auto &tp : optimal_trajectory.first.trajectory_points) {
+    std::cout << " relative_time : " << tp.relative_time << ", s : " << tp.path_point.s << ", x : " << tp.path_point.x
+              << " , y: " << tp.path_point.y << ", theta" << tp.path_point.theta << ", v : " << tp.vel << ", a: "
+              << tp.acc << std::endl;
+  }
+#endif
   return num_lattice_traj > 0;
 }
 
@@ -310,25 +325,25 @@ void FrenetLatticePlanner::GenerateStoppingLonTrajectories(double stop_s,
                                                            const std::shared_ptr<EndConditionSampler> &end_condition_sampler,
                                                            std::vector<std::shared_ptr<Polynomial>> *ptr_lon_traj_vec) {
   auto end_conditions = end_condition_sampler->SampleLonEndConditionForStopping(stop_s);
-  ROS_INFO("[FrenetLatticePlanner::GenerateStoppingLonTrajectories], the end conditions size : %zu",
-           end_conditions.size());
+  ROS_DEBUG("[FrenetLatticePlanner::GenerateStoppingLonTrajectories], the end conditions size : %zu",
+            end_conditions.size());
   ros::Time begin = ros::Time::now();
   FrenetLatticePlanner::GeneratePolynomialTrajectories(init_s, end_conditions, 5, ptr_lon_traj_vec);
   ros::Time end = ros::Time::now();
-  ROS_INFO("[GenerateStoppingLonTrajectories], GeneratePolynomialTrajectories elapsed %lf s", (end - begin).toSec());
+  ROS_DEBUG("[GenerateStoppingLonTrajectories], GeneratePolynomialTrajectories elapsed %lf s", (end - begin).toSec());
 }
 
 void FrenetLatticePlanner::GenerateOvertakeAndFollowingLonTrajectories(const std::array<double, 3> &init_s,
                                                                        const std::shared_ptr<EndConditionSampler> &end_condition_sampler,
                                                                        std::vector<std::shared_ptr<Polynomial>> *ptr_lon_traj_vec) {
   auto end_conditions = end_condition_sampler->SampleLonEndConditionWithSTGraph();
-  ROS_INFO("[FrenetLatticePlanner::GenerateOvertakeAndFollowingLonTrajectories], the end conditions size : %zu",
-           end_conditions.size());
+  ROS_DEBUG("[FrenetLatticePlanner::GenerateOvertakeAndFollowingLonTrajectories], the end conditions size : %zu",
+            end_conditions.size());
   ros::Time begin = ros::Time::now();
   FrenetLatticePlanner::GeneratePolynomialTrajectories(init_s, end_conditions, 5, ptr_lon_traj_vec);
   ros::Time end = ros::Time::now();
-  ROS_INFO("[GenerateOvertakeAndFollowingLonTrajectories], GeneratePolynomialTrajectories elapsed %lf s",
-           (end - begin).toSec());
+  ROS_DEBUG("[GenerateOvertakeAndFollowingLonTrajectories], GeneratePolynomialTrajectories elapsed %lf s",
+            (end - begin).toSec());
 
 }
 
@@ -342,7 +357,7 @@ void FrenetLatticePlanner::GeneratePolynomialTrajectories(
     return;
   }
   if (end_conditions.empty()) {
-    ROS_INFO("[FrenetLatticePlanner::GeneratePolynomialTrajectories], the end conditions vector is empty");
+    ROS_WARN("[FrenetLatticePlanner::GeneratePolynomialTrajectories], the end conditions vector is empty");
     return;
   }
   ROS_INFO("[FrenetLatticePlanner::GeneratePolynomialTrajectories], "
@@ -377,9 +392,9 @@ void FrenetLatticePlanner::GetInitCondition(const ReferenceLine &ptr_ref_line,
   ReferencePoint matched_ref_point;
   double matched_s;
   if (!ptr_ref_line.GetMatchedPoint(init_trajectory_point.path_point.x,
-                                     init_trajectory_point.path_point.y,
-                                     &matched_ref_point,
-                                     &matched_s)) {
+                                    init_trajectory_point.path_point.y,
+                                    &matched_ref_point,
+                                    &matched_s)) {
     ROS_FATAL("[FrenetLatticePlanner::GetInitCondition] failed because the GetMatchedPoint failed");
     return;
   }

@@ -71,8 +71,8 @@ class CollisionChecker {
    * @param[in] ref_line: reference line
    * @return
    */
-  bool IsObstacleBehindEgoVehicle(const std::shared_ptr<planning::Obstacle> &obstacle, double ego_s,
-                                  const ReferenceLine &ref_line) const;
+  static bool IsObstacleBehindEgoVehicle(const std::shared_ptr<planning::Obstacle> &obstacle, double ego_s,
+                                         const ReferenceLine &ref_line);
 
  private:
   ReferenceLine ref_line_;

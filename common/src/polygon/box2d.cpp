@@ -2,13 +2,14 @@
 #include "polygon/box2d.hpp"
 #include "math/math_utils.hpp"
 #include <Eigen/Core>
+#include <utility>
 namespace common {
 
-Box2d::Box2d(const Eigen::Vector2d &center,
+Box2d::Box2d(Eigen::Vector2d center,
              double heading,
              double length,
              double width)
-    : center_(center),
+    : center_(std::move(center)),
       heading_(heading),
       length_(length),
       width_(width),
@@ -31,6 +32,7 @@ void Box2d::InitCorners() {
   corners_.emplace_back(center_.x() + dx1 - dx2, center_.y() + dy1 - dy2);
   corners_.emplace_back(center_.x() - dx1 - dx2, center_.y() - dy1 - dy2);
   corners_.emplace_back(center_.x() - dx1 + dx2, center_.y() - dy1 + dy2);
+
   for (auto &corner : corners_) {
     max_x_ = std::fmax(corner.x(), max_x_);
     min_x_ = std::fmin(corner.x(), min_x_);
@@ -79,14 +81,11 @@ double Box2d::DistanceToPoint(const Eigen::Vector2d &point) const {
 // ref: https://zhuanlan.zhihu.com/p/146778379
 // ref: apollo
 bool Box2d::HasOverlapWithBox2d(const common::Box2d &box) const {
-  // AABox check
-  if (box.max_x() < min_x_ ||
-      box.min_x() > max_x_ ||
-      box.max_y() < min_y_ ||
-      box.min_y() > max_y_) {
+  if (box.max_x() < min_x() || box.min_x() > max_x() || box.max_y() < min_y() ||
+      box.min_y() > max_y()) {
     return false;
   }
-  // Obox check
+
   const double shift_x = box.center_x() - center_.x();
   const double shift_y = box.center_y() - center_.y();
 
@@ -155,7 +154,7 @@ double Box2d::area() const { return length_ * width_; }
 double Box2d::diagonal() const { return std::hypot(length_, width_); }
 double Box2d::max_x() const { return max_x_; }
 double Box2d::min_x() const { return min_x_; }
-double Box2d::max_y() const { return max_x_; }
+double Box2d::max_y() const { return max_y_; }
 double Box2d::min_y() const { return min_y_; }
 
 }

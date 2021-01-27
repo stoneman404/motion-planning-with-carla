@@ -152,18 +152,22 @@ std::vector<EndCondition> EndConditionSampler::SampleLonEndConditionWithSTGraph(
   for (const auto &sample_point : sample_points_overtake) {
     std::cout << "overtake sample_point: s: " << sample_point.first.s() << ", t: " << sample_point.first.t() << ", v: "
               << sample_point.second << std::endl;
+    auto ref_point = ref_line_.GetReferencePoint(sample_point.first.s());
+    std::cout << " overtake point in cartersian coordinate : x: " << ref_point.x() <<", y: " << ref_point.y() << std::endl;
   }
   std::cout << "----------------------------------" << std::endl;
   for (const auto &sample_point : sample_points_follow) {
     std::cout << "following sample_point: s: " << sample_point.first.s() << ", t: " << sample_point.first.t() << ", v: "
               << sample_point.second << std::endl;
+    auto ref_point = ref_line_.GetReferencePoint(sample_point.first.s());
+    std::cout << " following point in cartersian coordinate : x: " << ref_point.x() <<", y: " << ref_point.y() << std::endl;
   }
-  std::cout << "---------------------------------" << std::endl;
-  for (const auto &end_condition : end_s_conditions) {
-    std::cout << "overtake-following end conditions: " << " s: " << end_condition.first[0]
-              << " s_dot: " << end_condition.first[1] << " s_ddot: " << end_condition.first[2] <<
-              " t: " << end_condition.second << std::endl;
-  }
+//  std::cout << "---------------------------------" << std::endl;
+//  for (const auto &end_condition : end_s_conditions) {
+//    std::cout << "overtake-following end conditions: " << " s: " << end_condition.first[0]
+//              << " s_dot: " << end_condition.first[1] << " s_ddot: " << end_condition.first[2] <<
+//              " t: " << end_condition.second << std::endl;
+//  }
 #endif
 
   return end_s_conditions;

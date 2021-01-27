@@ -9,7 +9,7 @@ class Box2d {
  public:
   Box2d() = default;
   ~Box2d() = default;
-  Box2d(const Eigen::Vector2d &center, double heading, double length, double width);
+  Box2d(Eigen::Vector2d center, double heading, double length, double width);
   const Eigen::Vector2d &Center() const;
   double center_x() const;
   double center_y() const;
