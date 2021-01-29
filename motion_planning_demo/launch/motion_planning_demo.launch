@@ -2,7 +2,7 @@
     <!-- carla parameters -->
     <arg name='host' default='localhost'/> <!-- host the carla server is running on -->
     <arg name='port' default='2000'/> <!-- port of the carla server -->
-    <arg name="town" default="Town04"/> <!-- the carla town to load-->
+    <arg name="town" default="Town05"/> <!-- the carla town to load-->
     <arg name='synchronous_mode'
          default='True'/> <!-- should the synchronous mode be used? Enable to get reproducible results independent of the system workload -->
     <arg name='synchronous_mode_wait_for_vehicle_control_command'
@@ -63,8 +63,8 @@
         <arg name='role_name' value='$(arg role_name)'/>
     </include>
 
-<!--     <include file="$(find motion_planner)/launch/motion_planner.launch"> -->
-<!--     </include> -->
+    <include file="$(find motion_planner)/launch/motion_planner.launch">
+    </include>
 
     <include file="$(find motion_controller)/launch/motion_controller.launch">
     </include>

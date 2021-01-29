@@ -19,7 +19,7 @@ struct ReferenceLineConfig {
   double reference_smooth_deviation_weight_{0.0};
   double reference_smooth_heading_weight_{0.0};
   double reference_smooth_length_weight_{0.0};
-  double reference_smooth_slack_weight_{};
+  double reference_smooth_slack_weight_{0.0};
 
 };
 

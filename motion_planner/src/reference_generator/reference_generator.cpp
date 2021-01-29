@@ -169,7 +169,8 @@ bool ReferenceGenerator::RetriveReferenceLine(ReferenceLine &ref_lane,
   if (smooth) {
     if (!ref_lane.Smooth(smooth_config.reference_smooth_deviation_weight_,
                          smooth_config.reference_smooth_heading_weight_,
-                         smooth_config.reference_smooth_length_weight_, 0,
+                         smooth_config.reference_smooth_length_weight_,
+                         smooth_config.reference_smooth_slack_weight_,
                          smooth_config.reference_smooth_max_curvature_)) {
       ROS_WARN("Failed to Smooth Reference Line");
     }

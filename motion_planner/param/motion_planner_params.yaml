@@ -31,16 +31,16 @@
 /motion_planner/lattice_weight_dist_travelled: 10.0
 /motion_planner/lattice_weight_target_speed: 2
 /motion_planner/lattice_weight_collision: 5.0
-/motion_planner/lattice_weight_lon_jerk: 2.0
+/motion_planner/lattice_weight_lon_jerk: 0.5
 /motion_planner/lattice_weight_lon_target: 20.0
-/motion_planner/lattice_weight_lat_offset: 5.0
-/motion_planner/lattice_weight_lat_jerk: 2.0
-/motion_planner/lattice_weight_centripetal_acc: 1.5
+/motion_planner/lattice_weight_lat_offset: 7.0
+/motion_planner/lattice_weight_lat_jerk: 5.0
+/motion_planner/lattice_weight_centripetal_acc: 1.0
 /motion_planner/max_replan_lat_distance_threshold: 0.5
 /motion_planner/max_replan_lon_distance_threshold: 3.5
 /motion_planner/preserve_history_trajectory_point_num: 25
 
-/motion_planner/desired_velocity: 28.0
+/motion_planner/desired_velocity: 23.0
 /motion_planner/sim_horizon: 10.0
 /motion_planner/sim_step: 0.25
 /motion_planner/safe_time_headway: 1.5
