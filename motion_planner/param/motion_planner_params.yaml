@@ -15,32 +15,32 @@
 /motion_planner/max_lookahead_distance: 100.0
 /motion_planner/max_lookback_distance: 30.0
 
-/motion_planner/max_lon_acc: 5.0
-/motion_planner/min_lon_acc: -4.0
-/motion_planner/max_lon_velocity: 50.0
+/motion_planner/max_lon_acc: 6.0
+/motion_planner/min_lon_acc: -5.0
+/motion_planner/max_lon_velocity: 40.0
 /motion_planner/min_lon_velocity: -0.1
-/motion_planner/max_lon_jerk: 20.0
-/motion_planner/min_lon_jerk: -20.0
+/motion_planner/max_lon_jerk: 30.0
+/motion_planner/min_lon_jerk: -30.0
 /motion_planner/min_kappa: -4.0
 /motion_planner/max_kappa: 4.0
 
-/motion_planner/min_lat_acc: -3.0
-/motion_planner/max_lat_acc: 3.0
+/motion_planner/min_lat_acc: -6.0
+/motion_planner/max_lat_acc: 6.0
 /motion_planner/lattice_weight_opposite_side_offset: 10.0
 /motion_planner/lattice_weight_same_side_offset: 1.0
-/motion_planner/lattice_weight_dist_travelled: 20.0
+/motion_planner/lattice_weight_dist_travelled: 10.0
 /motion_planner/lattice_weight_target_speed: 2
 /motion_planner/lattice_weight_collision: 5.0
-/motion_planner/lattice_weight_lon_jerk: 1.0
-/motion_planner/lattice_weight_lon_target: 80.0
+/motion_planner/lattice_weight_lon_jerk: 2.0
+/motion_planner/lattice_weight_lon_target: 20.0
 /motion_planner/lattice_weight_lat_offset: 5.0
-/motion_planner/lattice_weight_lat_jerk: 1.0
+/motion_planner/lattice_weight_lat_jerk: 2.0
 /motion_planner/lattice_weight_centripetal_acc: 1.5
 /motion_planner/max_replan_lat_distance_threshold: 0.5
-/motion_planner/max_replan_lon_distance_threshold: 2.5
+/motion_planner/max_replan_lon_distance_threshold: 3.5
 /motion_planner/preserve_history_trajectory_point_num: 25
 
-/motion_planner/desired_velocity: 18.0
+/motion_planner/desired_velocity: 28.0
 /motion_planner/sim_horizon: 10.0
 /motion_planner/sim_step: 0.25
 /motion_planner/safe_time_headway: 1.5

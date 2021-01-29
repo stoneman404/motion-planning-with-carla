@@ -54,7 +54,7 @@ std::vector<EndCondition> EndConditionSampler::SampleLatEndCondition() {
 
 std::vector<EndCondition> EndConditionSampler::SampleLonEndConditionForCruising(const double ref_target_vel) const {
   constexpr int kVelSampleNum = 9;  // put  into PlanningConfig
-  constexpr int kTimeSampleNum = 7; // put into PlanningConfig
+  constexpr int kTimeSampleNum = 9; // put into PlanningConfig
   constexpr double vel_interval_step = 0.3; // put int PlanningConfig
   std::array<double, kTimeSampleNum> time_samples{};
 
@@ -96,26 +96,30 @@ std::vector<EndCondition> EndConditionSampler::SampleLonEndConditionForCruising(
 }
 
 double EndConditionSampler::VUpper(double t) const {
-  return init_s_[1] + PlanningConfig::Instance().max_lon_acc() * t;
+  double comfortable_acc = PlanningConfig::Instance().max_lon_acc() * 0.9;
+  return init_s_[1] + comfortable_acc * t;
 }
 
 double EndConditionSampler::VLower(double t) const {
-  double t_at_zero_speed = init_s_[1] / (-PlanningConfig::Instance().min_lon_acc());
+  double comfortable_decel = -PlanningConfig::Instance().min_lon_acc() * 0.9;
+  double t_at_zero_speed = init_s_[1] / (comfortable_decel);
   return t < t_at_zero_speed ?
-         init_s_[1] + PlanningConfig::Instance().min_lon_acc() * t :
+         init_s_[1] - comfortable_decel * t :
          0.0;
 }
 
 double EndConditionSampler::SUpper(double t) const {
+  double comfortable_acc = PlanningConfig::Instance().max_lon_acc() * 0.9;
   return init_s_[0] + init_s_[1] * t +
-      0.5 * PlanningConfig::Instance().max_lon_acc() * t * t;
+      0.5 * comfortable_acc * t * t;
 }
 
 double EndConditionSampler::SLower(double t) const {
-  const double t_at_zero_speed = init_s_[1] / (-PlanningConfig::Instance().min_lon_acc());
+  double comfortable_decel = -PlanningConfig::Instance().min_lon_acc() * 0.9;
+  const double t_at_zero_speed = init_s_[1] / (comfortable_decel);
   const double
-      s_at_zero_speed = init_s_[0] + init_s_[1] * init_s_[1] / (-2.0 * PlanningConfig::Instance().min_lon_acc());
-  return t < t_at_zero_speed ? init_s_[0] + init_s_[1] * t + 0.5 * PlanningConfig::Instance().min_lon_acc() * t * t
+      s_at_zero_speed = init_s_[0] + init_s_[1] * init_s_[1] / (2.0 * comfortable_decel);
+  return t < t_at_zero_speed ? init_s_[0] + init_s_[1] * t - 0.5 * comfortable_decel * t * t
                              : s_at_zero_speed;
 }
 
