@@ -113,7 +113,7 @@ bool PolynomialTrajectoryEvaluator::IsValidLateralTrajectory(const common::Polyn
 //    double dldds = lat_traj.Evaluate(2, s);
 //    double dldt = dlds * dsdt;
 //    double dlddt = dldds * dsdt * dsdt + dlds * dsddt;
-    if (!ConstraintChecker::WithInRange(l, -3.5, 3.5)) {
+    if (!ConstraintChecker::WithInRange(l, -3.5/2, 3.5/2)) {
       return false;
     }
 //    if (!ConstraintChecker::WithInRange(dlddt,

@@ -49,72 +49,72 @@ bool ReferenceGenerator::CreateReferenceLines(bool smooth, std::vector<Reference
     return false;
   }
   ref_lanes.emplace_back(main_ref_lane);
-
-  double const kDefaultLaneWidth = 3.5;
-  common::SLPoint sl_point;
-  if (!main_ref_lane.XYToSL(vehicle_state.x, vehicle_state.y, &sl_point)) {
-    return false;
-  }
-  auto tmp_sl = sl_point;
-  tmp_sl.l = kDefaultLaneWidth;
-  Eigen::Vector2d left_xy;
-  if (!main_ref_lane.SLToXY(tmp_sl, &left_xy)) {
-    return false;
-  }
-  common::SLPoint left_sl;
-  for (const auto &lane : route_info.left_lanes) {
-    auto left_ref_lane = ReferenceLine(lane);
-    if (!left_ref_lane.XYToSL(left_xy, &left_sl)) {
-      continue;
-    }
-    if (!left_ref_lane.IsOnLane(left_sl)) {
-      continue;
-    }
-    auto left_ref = left_ref_lane.GetReferencePoint(left_sl.s);
-    if (std::fabs(common::MathUtils::CalcAngleDist(left_ref.theta(), vehicle_state.theta)) > 0.25 * M_PI) {
-      continue;
-    } else {
-      ReferenceGenerator::RetriveReferenceLine(left_ref_lane,
-                                               vehicle_state,
-                                               lane,
-                                               lookahead_distance_,
-                                               lookback_distance_,
-                                               smooth,
-                                               smooth_config_);
-      ref_lanes.emplace_back(left_ref_lane);
-      break;
-    }
-  }
-  tmp_sl.l = -kDefaultLaneWidth;
-  Eigen::Vector2d right_xy;
-  if (!main_ref_lane.SLToXY(tmp_sl, &right_xy)) {
-    return false;
-  }
-
-  common::SLPoint right_sl;
-  for (const auto &lane : route_info.right_lanes) {
-    auto right_ref_lane = ReferenceLine(lane);
-    if (!right_ref_lane.XYToSL(right_xy, &right_sl)) {
-      continue;
-    }
-    if (!right_ref_lane.IsOnLane(right_sl)) {
-      continue;
-    }
-    auto right_ref = right_ref_lane.GetReferencePoint(right_sl.s);
-    if (std::fabs(common::MathUtils::CalcAngleDist(right_ref.theta(), vehicle_state.theta)) > 0.25 * M_PI) {
-      continue;
-    } else {
-      ReferenceGenerator::RetriveReferenceLine(right_ref_lane,
-                                               vehicle_state,
-                                               lane,
-                                               lookahead_distance_,
-                                               lookback_distance_,
-                                               smooth,
-                                               smooth_config_);
-      ref_lanes.emplace_back(right_ref_lane);
-      break;
-    }
-  }
+//
+//  double const kDefaultLaneWidth = 3.5;
+//  common::SLPoint sl_point;
+//  if (!main_ref_lane.XYToSL(vehicle_state.x, vehicle_state.y, &sl_point)) {
+//    return false;
+//  }
+//  auto tmp_sl = sl_point;
+//  tmp_sl.l = kDefaultLaneWidth;
+//  Eigen::Vector2d left_xy;
+//  if (!main_ref_lane.SLToXY(tmp_sl, &left_xy)) {
+//    return false;
+//  }
+//  common::SLPoint left_sl;
+//  for (const auto &lane : route_info.left_lanes) {
+//    auto left_ref_lane = ReferenceLine(lane);
+//    if (!left_ref_lane.XYToSL(left_xy, &left_sl)) {
+//      continue;
+//    }
+//    if (!left_ref_lane.IsOnLane(left_sl)) {
+//      continue;
+//    }
+//    auto left_ref = left_ref_lane.GetReferencePoint(left_sl.s);
+//    if (std::fabs(common::MathUtils::CalcAngleDist(left_ref.theta(), vehicle_state.theta)) > 0.25 * M_PI) {
+//      continue;
+//    } else {
+//      ReferenceGenerator::RetriveReferenceLine(left_ref_lane,
+//                                               vehicle_state,
+//                                               lane,
+//                                               lookahead_distance_,
+//                                               lookback_distance_,
+//                                               smooth,
+//                                               smooth_config_);
+//      ref_lanes.emplace_back(left_ref_lane);
+//      break;
+//    }
+//  }
+//  tmp_sl.l = -kDefaultLaneWidth;
+//  Eigen::Vector2d right_xy;
+//  if (!main_ref_lane.SLToXY(tmp_sl, &right_xy)) {
+//    return false;
+//  }
+//
+//  common::SLPoint right_sl;
+//  for (const auto &lane : route_info.right_lanes) {
+//    auto right_ref_lane = ReferenceLine(lane);
+//    if (!right_ref_lane.XYToSL(right_xy, &right_sl)) {
+//      continue;
+//    }
+//    if (!right_ref_lane.IsOnLane(right_sl)) {
+//      continue;
+//    }
+//    auto right_ref = right_ref_lane.GetReferencePoint(right_sl.s);
+//    if (std::fabs(common::MathUtils::CalcAngleDist(right_ref.theta(), vehicle_state.theta)) > 0.25 * M_PI) {
+//      continue;
+//    } else {
+//      ReferenceGenerator::RetriveReferenceLine(right_ref_lane,
+//                                               vehicle_state,
+//                                               lane,
+//                                               lookahead_distance_,
+//                                               lookback_distance_,
+//                                               smooth,
+//                                               smooth_config_);
+//      ref_lanes.emplace_back(right_ref_lane);
+//      break;
+//    }
+//  }
 
   auto end = ros::Time::now();
   ROS_WARN("CreateReferenceLine elapsed time is %lf s", (end - begin).toSec());
@@ -225,14 +225,8 @@ bool ReferenceGenerator::HasOverLapWithRefLane(const ReferenceLine &ref_lane,
 bool ReferenceGenerator::UpdateRouteResponse(const planning_srvs::RoutePlanServiceResponse &route_response) {
   std::lock_guard<std::mutex> lock_guard(route_mutex_);
   auto raw_ref_lane = route_response.route;
-  auto raw_left_lane = route_response.left_lane;
-  auto raw_right_lane = route_response.right_lane;
   route_info_.main_lane = raw_ref_lane.way_points;
-  route_info_.right_lanes = ReferenceGenerator::SplitRawLane(raw_right_lane);
-  route_info_.left_lanes = ReferenceGenerator::SplitRawLane(raw_right_lane);
-#ifdef DEBUG
-  route_info_.PrintRouteInfo();
-#endif
+
   has_route_ = true;
   return true;
 }

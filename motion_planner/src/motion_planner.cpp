@@ -214,16 +214,7 @@ void MotionPlanner::InitSubscriber() {
         if (ego_vehicle_id_ == -1) {
           return;
         }
-
-        geometry_msgs::Pose start_pose;
-        auto state = vehicle_state_->GetKinoDynamicVehicleState();
-        start_pose.position.x = state.x;
-        start_pose.position.y = state.y;
-        start_pose.position.z = state.z;
-        start_pose.orientation = tf::createQuaternionMsgFromYaw(state.theta);
-        geometry_msgs::Pose destination;
-        std::cout << "destination is  : " << destination.position.x << ", y: " << destination.position.y << std::endl;
-        if (!GetEgoVehicleRoutes(start_pose, destination)) {
+        if (!ReRoute()) {
           return;
         }
       });
@@ -726,6 +717,9 @@ bool MotionPlanner::GetEgoVehicleRoutes(geometry_msgs::Pose &start_pose, geometr
   srv.request.start_pose = start_pose;
   srv.request.end_pose = destination;
   if (!get_ego_vehicle_route_client_.call(srv)) {
+    return false;
+  }
+  if (srv.response.route.way_points.size() < 20) {
     return false;
   }
   return reference_generator_->UpdateRouteResponse(srv.response);

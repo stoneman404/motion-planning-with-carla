@@ -48,8 +48,8 @@ class ClinetInterface(object):
         self._goal = None
         self._role_name = rospy.get_param("~role_name", 'ego_vehicle')
         self._dao = GlobalRoutePlannerDAO(self._map, sampling_resolution=WAYPOINT_DISTANCE)
-        self._random_route_planner = RandomRoutePlanner(self._dao)
-        self._random_route_planner.setup()
+        # self._random_route_planner = RandomRoutePlanner(self._dao)
+        # self._random_route_planner.setup()
         self._global_planner = GlobalRoutePlanner(self._dao)
         self._global_planner.setup()
 
@@ -264,9 +264,31 @@ class ClinetInterface(object):
 
         carl_start_waypoint = self._map.get_waypoint(carla_start.location)
         carla_goal_waypoint = random.choice(self._world.get_map().get_spawn_points())
+        response = RoutePlanServiceResponse()
+        raw_route = self._global_planner.trace_route(carl_start_waypoint.transform.location,
+                                                     carla_goal_waypoint.location)
+        route = []
+        extend_route = list()
+        waypoints = carl_start_waypoint.previous_until_lane_start(2.0)
+        option = RoadOption.LANEFOLLOW
+        for wp in waypoints:
+            extend_route.append([wp, option])
+        extend_route.reverse()
+        raw_route = raw_route + extend_route
+        if len(raw_route) == 0:
+            return response
+        last_wp = raw_route[0]
+        route.append(last_wp)
+        for wp in raw_route:
+            if (wp[0].transform.location.x - last_wp[0].transform.location.x) ** 2 + (
+                    wp[0].transform.location.y - last_wp[0].transform.location.y) ** 2 < 1:
+                last_wp = wp
+                continue
+            route.append(wp)
+            last_wp = wp
 
-        # raw_route = self._random_route_planner.trace_route(carl_start_waypoint.transform.location,
-        #                                                carla_goal_waypoint.location)
+        response.route = self.route_to_planning_waypoint(route)
+
         #
         # extend_route = list()
         # waypoints = carl_start_waypoint.previous_until_lane_start(2.0)
@@ -368,56 +390,55 @@ class ClinetInterface(object):
         # for wp in response.route.way_points:
         #     print("wp : x:{}, y:{}, lane_id:{}, road_id:{}".format(wp.pose.position.x, wp.pose.position.y, wp.lane_id,
         #                                                            wp.road_id))
-        response = RoutePlanServiceResponse()
-        count = 0
-        road_option = RoadOption.LANEFOLLOW
-
-        waypoints = list(list())
-        left_waypoints = list(list())
-        right_waypoints = list(list())
-        front_waypoints = carl_start_waypoint.previous_until_lane_start(distance=2.0)
-        front_waypoints.reverse()
-        for wp in front_waypoints:
-            waypoints.append([wp, road_option])
-
-        if carl_start_waypoint.get_right_lane() and (
-                carl_start_waypoint.lane_change == carla.LaneChange.Right or carl_start_waypoint.lane_change == carla.LaneChange.Both):
-            right_front_waypoints = carl_start_waypoint.get_right_lane().previous_until_lane_start(distance=2.0)
-            right_front_waypoints.reverse()
-
-            for wp in right_front_waypoints:
-                right_waypoints.append([wp, road_option])
-        right_waypoints.append([carl_start_waypoint.get_right_lane(), road_option])
-        if carl_start_waypoint.get_left_lane() and (
-                carl_start_waypoint.lane_change == carla.LaneChange.Left or carl_start_waypoint.lane_change == carla.LaneChange.Both):
-            left_front_waypoints = carl_start_waypoint.get_left_lane().previous_until_lane_start(distance=2.0)
-            left_front_waypoints.reverse()
-
-            for wp in left_front_waypoints:
-                left_waypoints.append([wp, road_option])
-        left_waypoints.append([carl_start_waypoint.get_left_lane(), road_option])
-        last_waypoint = carl_start_waypoint
-        waypoints.append([carl_start_waypoint, road_option])
-        while True:
-            if count < 2000:
-                nexts = list(last_waypoint.next(distance=2.0))
-                if not nexts:
-                    raise RuntimeError("No more waypoints")
-                w = random.choice(nexts)
-                waypoints.append([w, road_option])
-                if w.get_right_lane() and (
-                        w.lane_change == carla.LaneChange.Right or w.lane_change == carla.LaneChange.Both):
-                    right_waypoints.append([w.get_right_lane(), road_option])
-                if w.get_left_lane() and (
-                        w.lane_change == carla.LaneChange.Left or w.lane_change == carla.LaneChange.Both):
-                    left_waypoints.append([w.get_left_lane(), road_option])
-                count += 1
-                last_waypoint = w
-            else:
-                break
-        response.right_lane = self.route_to_planning_waypoint(right_waypoints)
-        response.left_lane = self.route_to_planning_waypoint(left_waypoints)
-        response.route = self.route_to_planning_waypoint(waypoints)
+        # count = 0
+        # road_option = RoadOption.LANEFOLLOW
+        #
+        # waypoints = list(list())
+        # left_waypoints = list(list())
+        # right_waypoints = list(list())
+        # front_waypoints = carl_start_waypoint.previous_until_lane_start(distance=2.0)
+        # front_waypoints.reverse()
+        # for wp in front_waypoints:
+        #     waypoints.append([wp, road_option])
+        #
+        # if carl_start_waypoint.get_right_lane() and (
+        #         carl_start_waypoint.lane_change == carla.LaneChange.Right or carl_start_waypoint.lane_change == carla.LaneChange.Both):
+        #     right_front_waypoints = carl_start_waypoint.get_right_lane().previous_until_lane_start(distance=2.0)
+        #     right_front_waypoints.reverse()
+        #
+        #     for wp in right_front_waypoints:
+        #         right_waypoints.append([wp, road_option])
+        # right_waypoints.append([carl_start_waypoint.get_right_lane(), road_option])
+        # if carl_start_waypoint.get_left_lane() and (
+        #         carl_start_waypoint.lane_change == carla.LaneChange.Left or carl_start_waypoint.lane_change == carla.LaneChange.Both):
+        #     left_front_waypoints = carl_start_waypoint.get_left_lane().previous_until_lane_start(distance=2.0)
+        #     left_front_waypoints.reverse()
+        #
+        #     for wp in left_front_waypoints:
+        #         left_waypoints.append([wp, road_option])
+        # left_waypoints.append([carl_start_waypoint.get_left_lane(), road_option])
+        # last_waypoint = carl_start_waypoint
+        # waypoints.append([carl_start_waypoint, road_option])
+        # while True:
+        #     if count < 2000:
+        #         nexts = list(last_waypoint.next(distance=2.0))
+        #         if not nexts:
+        #             raise RuntimeError("No more waypoints")
+        #         w = random.choice(nexts)
+        #         waypoints.append([w, road_option])
+        #         if w.get_right_lane() and (
+        #                 w.lane_change == carla.LaneChange.Right or w.lane_change == carla.LaneChange.Both):
+        #             right_waypoints.append([w.get_right_lane(), road_option])
+        #         if w.get_left_lane() and (
+        #                 w.lane_change == carla.LaneChange.Left or w.lane_change == carla.LaneChange.Both):
+        #             left_waypoints.append([w.get_left_lane(), road_option])
+        #         count += 1
+        #         last_waypoint = w
+        #     else:
+        #         break
+        # response.right_lane = self.route_to_planning_waypoint(right_waypoints)
+        # response.left_lane = self.route_to_planning_waypoint(left_waypoints)
+        # response.route = self.route_to_planning_waypoint(waypoints)
         rospy.loginfo("the route length is {}".format(len(response.route.way_points)))
         for wp in response.route.way_points:
             print("wp : x:{}, y:{}, lane_id:{}, road_id:{}".format(wp.pose.position.x, wp.pose.position.y, wp.lane_id,

@@ -24,7 +24,6 @@
 #include "trajectory_planner.hpp"
 #include "frenet_lattice_planner/frenet_lattice_planner.hpp"
 
-
 namespace planning {
 
 class MotionPlanner {
@@ -44,40 +43,27 @@ class MotionPlanner {
   std::vector<PlanningTarget> GetPlanningTargets(const std::vector<ReferenceLine> &ref_lines,
                                                  const planning_msgs::TrajectoryPoint &init_point);
 
-//  SimulationParams GetSimulateParams() const;
+  static std::vector<std::shared_ptr<Obstacle>> GetKeyObstacle(
+      const std::unordered_map<int, derived_object_msgs::Object> &objects,
+      const std::unordered_map<int, carla_msgs::CarlaTrafficLightStatus> &traffic_light_status_list,
+      const std::unordered_map<int, carla_msgs::CarlaTrafficLightInfo> &traffic_lights_info_list,
+      const planning_msgs::TrajectoryPoint &trajectory_point, int ego_id,
+      const std::vector<PlanningTarget> &targets);
 
-  /**
-   * @brief: make behaviour agent set for behaviour planning
-   * @return: the behaviour agent set, std::unordered_map<int, Agent>
-   */
-//  std::unordered_map<int, Agent> MakeBehaviourAgentSet();
-
-  /**
-   * @brief: get key agent set from behaviour agent set and ego agent state
-   * @param agent_set
-   * @param ego_id
-   * @return
-   */
-//  static std::unordered_map<int, Agent> GetKeyAgents(
-//      const std::unordered_map<int, Agent> &agent_set, int ego_id);
-  static std::vector<std::shared_ptr<Obstacle>> GetKeyObstacle(const std::unordered_map<int,
-                                                                                        derived_object_msgs::Object> &objects,
-                                                               const std::unordered_map<int,
-                                                                                        carla_msgs::CarlaTrafficLightStatus> &traffic_light_status_list,
-                                                               const std::unordered_map<int,
-                                                                                        carla_msgs::CarlaTrafficLightInfo> &traffic_lights_info_list,
-                                                               const planning_msgs::TrajectoryPoint &trajectory_point,
-                                                               int ego_id,
-                                                               const std::vector<PlanningTarget> &targets);
-  /**
-   * @brief: predict agent behaviour.
-   * @param key_agent_set
-   * @param ego_id
-   * @return
-   */
-//  bool PredictAgentsBehaviours(
-//      std::unordered_map<int, Agent> &key_agent_set, int ego_id);
-
+  bool ReRoute() {
+    geometry_msgs::Pose start_pose;
+    auto state = vehicle_state_->GetKinoDynamicVehicleState();
+    start_pose.position.x = state.x;
+    start_pose.position.y = state.y;
+    start_pose.position.z = state.z;
+    start_pose.orientation = tf::createQuaternionMsgFromYaw(state.theta);
+    geometry_msgs::Pose destination;
+    std::cout << "destination is  : " << destination.position.x << ", y: " << destination.position.y << std::endl;
+    if (!GetEgoVehicleRoutes(start_pose, destination)) {
+      return false;
+    }
+    return true;
+  }
   /**
    * @brief: add agent potential reference line
    * @param state
@@ -96,8 +82,6 @@ class MotionPlanner {
       bool smooth,
       std::vector<ReferenceLine> *ptr_potential_lanes);
 
-
-
   /**
    * @brief: get ego vehicle routes
    * @param start_pose
@@ -113,15 +97,6 @@ class MotionPlanner {
    */
   static void GenerateEmergencyStopTrajectory(const planning_msgs::TrajectoryPoint &init_trajectory_point,
                                               planning_msgs::Trajectory &emergency_stop_trajectory);
-
-  /**
-   * @brief: get planning target from behaviour
-   * @param behaviour
-   * @param planning_targets
-   * @return
-   */
-//  bool GetPlanningTargetFromBehaviour(const Behaviour &behaviour,
-//                                      std::vector<PlanningTarget> &planning_targets);
 
   /**
    * @brief: stitching history trajectory and planned trajectory
@@ -175,6 +150,7 @@ class MotionPlanner {
   static size_t GetPositionMatchedIndex(
       const std::pair<double, double> &xy,
       const std::vector<planning_msgs::TrajectoryPoint> &trajectory);
+
   /**
    * @brief get lateral and longitudinal distance from reference path point.
    * @param x:
@@ -209,15 +185,8 @@ class MotionPlanner {
    * @param ref_lanes
    */
   void VisualizeReferenceLine(std::vector<ReferenceLine> &ref_lanes);
+  void VisualizeObstacleTrajectory(const std::vector<std::shared_ptr<Obstacle>> &obstacle);
 
-  void VisualizeObstacleTrajectory(const std::vector<std::shared_ptr<Obstacle>>& obstacle) ;
-
-  /**
-   * @brief: get local goal
-   * @param planning_target
-   * @return
-   */
-  static bool GetLocalGoal(PlanningTarget &planning_target);
 
  private:
   bool has_history_trajectory_ = false;
