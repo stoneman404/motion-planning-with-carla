@@ -17,10 +17,7 @@ STBoundary::STBoundary(const std::vector<std::pair<STPoint, STPoint>> &point_pai
     lower_points_.emplace_back(item.first.s(), t);
     upper_points_.emplace_back(item.second.s(), t);
   }
-//  lower_left_point_ = lower_points_.front();
-//  lower_right_point_ = lower_points_.back();
-//  upper_left_point_ = upper_points_.front();
-//  upper_right_point_ = upper_points_.back();
+
   for (const auto &point : lower_points_) {
     points_.emplace_back(point);
   }
@@ -28,30 +25,30 @@ STBoundary::STBoundary(const std::vector<std::pair<STPoint, STPoint>> &point_pai
     points_.emplace_back(*rit);
   }
   num_points_ = points_.size();
-  ROS_ASSERT(num_points_ >= 3);
+  ROS_ASSERT(num_points_ >= 2);
   area_ = 0.0;
   for (size_t i = 1; i < num_points_; ++i) {
     area_ += MathUtils::CrossProd({points_[0].t(), points_[0].s()},
                                   {points_[i - 1].t(), points_[i - 1].s()},
                                   {points_[i].t(), points_[i].s()});
   }
-  if (area_ < 0) {
-    area_ = -area_;
-    std::reverse(points_.begin(), points_.end());
-  }
-  area_ /= 2.0;
-  ROS_ASSERT(area_ > 1e-6);
-
-  is_convex_ = true;
-  for (int i = 0; i < num_points_; ++i) {
-    if (MathUtils::CrossProd({points_[Prev(i)].t(), points_[Prev(i)].s()},
-                             {points_[i].t(), points_[i].s()},
-                             {points_[Next(i)].t(), points_[Next(i)].s()}) <=
-        -1e-6) {
-      is_convex_ = false;
-      break;
-    }
-  }
+//  if (area_ < 0) {
+//    area_ = -area_;
+//    std::reverse(points_.begin(), points_.end());
+//  }
+//  area_ /= 2.0;
+//  ROS_ASSERT(area_ > 1e-6);
+//
+//  is_convex_ = true;
+//  for (int i = 0; i < num_points_; ++i) {
+//    if (MathUtils::CrossProd({points_[Prev(i)].t(), points_[Prev(i)].s()},
+//                             {points_[i].t(), points_[i].s()},
+//                             {points_[Next(i)].t(), points_[Next(i)].s()}) <=
+//        -1e-6) {
+//      is_convex_ = false;
+//      break;
+//    }
+//  }
 
   for (const auto &point : lower_points_) {
     min_s_ = std::fmin(min_s_, point.s());
@@ -62,12 +59,15 @@ STBoundary::STBoundary(const std::vector<std::pair<STPoint, STPoint>> &point_pai
   min_t_ = lower_points_.front().t();
   max_t_ = lower_points_.back().t();
 }
+
 size_t STBoundary::Prev(size_t i) const {
   return i >= num_points_ - 1 ? 0 : i + 1;
 }
+
 size_t STBoundary::Next(size_t i) const {
   return i <= 0 ? num_points_ - 1 : i - 1;
 }
+
 bool STBoundary::GetBoundarySRange(double curr_time, double *s_upper, double *s_lower) const {
   if (s_lower == nullptr || s_upper == nullptr) {
     return false;
@@ -92,10 +92,6 @@ double STBoundary::max_s() const { return max_s_; }
 double STBoundary::max_t() const { return max_t_; }
 const std::vector<STPoint> &STBoundary::upper_points() const { return upper_points_; }
 const std::vector<STPoint> &STBoundary::lower_points() const { return lower_points_; }
-const STPoint &STBoundary::upper_left_point() const { return upper_left_point_; }
-const STPoint &STBoundary::upper_right_point() const { return upper_right_point_; }
-const STPoint &STBoundary::lower_left_point() const { return lower_left_point_; }
-const STPoint &STBoundary::lower_right_point() const { return lower_right_point_; }
 
 /**
  *
@@ -183,10 +179,7 @@ bool STBoundary::IsPointInBoundary(const STPoint &st_point) const {
                                                   {lower_points_[right].t(), lower_points_[right].s()});
   return check_lower * check_upper < 0.0;
 }
-void STBoundary::set_upper_left_point(const STPoint &st_point) { upper_left_point_ = st_point; }
-void STBoundary::set_upper_right_point(const STPoint &st_point) { upper_right_point_ = st_point; }
-void STBoundary::set_lower_left_point(const STPoint &st_point) { lower_left_point_ = st_point; }
-void STBoundary::set_lower_right_point(const STPoint &st_point) { lower_right_point_ = st_point; }
+
 void STBoundary::set_id(int id) { id_ = id; }
 
 }

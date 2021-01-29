@@ -1,12 +1,8 @@
-/motion_control/controller_type: "pid"
-#/motion_control/pid_lookahead_time: 0.9
-#/motion_control/lateral_pid_kp: 0.15
-#/motion_control/lateral_pid_kd: 0.01
-#/motion_control/lateral_pid_ki: 0.15
-/motion_control/steer_control_gain: 2
+/motion_control/controller_type: "pure_pursuit_pid"
+
+/motion_control/steer_control_gain: 1.5
 /motion_control/steer_control_max_lookahead_dist: 80.0
-/motion_control/steer_control_min_lookahead_dist: 2.5
-/motion_control/steer_weight: 1.7
+/motion_control/steer_control_min_lookahead_dist: 3
 /motion_control/longitudinal_pid_kp: 1.0
 /motion_control/longitudinal_pid_kd: 0.1
 /motion_control/longitudinal_pid_ki: 0.0

@@ -22,6 +22,7 @@ const std::string kVisualizedBehaviourTrajectoryName = "/behaviour_planner/visua
 const std::string kBehaviourName = "/behaviour_planner/behaviour";                                             //NOLINT
 const std::string kVisualizedObstacleTrajectoriesName = "/motion_planner/visualized_obstacle_trajectries";     //NOLINT
 const std::string kVisualizedObstacleInfoName = "/motion_planner/visualized_obstacle_infos";                    //NOLINT
+const std::string kEgoVehicleVisualizedName = "/motion_planner/visualized_ego_vehicle";                         //NOLINT
 }
 
 namespace service {

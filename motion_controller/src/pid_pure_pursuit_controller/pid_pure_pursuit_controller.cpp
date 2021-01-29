@@ -27,7 +27,6 @@ bool PIDPurePursuitController::Execute(double current_time_stamp,
       std::min(std::max(control_configs_.pure_pursuit_configs.steer_control_min_lookahead_dist,
                         kinodynamic_state.v * control_configs_.pure_pursuit_configs.steer_control_gain),
                control_configs_.pure_pursuit_configs.steer_control_max_lookahead_dist);
-  std::cout << " ===============approx_lookahead_dist: " << approx_lookahead_dist << std::endl;
   if (!GetMatchedPointByS(cur_tp.path_point.s + approx_lookahead_dist, trajectory, target_tp)) {
     return false;
   }
@@ -46,13 +45,6 @@ bool PIDPurePursuitController::Execute(double current_time_stamp,
     return false;
   }
 
-//  if (!LateralControl({kinodynamic_state.x, kinodynamic_state.y, kinodynamic_state.theta},
-//                      {target_tp.path_point.x, target_tp.path_point.y, target_tp
-//                          .path_point.theta},
-//                      1.0 / loop_rate_,
-//                      &steer)) {
-//    return false;
-//  }
   control.steer = steer;
   control.throttle = throttle;
   control.brake = 0.0;

@@ -6,8 +6,7 @@
 #include <derived_object_msgs/Object.h>
 #include <tf/transform_datatypes.h>
 #include <math/coordinate_transformer.hpp>
-
-
+#include <memory>
 
 class CollisionCheckTest : public ::testing::Test {
  public:
@@ -81,7 +80,7 @@ class CollisionCheckTest : public ::testing::Test {
                                                     t_end_,
                                                     init_d_,
                                                     8.0,
-                                                    0.0);
+                                                    0.1);
   }
 
   void SetUpReferenceLine() {
@@ -327,6 +326,112 @@ TEST_F(CollisionCheckTest, collision_test) {
   std::cout << "trajectory.trajectory_point.back(): x: " << trajectory.trajectory_points.back().path_point.x << ", y: "
             << trajectory.trajectory_points.back().path_point.y << std::endl;
   EXPECT_TRUE(collision_checker_->IsCollision(trajectory));
+
+}
+
+TEST_F(CollisionCheckTest, st_graph_test) {
+  EXPECT_TRUE(st_graph_->IsObstacleInGraph(obstacle_->Id()));
+  std::vector<common::STPoint> st_points = st_graph_->GetObstacleSurroundingPoints(obstacle_->Id(), 1e-3, 0.1);
+  common::SLBoundary sl_boundary;
+  EXPECT_TRUE(reference_line_.GetSLBoundary(obstacle_->GetBoundingBox(), &sl_boundary));
+  for (const auto &st : st_points) {
+    EXPECT_NEAR(st.s(), sl_boundary.end_s, 0.1);
+//    std::cout << " t: " << st.t() << ", s: " << st.s() << std::endl;
+  }
+  st_points = st_graph_->GetObstacleSurroundingPoints(obstacle_->Id(), -1e-3, 0.1);
+  for (const auto &st : st_points) {
+    EXPECT_NEAR(st.s(), sl_boundary.start_s, 0.1);
+//    std::cout << " t: " << st.t() << ", s: " << st.s() << std::endl;
+  }
+  std::vector<common::STBoundary> st_boundaries = st_graph_->GetObstaclesSTBoundary();
+  for (const auto &st_boundary : st_boundaries) {
+    double t = 0.0;
+    double upper_s, lower_s;
+    st_boundary.GetBoundarySRange(t, &upper_s, &lower_s);
+    EXPECT_NEAR(upper_s, sl_boundary.end_s, 0.1);
+    EXPECT_NEAR(lower_s, sl_boundary.start_s, 0.1);
+  }
+  std::vector<std::vector<std::pair<double, double>>> intervals =
+      st_graph_->GetPathBlockingIntervals(0, 8, 0.2);
+  EXPECT_EQ(intervals.size(), static_cast<size_t>(8 / 0.2));
+}
+
+TEST_F(CollisionCheckTest, dynamic_obstacle_test) {
+  planning_msgs::Trajectory trajectory;
+  double t = 0.0;
+  double delta_t = delta_t_;
+  planning::ReferencePoint matched_refpoint;
+  double matched_s;
+  reference_line_.GetMatchedPoint(obstacle_->center_.x(), obstacle_->center_.y(), &matched_refpoint, &matched_s);
+  double s = matched_s;
+  while (t <= 8.0) {
+    auto ref_point = reference_line_.GetReferencePoint(s);
+    auto xy = common::CoordinateTransformer::CalcCatesianPoint(ref_point.theta(), ref_point.x(), ref_point.y(), 0.0);
+    planning_msgs::TrajectoryPoint tp;
+    tp.path_point.x = xy.x();
+    tp.path_point.y = xy.y();
+    tp.path_point.theta = ref_point.theta();
+    tp.vel = 3.0;
+    tp.acc = 0.0;
+    tp.jerk = 0.0;
+    tp.relative_time = t;
+    trajectory.trajectory_points.push_back(tp);
+    s += tp.vel * delta_t;
+    t += delta_t;
+  }
+  obstacle_->trajectory_ = trajectory;
+
+  s = start_s_;
+  planning_msgs::Trajectory ego_trajectory;
+  while (t <= 8.0) {
+    auto ref_point = reference_line_.GetReferencePoint(s);
+    auto xy = common::CoordinateTransformer::CalcCatesianPoint(ref_point.theta(), ref_point.x(), ref_point.y(), 0.0);
+    planning_msgs::TrajectoryPoint tp;
+    tp.path_point.x = xy.x();
+    tp.path_point.y = xy.y();
+    tp.path_point.theta = ref_point.theta();
+    tp.vel = 10.0;
+    tp.acc = 0.0;
+    tp.jerk = 0.0;
+    tp.relative_time = t;
+    ego_trajectory.trajectory_points.push_back(tp);
+    s += tp.vel * delta_t;
+    t += delta_t;
+  }
+  std::vector<std::shared_ptr<planning::Obstacle>> obstacles{obstacle_};
+  auto st_graph = std::make_shared<planning::STGraph>(obstacles,
+                                                      reference_line_,
+                                                      start_s_,
+                                                      end_s_,
+                                                      t_start_,
+                                                      t_end_,
+                                                      init_d_,
+                                                      8.0,
+                                                      0.1);
+  EXPECT_TRUE(!obstacle_->IsStatic());
+  EXPECT_EQ(st_graph->obstacles_st_boundary_.size(), 1);
+//  EXPECT_EQ(st_graph->obstacles_sl_boundary_.size(), 0);
+  EXPECT_EQ(st_graph->st_map_.size(), 1);
+  for (const auto &st_boundary : st_graph->obstacles_st_boundary_) {
+    double s_upper, s_lower, s_upper_slope, s_lower_slope;
+    st_boundary.GetBoundarySRange(3.0, &s_upper, &s_lower);
+    st_boundary.GetBoundarySlopes(3.0, &s_upper_slope, &s_lower_slope);
+//    std::cout << " sl boundary: s_start: " << st_graph->obstacles_sl_boundary_.front().start_s << ", s_end: " << st_graph->obstacles_sl_boundary_.front().end_s << std::endl;
+    std::cout << "s_upper: " << s_upper << ", s_lower: " << s_lower << std::endl;
+    std::cout << "s_upper_slope: " << s_upper_slope << ", s_lower_slope: " << s_lower_slope << std::endl;
+  }
+  std::unordered_map<int, std::shared_ptr<planning::Obstacle>> obstacle_map;
+  obstacle_map.emplace(obstacle_->Id(), obstacle_);
+  auto collision_checker = std::make_shared<planning::CollisionChecker>(obstacle_map,
+                                                                        reference_line_,
+                                                                        st_graph,
+                                                                        start_s_,
+                                                                        init_d_[0],
+                                                                        2.0,
+                                                                        0.3, lookahead_time_, 0.1, vehicle_params_,
+                                                                        nullptr);
+  std::cout << collision_checker->IsCollision(ego_trajectory) << std::endl;
+
 
 }
 

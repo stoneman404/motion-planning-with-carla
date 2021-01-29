@@ -23,8 +23,7 @@
 #include <reference_generator/reference_generator.hpp>
 #include "trajectory_planner.hpp"
 #include "frenet_lattice_planner/frenet_lattice_planner.hpp"
-//#include "behaviour_planner/behaviour_strategy/behaviour_strategy.hpp"
-//#include "behaviour_planner/behaviour_strategy/mpdm_planner/mpdm_planner.hpp"
+
 
 namespace planning {
 
@@ -40,6 +39,7 @@ class MotionPlanner {
   void InitPublisher();
   void InitSubscriber();
   void InitServiceClient();
+  void VisualizeEgoVehicle();
 
   std::vector<PlanningTarget> GetPlanningTargets(const std::vector<ReferenceLine> &ref_lines,
                                                  const planning_msgs::TrajectoryPoint &init_point);
@@ -60,13 +60,15 @@ class MotionPlanner {
    */
 //  static std::unordered_map<int, Agent> GetKeyAgents(
 //      const std::unordered_map<int, Agent> &agent_set, int ego_id);
-  static std::vector<std::shared_ptr<Obstacle>> GetKeyObstacle(const std::unordered_map<int, derived_object_msgs::Object> &objects,
+  static std::vector<std::shared_ptr<Obstacle>> GetKeyObstacle(const std::unordered_map<int,
+                                                                                        derived_object_msgs::Object> &objects,
                                                                const std::unordered_map<int,
                                                                                         carla_msgs::CarlaTrafficLightStatus> &traffic_light_status_list,
                                                                const std::unordered_map<int,
                                                                                         carla_msgs::CarlaTrafficLightInfo> &traffic_lights_info_list,
                                                                const planning_msgs::TrajectoryPoint &trajectory_point,
-                                                               int ego_id);
+                                                               int ego_id,
+                                                               const std::vector<PlanningTarget> &targets);
   /**
    * @brief: predict agent behaviour.
    * @param key_agent_set
@@ -94,20 +96,7 @@ class MotionPlanner {
       bool smooth,
       std::vector<ReferenceLine> *ptr_potential_lanes);
 
-  /**
-   * @brief: get agent potential reference lines
-   * @param agent_state
-   * @param agent_id
-   * @param lookahead_length
-   * @param lookback_length
-   * @param potential_reference_lines
-   * @return
-   */
-  bool GetAgentPotentialRefLanes(const vehicle_state::KinoDynamicState &agent_state,
-                                 int agent_id,
-                                 double lookahead_length,
-                                 double lookback_length,
-                                 std::vector<ReferenceLine> *potential_reference_lines);
+
 
   /**
    * @brief: get ego vehicle routes
@@ -271,7 +260,7 @@ class MotionPlanner {
   ros::Publisher visualized_traffic_light_box_publisher_;
   ros::Publisher visualized_obstacle_trajectory_publisher_;
   ros::Publisher visualized_obstacle_info_publisher_;
-
+  ros::Publisher visualized_ego_vehicle_publisher_;
   /////////////////// thread pool///////////////////
   size_t thread_pool_size_ = 6;
   std::unique_ptr<common::ThreadPool> thread_pool_;

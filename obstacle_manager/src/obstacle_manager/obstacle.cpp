@@ -16,7 +16,9 @@ Obstacle::Obstacle(const derived_object_msgs::Object &object) {
   this->is_static_ = false;
   this->heading_ = tf::getYaw(object.pose.orientation);
   center_ = Eigen::Vector2d(object.pose.position.x, object.pose.position.y);
-  this->bounding_box_ = Box2d(center_, heading_, object.shape.dimensions[0], object.shape.dimensions[1]);
+  double length = std::max(object.shape.dimensions[0], object.shape.dimensions[1]);
+  double width = std::min(object.shape.dimensions[0], object.shape.dimensions[1]);
+  this->bounding_box_ = Box2d(center_, heading_, length, width);
   acc_ = object.accel.linear.x * std::cos(heading_) + object.accel.linear.y * std::sin(heading_);
   centripental_acc_ = object.accel.linear.y * std::cos(heading_) - object.accel.linear.x * std::sin(heading_);
   kappa_ = std::fabs(speed_) < 1e-2 ? 0.0 : angular_speed_ / speed_;
@@ -137,8 +139,8 @@ void Obstacle::PredictTrajectory(double predict_horizon, double predict_step) {
       trajectory_point.path_point.kappa = 0.0;
       trajectory_point.path_point.dkappa = 0.0;
       trajectory_point.relative_time = predict_step * static_cast<double>(i);
-      trajectory_point.vel = last_trajectory_point.vel + predict_step * acc_;
-      trajectory_point.acc = acc_;
+      trajectory_point.vel = last_trajectory_point.vel;
+      trajectory_point.acc = 0.0;
       trajectory_point.jerk = 0.0;
       trajectory_point.steer_angle = 0.0;
       double dx = trajectory_point.path_point.x - last_trajectory_point.path_point.x;

@@ -72,7 +72,7 @@ class STBoundary {
   STBoundary() = default;
   /**
    *
-   * @param point_pairs
+   * @param point_pairs, first is lower st point, second is upper point
    */
   explicit STBoundary(const std::vector<std::pair<STPoint, STPoint>> &point_pairs);
   ~STBoundary() = default;
@@ -112,15 +112,15 @@ class STBoundary {
   const std::vector<STPoint> &upper_points() const;
   const std::vector<STPoint> &lower_points() const;
 
-  const STPoint &upper_left_point() const;
-  const STPoint &upper_right_point() const;
-  const STPoint &lower_left_point() const;
-  const STPoint &lower_right_point() const;
-
-  void set_upper_left_point(const STPoint &st_point);
-  void set_upper_right_point(const STPoint &st_point);
-  void set_lower_left_point(const STPoint &st_point);
-  void set_lower_right_point(const STPoint &st_point);
+//  const STPoint &upper_left_point() const;
+//  const STPoint &upper_right_point() const;
+//  const STPoint &lower_left_point() const;
+//  const STPoint &lower_right_point() const;
+//
+//  void set_upper_left_point(const STPoint &st_point);
+//  void set_upper_right_point(const STPoint &st_point);
+//  void set_lower_left_point(const STPoint &st_point);
+//  void set_lower_right_point(const STPoint &st_point);
 
  private:
   size_t Prev(size_t i) const;
@@ -139,10 +139,7 @@ class STBoundary {
   double max_t_ = std::numeric_limits<double>::lowest();
 
   std::vector<STPoint> points_;
-  STPoint lower_left_point_;
-  STPoint lower_right_point_;
-  STPoint upper_left_point_;
-  STPoint upper_right_point_;
+
   size_t num_points_ = 0;
   double is_convex_ = false;
 

@@ -6,7 +6,7 @@
 namespace control {
 
 Controller::Controller(ros::NodeHandle &nh) : nh_(nh), vehicle_state_(std::make_unique<vehicle_state::VehicleState>()) {
-  nh_.param<std::string>("/motion_control/controller_type", controller_type_, "pid");
+  nh_.param<std::string>("/motion_control/controller_type", controller_type_, "pure_pursuit_pid");
   nh_.param<double>("/motion_control/pid_lookahead_time", control_configs_.lookahead_time, 1.0);
 //  nh_.param<double>("/motion_control/lateral_pid_kp", control_configs_.lat_configs.lat_kp, 1.95);
 //  nh_.param<double>("/motion_control/lateral_pid_kd", control_configs_.lat_configs.lat_kd, 0.01);
@@ -26,7 +26,7 @@ Controller::Controller(ros::NodeHandle &nh) : nh_(nh), vehicle_state_(std::make_
   nh_.param<double>("/motion_control/longitudinal_pid_ki", control_configs_.lon_configs.lon_ki, 0.36);
 
   nh_.param<double>("/motion_control/loop_rate", loop_rate_, 50.0);
-  if (controller_type_ == "pid") {
+  if (controller_type_ == "pure_pursuit_pid") {
     control_strategy_ = std::make_unique<PIDPurePursuitController>(control_configs_, loop_rate_);
   } else {
     ROS_FATAL("No such controller... [%s]", controller_type_.c_str());

@@ -57,9 +57,9 @@ PolynomialTrajectoryEvaluator::PolynomialTrajectoryEvaluator(const std::array<do
 
 
       for (const auto &lat_traj : lat_trajectory_vec) {
-        if (!IsValidLateralTrajectory(*lon_traj, *lat_traj)) {
-          continue;
-        }
+//        if (!IsValidLateralTrajectory(*lon_traj, *lat_traj)) {
+//          continue;
+//        }
         double cost = Evaluate(planning_target, lon_traj, lat_traj);
         cost_queue_.emplace(TrajectoryPair(lon_traj, lat_traj), cost);
       }

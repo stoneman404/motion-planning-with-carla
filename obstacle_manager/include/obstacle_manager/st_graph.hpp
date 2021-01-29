@@ -79,6 +79,11 @@ class STGraph {
 
   void SetUpDynamicObstacle(const std::shared_ptr<Obstacle> &obstacle,
                             const ReferenceLine &ref_line);
+
+  bool MakeSTBoundary(const std::shared_ptr<Obstacle>& obstacle,
+                      const ReferenceLine& ref_line,
+                      common::STBoundary& st_boundary) const;
+
   static common::STPoint SetSTPoint(double s, double t);
 
  private:
@@ -90,7 +95,7 @@ class STGraph {
   std::array<double, 3> init_d_{};
   std::unordered_map<int, common::STBoundary> st_map_;
   std::vector<common::STBoundary> obstacles_st_boundary_;
-  std::vector<common::SLBoundary> obstacles_sl_boundary_;
+//  std::vector<common::SLBoundary> obstacles_sl_boundary_;
 };
 }
 #endif //CATKIN_WS_SRC_MOTION_PLANNING_WITH_CARLA_COMMON_INCLUDE_PATH_TIME_GRAPH_ST_GRAPH_HPP_

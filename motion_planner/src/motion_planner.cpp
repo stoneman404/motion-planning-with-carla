@@ -20,7 +20,6 @@ MotionPlanner::MotionPlanner(const ros::NodeHandle &nh) : nh_(nh), thread_pool_s
               PlanningConfig::Instance().planner_type().c_str());
     ROS_ASSERT(false);
   }
-
   this->InitPublisher();
   this->InitSubscriber();
   this->InitServiceClient();
@@ -83,23 +82,19 @@ void MotionPlanner::RunOnce() {
   if (ego_vehicle_id_ == -1) {
     return;
   }
-
   if (objects_map_.find(ego_vehicle_id_) == objects_map_.end()) {
     ROS_FATAL("[MotionPlanner::RunOnce], no ego vehicle");
     return;
   }
-
   ego_object_ = objects_map_[ego_vehicle_id_];
   vehicle_state_->Update(ego_vehicle_status_, ego_vehicle_info_, ego_object_);
+  VisualizeEgoVehicle();
+  PlanningConfig::Instance().set_vehicle_params(vehicle_state_->vehicle_params());
   auto stitching_trajectory =
       this->GetStitchingTrajectory(current_time_stamp,
                                    1.0 / static_cast<double>(PlanningConfig::Instance().loop_rate()),
                                    PlanningConfig::Instance().preserve_history_trajectory_point_num());
   auto init_trajectory_point = stitching_trajectory.back();
-
-//  auto agent_set = this->MakeBehaviourAgentSet();
-//  agent_set[ego_vehicle_id_].MoveAgentToPoint(init_trajectory_point);
-
   reference_generator_->UpdateVehicleState(vehicle_state_->GetKinoDynamicVehicleState());
   planning_msgs::Trajectory optimal_trajectory;
   std::vector<ReferenceLine> ref_lines;
@@ -112,20 +107,18 @@ void MotionPlanner::RunOnce() {
     return;
   }
 
-  std::cout << "-----------reference line size: " << ref_lines.size() << std::endl;
   VisualizeReferenceLine(ref_lines);
-  VisualizeTrafficLightBox();
+
+  std::vector<PlanningTarget> planning_targets = GetPlanningTargets(ref_lines, init_trajectory_point);
 
   std::vector<std::shared_ptr<Obstacle>> obstacles = GetKeyObstacle(
       objects_map_,
       traffic_light_status_list_,
       traffic_lights_info_list_,
       init_trajectory_point,
-      ego_vehicle_id_);
-
+      ego_vehicle_id_, planning_targets);
   VisualizeObstacleTrajectory(obstacles);
 
-  std::vector<PlanningTarget> planning_targets = GetPlanningTargets(ref_lines, init_trajectory_point);
   if (!trajectory_planner_->Process(obstacles, init_trajectory_point,
                                     planning_targets,
                                     optimal_trajectory,
@@ -170,15 +163,12 @@ void MotionPlanner::InitPublisher() {
       common::topic::kVisualizedObstacleTrajectoriesName, 1);
   this->visualized_obstacle_info_publisher_ = nh_.advertise<visualization_msgs::MarkerArray>(
       common::topic::kVisualizedObstacleInfoName, 1);
+  this->visualized_ego_vehicle_publisher_ =
+      nh_.advertise<visualization_msgs::Marker>(common::topic::kEgoVehicleVisualizedName, 1);
 }
 
 void MotionPlanner::InitSubscriber() {
 
-//  this->behaviour_subscriber_ = nh_.subscribe<planning_msgs::Behaviour>(
-//      common::topic::kBehaviourName, 5,
-//      [this](const planning_msgs::Behaviour::ConstPtr &behaviour) {
-//        this->behaviour_ = *behaviour;
-//      });
   this->ego_vehicle_subscriber_ = nh_.subscribe<carla_msgs::CarlaEgoVehicleStatus>(
       common::topic::kEgoVehicleStatusName, 5,
       [this](const carla_msgs::CarlaEgoVehicleStatus::ConstPtr &ego_vehicle_status) {
@@ -254,16 +244,17 @@ void MotionPlanner::InitServiceClient() {
 void MotionPlanner::VisualizeObstacleTrajectory(const std::vector<std::shared_ptr<Obstacle>> &obstacles) {
   visualization_msgs::MarkerArray obstacle_trajectory_mark_array;
   visualization_msgs::MarkerArray obstacle_info_mark_array;
+
   int i = 1;
   for (const auto &obstacle : obstacles) {
     visualization_msgs::Marker trajectory_marker;
     visualization_msgs::Marker info_marker;
-    info_marker.type = visualization_msgs::Marker::TEXT_VIEW_FACING;
+    info_marker.type = visualization_msgs::Marker::CUBE;
     info_marker.id = i;
     info_marker.scale.x = 0.1;
-    info_marker.color.a = 1.0;
+    info_marker.color.a = 0.2;
     info_marker.color.r = .7;
-    info_marker.pose.orientation.w = 1.0;
+    info_marker.pose.orientation = tf::createQuaternionMsgFromYaw(obstacle->GetBoundingBox().heading());
     info_marker.pose.position.x = obstacle->x();
     info_marker.pose.position.y = obstacle->y();
     info_marker.pose.position.z = 2.0;
@@ -271,7 +262,12 @@ void MotionPlanner::VisualizeObstacleTrajectory(const std::vector<std::shared_pt
     info_marker.header.frame_id = "map";
     info_marker.lifetime = ros::Duration(1.0);
     info_marker.action = visualization_msgs::Marker::ADD;
-    info_marker.text = "id: ";
+    info_marker.scale.x = obstacle->GetBoundingBox().length();
+    info_marker.scale.y = obstacle->GetBoundingBox().width();
+    info_marker.scale.z = obstacle->IsVirtual() ? traffic_lights_info_list_[obstacle->Id()].trigger_volume.center.z
+                                                : objects_map_[obstacle->Id()].shape.dimensions[2];
+    obstacle_info_mark_array.markers.push_back(info_marker);
+
     trajectory_marker.type = visualization_msgs::Marker::LINE_STRIP;
     trajectory_marker.id = i;
     trajectory_marker.scale.x = 0.1;
@@ -283,7 +279,6 @@ void MotionPlanner::VisualizeObstacleTrajectory(const std::vector<std::shared_pt
     trajectory_marker.header.frame_id = "map";
     trajectory_marker.lifetime = ros::Duration(1.0);
     trajectory_marker.action = visualization_msgs::Marker::ADD;
-    obstacle_info_mark_array.markers.push_back(info_marker);
     auto tj = obstacle->trajectory();
     for (const auto &tp : tj.trajectory_points) {
       geometry_msgs::Point p;
@@ -330,7 +325,7 @@ void MotionPlanner::VisualizeValidTrajectories(
 
 void MotionPlanner::VisualizeOptimalTrajectory(const planning_msgs::Trajectory &optimal_trajectory) const {
   visualization_msgs::Marker optimal_trajectory_marker;
-  optimal_trajectory_marker.type = visualization_msgs::Marker::LINE_STRIP;
+  optimal_trajectory_marker.type = visualization_msgs::Marker::POINTS;
   optimal_trajectory_marker.header.stamp = ros::Time::now();
   optimal_trajectory_marker.header.frame_id = "map";
   optimal_trajectory_marker.action = visualization_msgs::Marker::ADD;
@@ -338,7 +333,9 @@ void MotionPlanner::VisualizeOptimalTrajectory(const planning_msgs::Trajectory &
   optimal_trajectory_marker.color.b = 0.8;
   optimal_trajectory_marker.color.r = 1.0;
 //  optimal_trajectory_marker.color.g =0.7;
-  optimal_trajectory_marker.scale.x = 0.2;
+  optimal_trajectory_marker.scale.x = 0.5;
+  optimal_trajectory_marker.scale.y = 0.5;
+  optimal_trajectory_marker.scale.z = 0.5;
   optimal_trajectory_marker.pose.orientation.w = 1.0;
   optimal_trajectory_marker.id = 0;
   optimal_trajectory_marker.lifetime = ros::Duration(1.0);
@@ -350,7 +347,6 @@ void MotionPlanner::VisualizeOptimalTrajectory(const planning_msgs::Trajectory &
     optimal_trajectory_marker.points.push_back(p);
   }
   visualized_trajectory_publisher_.publish(optimal_trajectory_marker);
-
 }
 
 void MotionPlanner::VisualizeTrafficLightBox() {
@@ -415,39 +411,6 @@ void MotionPlanner::VisualizeReferenceLine(std::vector<ReferenceLine> &ref_lanes
   visualized_reference_lines_publisher_.publish(marker_array);
 }
 
-//bool MotionPlanner::GetPlanningTargetFromBehaviour(const Behaviour &behaviour,
-//                                                   std::vector<PlanningTarget> &planning_targets) {
-//  if (behaviour.lateral_behaviour == LateralBehaviour::UNDEFINED) {
-//    ROS_FATAL("[MotionPlanner::GetPlanningTargetFromBehaviour], the lateral behaviour is UNDEFINED");
-//    return false;
-//  }
-//  planning_targets.clear();
-//  planning_targets.resize(behaviour.forward_behaviours.size());
-//  for (size_t i = 0; i < behaviour.forward_behaviours.size(); ++i) {
-//    planning_targets[i].ref_lane = behaviour.forward_behaviours[i].second;
-//    if (behaviour.forward_behaviours[i].first == behaviour.lateral_behaviour) {
-//      planning_targets[i].is_best_behaviour = true;
-//    }
-//    planning_targets[i].lateral_behaviour = behaviour.forward_behaviours[i].first;
-//    planning_targets[i].behaviour_trajectory = behaviour.forward_trajs[i];
-//    GetLocalGoal(planning_targets[i]);
-//    for (const auto &obstacle_traj : behaviour.surrounding_trajs[i]) {
-//      int agent_id = obstacle_traj.first;
-//      if (objects_map_.find(agent_id) != objects_map_.end()) {
-//        planning_targets[i].obstacles.emplace_back(std::make_shared<Obstacle>(objects_map_[agent_id]));
-//        planning_targets[i].obstacles.back()->SetTrajectory(obstacle_traj.second);
-//      } else if (traffic_lights_info_list_.find(agent_id) != traffic_lights_info_list_.end()) {
-//        planning_targets[i].obstacles.emplace_back(
-//            std::make_shared<Obstacle>(traffic_lights_info_list_[agent_id],
-//                                       traffic_light_status_list_[agent_id]));
-//        planning_targets[i].obstacles.back()->SetTrajectory(obstacle_traj.second);
-//      } else {
-//        continue;
-//      }
-//    }
-//  }
-//  return true;
-//}
 void MotionPlanner::GenerateEmergencyStopTrajectory(const planning_msgs::TrajectoryPoint &init_trajectory_point,
                                                     planning_msgs::Trajectory &emergency_stop_trajectory) {
   const double kMaxTrajectoryTime = PlanningConfig::Instance().max_lookahead_time();
@@ -491,53 +454,6 @@ void MotionPlanner::GenerateEmergencyStopTrajectory(const planning_msgs::Traject
     last_a = tp.acc;
   }
 }
-//
-//bool MotionPlanner::GetLocalGoal(PlanningTarget &planning_target) {
-//  auto trajectory = planning_target.behaviour_trajectory;
-//  double t = PlanningConfig::Instance().max_lookahead_time();
-//  planning_msgs::TrajectoryPoint goal_trajectory_point;
-//  auto matched_iterator = std::lower_bound(
-//      trajectory.trajectory_points.begin(), trajectory.trajectory_points.end(), t,
-//      [](const planning_msgs::TrajectoryPoint &p0,
-//         const double relative_time) -> bool {
-//        return p0.relative_time < relative_time;
-//      });
-//  if (matched_iterator == trajectory.trajectory_points.begin()) {
-//    goal_trajectory_point = trajectory.trajectory_points.front();
-//  } else if (matched_iterator == trajectory.trajectory_points.end()) {
-//    goal_trajectory_point = trajectory.trajectory_points.back();
-//  } else {
-//    goal_trajectory_point = common::MathUtils::InterpolateTrajectoryPoint(
-//        *(matched_iterator - 1),
-//        *matched_iterator,
-//        PlanningConfig::Instance().max_lookahead_time());
-//  }
-//  auto ref_lane = planning_target.ref_lane;
-//  ReferencePoint ref_point;
-//  double matched_s;
-//  if (!ref_lane.GetMatchedPoint(goal_trajectory_point.path_point.x,
-//                                goal_trajectory_point.path_point.y,
-//                                &ref_point,
-//                                &matched_s)) {
-//    ROS_FATAL("[MotionPlanner::GetLocalGoal]: failed to get local goal because get matched point failed");
-//    return false;
-//  }
-//  if (matched_s > ref_lane.Length() - 2.0) {
-//    planning_target.has_stop_point = true;
-//    planning_target.stop_s = ref_lane.Length() - PlanningConfig::Instance().lon_safety_buffer();
-//  } else {
-//    planning_target.has_stop_point = false;
-//    planning_target.stop_s = std::numeric_limits<double>::max();
-//  }
-//
-//  double v_x = goal_trajectory_point.vel * std::cos(goal_trajectory_point.path_point.theta);
-//  double v_y = goal_trajectory_point.vel * std::sin(goal_trajectory_point.path_point.theta);
-//  double ref_v = std::cos(ref_point.theta()) * v_x + std::sin(ref_point.theta()) * v_y;
-//  double max_ref_v = std::sqrt(PlanningConfig::Instance().max_lat_acc() / (std::fabs(ref_point.kappa()) + 1e-5));
-//  planning_target.desired_vel = std::min(max_ref_v, ref_v);
-//  return true;
-//
-//}
 
 std::vector<planning_msgs::TrajectoryPoint> MotionPlanner::GetStitchingTrajectory(
     const ros::Time &current_time_stamp,
@@ -669,74 +585,47 @@ MotionPlanner::~MotionPlanner() {
     reference_generator_->Stop();
   }
 }
-//
-//std::unordered_map<int, Agent> MotionPlanner::MakeBehaviourAgentSet() {
-//  std::unordered_map<int, Agent> agent_set;
-//  for (const auto &object : objects_map_) {
-//    agent_set.emplace(object.first, object.second);
-//  }
-////  for (const auto &traffic_light :  traffic_lights_info_list_) {
-////    if (traffic_light_status_list_.find(traffic_light.first) == traffic_light_status_list_.end()) {
-////      continue;
-////    }
-////    auto traffic_status = traffic_light_status_list_[traffic_light.first];
-////    if (traffic_status.state == carla_msgs::CarlaTrafficLightStatus::RED) {
-////      agent_set.emplace(traffic_light.first, Agent({traffic_status, traffic_light.second}));
-////    }
-////  }
-//  return agent_set;
-//}
-//std::unordered_map<int, Agent> MotionPlanner::GetKeyAgents(const std::unordered_map<int, Agent> &agent_set,
-//                                                           int ego_id) {
-//  std::unordered_map<int, Agent> key_agent_set;
-//  const double front_distance =
-//      std::max(PlanningConfig::Instance().desired_velocity() * PlanningConfig::Instance().sim_horizon(),
-//               PlanningConfig::Instance().sample_min_lon_threshold());
-//  const double back_distance = front_distance / 2.0;
-//  auto ego_agent = agent_set.at(ego_id);
-//  Eigen::Vector2d ego_heading{std::cos(ego_agent.state().theta), std::sin(ego_agent.state().theta)};
-//  key_agent_set.emplace(ego_agent.id(), ego_agent);
-//  key_agent_set[ego_id].set_is_host(true);
-//
-//  for (const auto &agent : agent_set) {
-//    if (agent.first == ego_id) {
-//      continue;
-//    }
-//    Eigen::Vector2d agent_to_ego{agent.second.state().x - ego_agent.state().x,
-//                                 agent.second.state().y - ego_agent.state().y};
-//
-//    const double cross_prod = agent_to_ego.x() * ego_heading.y() - agent_to_ego.y() * ego_heading.x();
-//    if (std::fabs(cross_prod) > PlanningConfig::Instance().sample_lat_threshold()) {
-//      continue;
-//    }
-//    const double dot_prod = agent_to_ego.x() * ego_heading.x() + agent_to_ego.y() * ego_heading.y();
-//    if (dot_prod < front_distance && dot_prod > -back_distance) {
-//      key_agent_set.insert(agent);
-//    }
-//  }
-//  return key_agent_set;
-//}
 
 std::vector<std::shared_ptr<Obstacle>> MotionPlanner::GetKeyObstacle(
     const std::unordered_map<int, derived_object_msgs::Object> &objects,
     const std::unordered_map<int, carla_msgs::CarlaTrafficLightStatus> &traffic_light_status_list,
     const std::unordered_map<int, carla_msgs::CarlaTrafficLightInfo> &traffic_lights_info_list,
     const planning_msgs::TrajectoryPoint &trajectory_point,
-    int ego_id) {
-
-  auto ego_object = objects.at(ego_id);
+    int ego_id, const std::vector<PlanningTarget> &targets) {
   std::vector<std::shared_ptr<Obstacle>> obstacles;
-//  const double front_distance =
-//      std::max(PlanningConfig::Instance().desired_velocity() * PlanningConfig::Instance().sim_horizon(),
-//               PlanningConfig::Instance().sample_min_lon_threshold());
-//  const double back_distance = front_distance / 2.0;
-//  Eigen::Vector2d ego_heading{std::cos(trajectory_point.path_point.theta), std::sin(trajectory_point.path_point.theta)};
-//
-  const double radius = 100.0;
-  for (const auto &object : objects) {
-    if (object.first == ego_id) {
+  auto ego_object = objects.at(ego_id);
+  const double front_distance = PlanningConfig::Instance().max_lookahead_distance();
+  const double back_distance = PlanningConfig::Instance().max_lookback_distance();
+  for (const auto& target : targets) {
+    if (!target.is_best_behaviour) {
       continue;
     }
+    for (const auto &object : objects) {
+      if (object.first == ego_id) {
+        continue;
+      }
+      double height_diff = std::fabs(object.second.pose.position.z - ego_object.pose.position.z);
+      if (height_diff > 3) {
+        continue;
+      }
+      double distance = std::hypot(object.second.pose.position.x - trajectory_point.path_point.x,
+                                   object.second.pose.position.y - trajectory_point.path_point.y);
+
+      if (distance > front_distance) {
+        continue;
+      }
+      common::SLPoint sl_point;
+      if (!target.ref_lane.XYToSL(object.second.pose.position.x, object.second.pose.position.y, &sl_point)) {
+        continue;
+      }
+      if (sl_point.s > front_distance || sl_point.s < -back_distance ||
+          sl_point.l > PlanningConfig::Instance().sample_lat_threshold() ||
+          sl_point.l < -PlanningConfig::Instance().sample_lat_threshold()) {
+        continue;
+      }
+
+//    Eigen::Vector2d
+//        ego_heading{std::cos(trajectory_point.path_point.theta), std::sin(trajectory_point.path_point.theta)};
 //    Eigen::Vector2d agent_to_ego{object.second.pose.position.x - trajectory_point.path_point.x,
 //                                 object.second.pose.position.y - trajectory_point.path_point.y};
 //    const double cross_prod = agent_to_ego.x() * ego_heading.y() - agent_to_ego.y() * ego_heading.x();
@@ -744,115 +633,69 @@ std::vector<std::shared_ptr<Obstacle>> MotionPlanner::GetKeyObstacle(
 //      continue;
 //    }
 //    const double dot_prod = agent_to_ego.x() * ego_heading.x() + agent_to_ego.y() * ego_heading.y();
-    double dist = std::hypot(trajectory_point.path_point.x - object.second.pose.position.x,
-                             trajectory_point.path_point.y - object.second.pose.position.y);
-    double height_diff = std::fabs(object.second.pose.position.z - ego_object.pose.position.z);
-    if (dist < radius && height_diff < 1.5) {
+//    if (dot_prod > front_distance || dot_prod < -back_distance) {
+//      continue;
+//    }
       auto obstacle = std::make_shared<Obstacle>(object.second);
       obstacle->PredictTrajectory(PlanningConfig::Instance().max_lookahead_time(),
                                   PlanningConfig::Instance().delta_t());
       obstacles.emplace_back(obstacle);
-//      obstacles.back()->PredictTrajectory(PlanningConfig::Instance().max_lookahead_time(),
-//                                          PlanningConfig::Instance().delta_t());
     }
-  }
 
-  for (const auto &light_info : traffic_lights_info_list) {
-    auto id = light_info.first;
-    if (traffic_light_status_list.find(id) == traffic_light_status_list.end()) {
-      continue;
-    }
-    const auto light_status = traffic_light_status_list.at(id);
-    if (light_status.state == carla_msgs::CarlaTrafficLightStatus::GREEN
-        || light_status.state == carla_msgs::CarlaTrafficLightStatus::UNKNOWN) {
-      continue;
-    }
-    auto x = light_info.second.trigger_volume.center.x;
-    auto y = light_info.second.trigger_volume.center.y;
-    auto z = light_info.second.trigger_volume.center.z;
+    for (const auto &light_info : traffic_lights_info_list) {
+      auto id = light_info.first;
+      if (traffic_light_status_list.find(id) == traffic_light_status_list.end()) {
+        continue;
+      }
+      const auto light_status = traffic_light_status_list.at(id);
+      if (light_status.state == carla_msgs::CarlaTrafficLightStatus::GREEN
+          || light_status.state == carla_msgs::CarlaTrafficLightStatus::UNKNOWN) {
+        continue;
+      }
+      auto x = light_info.second.trigger_volume.center.x;
+      auto y = light_info.second.trigger_volume.center.y;
+      auto z = light_info.second.trigger_volume.center.z;
+      double height_diff = std::fabs(z - ego_object.pose.position.z);
+      if (height_diff > 3) {
+        continue;
+      }
+      double dist = std::hypot(trajectory_point.path_point.x - x,
+                               trajectory_point.path_point.y - y);
+      if (dist > front_distance) {
+        continue;
+      }
 
+      common::SLPoint sl_point;
+      if (!target.ref_lane.XYToSL(x, y, &sl_point)) {
+        continue;
+      }
+      if (sl_point.s > front_distance || sl_point.s < -back_distance ||
+          sl_point.l > PlanningConfig::Instance().sample_lat_threshold() ||
+          sl_point.l < -PlanningConfig::Instance().sample_lat_threshold()) {
+        continue;
+      }
+//    Eigen::Vector2d
+//        ego_heading{std::cos(trajectory_point.path_point.theta), std::sin(trajectory_point.path_point.theta)};
 //    Eigen::Vector2d agent_to_ego{x - trajectory_point.path_point.x, y - trajectory_point.path_point.y};
 //    const double cross_prod = agent_to_ego.x() * ego_heading.y() - agent_to_ego.y() * ego_heading.x();
 //    if (std::fabs(cross_prod) > PlanningConfig::Instance().sample_lat_threshold()) {
 //      continue;
 //    }
 //    const double dot_prod = agent_to_ego.x() * ego_heading.x() + agent_to_ego.y() * ego_heading.y();
-    double dist = std::hypot(trajectory_point.path_point.x - x,
-                             trajectory_point.path_point.y - y);
-    double height_diff = std::fabs(z - ego_object.pose.position.z);
+//    if (dot_prod > front_distance || dot_prod < -back_distance) {
+//      continue;
+//    }
 
-    if (dist < radius && height_diff < 1.5) {
       auto obstacle = std::make_shared<Obstacle>(light_info.second, light_status);
       obstacle->PredictTrajectory(PlanningConfig::Instance().max_lookahead_time(),
                                   PlanningConfig::Instance().delta_t());
       obstacles.emplace_back(obstacle);
-//      obstacles.back()->PredictTrajectory(PlanningConfig::Instance().max_lookahead_time(),
-//                                          PlanningConfig::Instance().delta_t());
     }
   }
+
   return obstacles;
 }
-//
-//bool MotionPlanner::PredictAgentsBehaviours(std::unordered_map<int, Agent> &key_agent_set, int ego_id) {
-//  if (key_agent_set.empty()) {
-//    ROS_WARN("The key agent set is empty");
-//    return false;
-//  }
-//  const double kMaxAcc = PlanningConfig::Instance().max_lon_acc();
-//  const double kMaxDecel = kMaxAcc;
-//  const double kSimStep = PlanningConfig::Instance().sim_step();
-//  const double kMaxLatAcc = PlanningConfig::Instance().max_lat_acc();
-//  const double kDesiredVel = PlanningConfig::Instance().desired_velocity();
-//  for (auto &agent: key_agent_set) {
-//    // if the agent is host, we dont assign probability.
-//    if (agent.second.is_host()) {
-//      continue;
-//    }
-//    if (agent.second.agent_type() != AgentType::VEHICLE) {
-//      agent.second.PredictAgentBehaviour(std::vector<ReferenceLine>(),
-//                                         kMaxAcc, kMaxDecel,
-//                                         kSimStep, kMaxLatAcc, kDesiredVel);
-//    } else {
-//      std::vector<ReferenceLine> agent_potential_lanes;
-//      if (!GetAgentPotentialRefLanes(agent.second.state(), agent.first,
-//                                     100.0, 20.0, &agent_potential_lanes)) {
-//        agent.second.PredictAgentBehaviour(std::vector<ReferenceLine>(),
-//                                           kMaxAcc, kMaxDecel,
-//                                           kSimStep, kMaxLatAcc, kDesiredVel);
-//      } else {
-//        agent.second.PredictAgentBehaviour(agent_potential_lanes,
-//                                           kMaxAcc, kMaxDecel,
-//                                           kSimStep, kMaxLatAcc, kDesiredVel);
-//      }
-//    }
-//  }
-//  return true;
-//}
-bool MotionPlanner::GetAgentPotentialRefLanes(const vehicle_state::KinoDynamicState &agent_state,
-                                              int agent_id,
-                                              double lookahead_length,
-                                              double lookback_length,
-                                              std::vector<ReferenceLine> *potential_reference_lines) {
-  if (potential_reference_lines == nullptr) {
-    return false;
-  }
-  planning_srvs::AgentRouteService srv;
-  srv.request.actor_id = agent_id;
-  if (!get_agent_potential_routes_client_.call(srv)) {
-    return false;
-  }
-  std::vector<planning_msgs::Lane> lane_arrays = srv.response.lanes;
-  for (const auto &lane : lane_arrays) {
-    std::shared_ptr<ReferenceLine> reference_line = std::make_shared<ReferenceLine>();
-    if (!AddAgentPotentialReferenceLines(agent_state,
-                                         lane, lookahead_length,
-                                         lookback_length,
-                                         false, potential_reference_lines)) {
-      continue;
-    }
-  }
-  return true;
-}
+
 bool MotionPlanner::AddAgentPotentialReferenceLines(const vehicle_state::KinoDynamicState &state,
                                                     const planning_msgs::Lane &lane,
                                                     double lookahead_length,
@@ -884,6 +727,22 @@ bool MotionPlanner::GetEgoVehicleRoutes(geometry_msgs::Pose &start_pose, geometr
     return false;
   }
   return reference_generator_->UpdateRouteResponse(srv.response);
+}
+void MotionPlanner::VisualizeEgoVehicle() {
+  visualization_msgs::Marker vehicle_marker;
+  vehicle_marker.type = visualization_msgs::Marker::CUBE;
+  vehicle_marker.scale.x = PlanningConfig::Instance().vehicle_params().length;
+  vehicle_marker.scale.y = PlanningConfig::Instance().vehicle_params().width;
+  vehicle_marker.scale.z = ego_object_.shape.dimensions[2];
+  vehicle_marker.pose = ego_object_.pose;
+  vehicle_marker.id = ego_vehicle_id_;
+  vehicle_marker.lifetime = ros::Duration(1.0);
+  vehicle_marker.action = visualization_msgs::Marker::ADD;
+  vehicle_marker.color.a = 1.0;
+  vehicle_marker.color.g = 0.7;
+  vehicle_marker.header.frame_id = "map";
+  vehicle_marker.header.stamp = ros::Time::now();
+  visualized_ego_vehicle_publisher_.publish(vehicle_marker);
 }
 
 }

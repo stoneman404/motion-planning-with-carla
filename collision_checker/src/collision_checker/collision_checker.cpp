@@ -26,11 +26,12 @@ CollisionChecker::CollisionChecker(const std::unordered_map<int, std::shared_ptr
       delta_t_(delta_t) {
   predicted_obstacle_box_.clear();
   this->Init(obstacles, ego_vehicle_s, ego_vehicle_d, ref_line_);
+  std::cout << " ---------lon buffer: " << lon_buffer << ", lat_buffer : " << lat_buffer << std::endl;
 }
 
 bool CollisionChecker::IsCollision(const planning_msgs::Trajectory &trajectory) const {
-  double ego_width = vehicle_params_.width;
-  double ego_length = vehicle_params_.length;
+  double ego_width = vehicle_params_.width + 2.0 * lat_buffer_;
+  double ego_length = vehicle_params_.length + 2.0 * lon_buffer_;
   double shift_distance = vehicle_params_.back_axle_to_center_length;
 
   assert(trajectory.trajectory_points.size() <= predicted_obstacle_box_.size());
@@ -92,7 +93,7 @@ void CollisionChecker::Init(const std::unordered_map<int, std::shared_ptr<Obstac
   bool ego_vehicle_in_lane = IsEgoVehicleInLane(ego_vehicle_s, ego_vehicle_d);
   std::vector<std::shared_ptr<Obstacle>> obstacle_considered;
   for (auto &obstacle : obstacles) {
-    if (/*ego_vehicle_in_lane &&*/
+    if (ego_vehicle_in_lane &&
         (IsObstacleBehindEgoVehicle(obstacle.second, ego_vehicle_s, reference_line)
             || !ptr_st_graph_->IsObstacleInGraph(obstacle.first))) {
       continue;
@@ -106,8 +107,6 @@ void CollisionChecker::Init(const std::unordered_map<int, std::shared_ptr<Obstac
     for (const auto &obstacle : obstacle_considered) {
       planning_msgs::TrajectoryPoint point = obstacle->GetPointAtTime(relative_time);
       Box2d box = obstacle->GetBoundingBoxAtPoint(point);
-      box.LateralExtend(2.0 * lat_buffer_);
-      box.LongitudinalExtend(2.0 * lon_buffer_);
       predicted_env.push_back(box);
     }
     predicted_obstacle_box_.push_back(std::move(predicted_env));
