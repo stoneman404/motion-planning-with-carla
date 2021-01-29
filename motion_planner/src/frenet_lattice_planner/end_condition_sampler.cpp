@@ -53,9 +53,9 @@ std::vector<EndCondition> EndConditionSampler::SampleLatEndCondition() {
 }
 
 std::vector<EndCondition> EndConditionSampler::SampleLonEndConditionForCruising(const double ref_target_vel) const {
-  constexpr int kVelSampleNum = 7;  // put  into PlanningConfig
-  constexpr int kTimeSampleNum = 9; // put into PlanningConfig
-  constexpr double vel_interval_step = 0.1; // put int PlanningConfig
+  constexpr int kVelSampleNum = 9;  // put  into PlanningConfig
+  constexpr int kTimeSampleNum = 7; // put into PlanningConfig
+  constexpr double vel_interval_step = 0.3; // put int PlanningConfig
   std::array<double, kTimeSampleNum> time_samples{};
 
   for (size_t i = 1; i < kTimeSampleNum; ++i) {
@@ -182,8 +182,7 @@ std::vector<std::pair<STPoint, double>> EndConditionSampler::OvertakeSamplePoint
     std::pair<STPoint, double> sample_point;
     sample_point.first = st_point;
     sample_point.first.set_s(st_point.s() + PlanningConfig::Instance().vehicle_params().half_length
-                                 - PlanningConfig::Instance().vehicle_params().back_axle_to_center_length
-                                 + PlanningConfig::Instance().lon_safety_buffer());
+                                 - PlanningConfig::Instance().vehicle_params().back_axle_to_center_length);
     sample_point.second = v;
     sample_points.push_back(sample_point);
   }

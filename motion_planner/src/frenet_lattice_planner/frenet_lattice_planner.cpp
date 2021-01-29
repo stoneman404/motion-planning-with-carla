@@ -107,17 +107,17 @@ bool FrenetLatticePlanner::PlanningOnRef(const planning_msgs::TrajectoryPoint &i
 #if DEBUG
   std::cout << " ======== obstacle size : " << obstacle_map.size() << std::endl;
 #endif
-  CollisionChecker collision_checker = CollisionChecker(obstacle_map,
-                                                        ref_line,
-                                                        st_graph,
-                                                        init_s[0],
-                                                        init_d[0],
-                                                        PlanningConfig::Instance().lon_safety_buffer(),
-                                                        PlanningConfig::Instance().lat_safety_buffer(),
-                                                        PlanningConfig::Instance().max_lookahead_time(),
-                                                        PlanningConfig::Instance().delta_t(),
-                                                        PlanningConfig::Instance().vehicle_params(),
-                                                        nullptr);
+//  CollisionChecker collision_checker = CollisionChecker(obstacle_map,
+//                                                        ref_line,
+//                                                        st_graph,
+//                                                        init_s[0],
+//                                                        init_d[0],
+//                                                        PlanningConfig::Instance().lon_safety_buffer(),
+//                                                        PlanningConfig::Instance().lat_safety_buffer(),
+//                                                        PlanningConfig::Instance().max_lookahead_time(),
+//                                                        PlanningConfig::Instance().delta_t(),
+//                                                        PlanningConfig::Instance().vehicle_params(),
+//                                                        nullptr);
   size_t collision_failure_count = 0;
   size_t combined_constraint_failure_count = 0;
   size_t lon_vel_failure_count = 0;
@@ -169,7 +169,13 @@ bool FrenetLatticePlanner::PlanningOnRef(const planning_msgs::TrajectoryPoint &i
       }
       continue;
     }
-    if (collision_checker.IsCollision(combined_trajectory)) {
+    if (CollisionChecker::IsCollision(obstacles_,
+                                       combined_trajectory,
+                                       PlanningConfig::Instance().vehicle_params().length
+                                           + PlanningConfig::Instance().lon_safety_buffer(),
+                                       PlanningConfig::Instance().vehicle_params().width
+                                           + PlanningConfig::Instance().lat_safety_buffer(),
+                                       PlanningConfig::Instance().vehicle_params().back_axle_to_center_length)) {
       ++collision_failure_count;
       continue;
     }
@@ -179,7 +185,6 @@ bool FrenetLatticePlanner::PlanningOnRef(const planning_msgs::TrajectoryPoint &i
     optimal_trajectory.first = combined_trajectory;
     break;
   }
-#if DEBUG
   ROS_WARN(
       "[PlanningOnRef]: the lon_vel_failure_count:%zu,  lon_acc_failure_count: %zu,  lon_jerk_failure_count: %zu,  curvature_failure_count: %zu,"
       "lat_acc_failure_count: %zu, lat_jerk_failure_count: %zu, collision_failure_count: %zu",
@@ -190,6 +195,8 @@ bool FrenetLatticePlanner::PlanningOnRef(const planning_msgs::TrajectoryPoint &i
       lat_acc_failure_count,
       lat_jerk_failure_count,
       collision_failure_count);
+#if DEBUG
+
   ros::Time end = ros::Time::now();
   ROS_INFO("[FrenetLatticePlanner::PlanningOnRef], the total time elapsed is %lf s", (end - begin).toSec());
   std::cout << "---------the optimal trajectory is : ----------------" << std::endl;
@@ -248,7 +255,7 @@ planning_msgs::Trajectory FrenetLatticePlanner::CombineTrajectories(const Refere
                                              s_conditions, d_conditions,
                                              &x, &y, &theta,
                                              &kappa, &v, &a);
-    if (t_param > PlanningConfig::Instance().delta_t()) {
+    if (t_param >= PlanningConfig::Instance().delta_t()) {
       double delta_x = x - prev_path_point.x;
       double delta_y = y - prev_path_point.y;
       accumulated_s += std::hypot(delta_x, delta_y);
@@ -412,7 +419,7 @@ void FrenetLatticePlanner::GetInitCondition(const ReferenceLine &ptr_ref_line,
                                            init_trajectory_point.path_point.theta,
                                            init_trajectory_point.path_point.kappa,
                                            init_s, init_d);
-#if 0
+#if DEBUG
   std::cout << "++++++++++GetInitConditions++++++++++" << std::endl;
   std::cout << "init_trajectory_point: x: " << init_trajectory_point.path_point.x << ", y: "
             << init_trajectory_point.path_point.y  << ", theta: " << init_trajectory_point.path_point.theta <<  ", v: " << init_trajectory_point.vel

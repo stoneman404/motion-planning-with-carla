@@ -46,6 +46,11 @@ class CollisionChecker {
    */
   bool IsCollision(const planning_msgs::Trajectory &trajectory) const;
 
+  static bool IsCollision(
+      const std::vector<std::shared_ptr<Obstacle>>& obstacles,
+      const planning_msgs::Trajectory& ego_trajectory, const double ego_length,
+      const double ego_width, const double back_axle_to_center);
+
  private:
   /**
    *

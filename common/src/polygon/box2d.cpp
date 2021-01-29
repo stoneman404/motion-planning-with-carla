@@ -17,10 +17,10 @@ Box2d::Box2d(Eigen::Vector2d center,
       half_width_(width / 2.0),
       cos_heading_(std::cos(heading)),
       sin_heading_(std::sin(heading)) {
-
-  ROS_ASSERT(length_ > -1e-9);
-  ROS_ASSERT(width_ > -1e-9);
+  assert(length_ > -std::numeric_limits<double>::epsilon());
+  assert(width_ > -std::numeric_limits<double>::epsilon());
   InitCorners();
+
 }
 void Box2d::InitCorners() {
   const double dx1 = cos_heading_ * half_length_;

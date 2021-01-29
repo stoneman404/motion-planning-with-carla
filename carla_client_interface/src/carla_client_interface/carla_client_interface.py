@@ -61,9 +61,9 @@ class ClinetInterface(object):
             GetActorWaypoint, self._get_actor_waypoint)
         self._getRouteService = rospy.Service('/carla_client_interface/{}/get_route'.format(self._role_name),
                                               RoutePlanService, self._get_route)
-        self._getAgentPotentialRoutesService = rospy.Service(
-            '/carla_client_interface/{}/agent_potential_routes'.format(self._role_name),
-            RoutePlanService, self._get_agent_potential_route_service)
+        # self._getAgentPotentialRoutesService = rospy.Service(
+        #     '/carla_client_interface/{}/agent_potential_routes'.format(self._role_name),
+        #     RoutePlanService, self._get_agent_potential_route_service)
         self._update_lock = threading.Lock()
 
         rospy.loginfo("Waiting for ego vehicle .....")

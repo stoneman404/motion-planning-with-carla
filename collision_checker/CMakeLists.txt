@@ -217,7 +217,8 @@ add_dependencies(collision_checker ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_
 ## Add gtest based cpp test target and link libraries
 catkin_add_gtest(collision_checker_test
         src/collision_checker/collision_checker.cpp
-        src/collision_checker/collision_checker_test.cpp)
+        src/collision_checker/collision_checker_test.cpp
+        src/collision_checker/st_graph_test.cpp)
 
 if (TARGET collision_checker_test)
     target_link_libraries(collision_checker_test

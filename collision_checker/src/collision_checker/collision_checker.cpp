@@ -30,8 +30,8 @@ CollisionChecker::CollisionChecker(const std::unordered_map<int, std::shared_ptr
 }
 
 bool CollisionChecker::IsCollision(const planning_msgs::Trajectory &trajectory) const {
-  double ego_width = vehicle_params_.width + 2.0 * lat_buffer_;
-  double ego_length = vehicle_params_.length + 2.0 * lon_buffer_;
+  double ego_width = vehicle_params_.width;
+  double ego_length = vehicle_params_.length;
   double shift_distance = vehicle_params_.back_axle_to_center_length;
 
   assert(trajectory.trajectory_points.size() <= predicted_obstacle_box_.size());
@@ -45,17 +45,21 @@ bool CollisionChecker::IsCollision(const planning_msgs::Trajectory &trajectory) 
       double ego_theta = traj_point.path_point.theta;
       Box2d ego_box = Box2d({traj_point.path_point.x, traj_point.path_point.y}, ego_theta, ego_length, ego_width);
       ego_box.Shift({shift_distance * std::cos(ego_theta), shift_distance * std::sin(ego_theta)});
+      ego_box.LateralExtend(lat_buffer_);
+      ego_box.LongitudinalExtend(lon_buffer_);
 #if DEBUG
       std::cout << " obstacle box at index  " << i << " size is :" << predicted_obstacle_box_[i].size() << std::endl;
       std::cout << "relative trajectory point: x: " << traj_point.path_point.x << ", y: " << traj_point.path_point.y
                 << ", theta: " << traj_point.path_point.theta << std::endl;
 #endif
-      for (const auto &obstacle_box : predicted_obstacle_box_[i]) {
+      for (const auto& obstacle_box : predicted_obstacle_box_[i]) {
+
 #if DEBUG
         std::cout << " obstacle_box: center: x: " << obstacle_box.center_x() << ", y: " << obstacle_box.center_y()
                   << ", theta: " << obstacle_box.heading() << ", length: " << obstacle_box.length() << ", width: "
                   << obstacle_box.width() << std::endl;
 #endif
+
         if (ego_box.HasOverlapWithBox2d(obstacle_box)) {
           return true;
         }
@@ -93,9 +97,9 @@ void CollisionChecker::Init(const std::unordered_map<int, std::shared_ptr<Obstac
   bool ego_vehicle_in_lane = IsEgoVehicleInLane(ego_vehicle_s, ego_vehicle_d);
   std::vector<std::shared_ptr<Obstacle>> obstacle_considered;
   for (auto &obstacle : obstacles) {
-    if (ego_vehicle_in_lane &&
+    if (/*ego_vehicle_in_lane &&*/
         (IsObstacleBehindEgoVehicle(obstacle.second, ego_vehicle_s, reference_line)
-            || !ptr_st_graph_->IsObstacleInGraph(obstacle.first))) {
+           /* || !ptr_st_graph_->IsObstacleInGraph(obstacle.first)*/)) {
       continue;
     }
     obstacle_considered.push_back(obstacle.second);
@@ -130,6 +134,35 @@ bool CollisionChecker::IsObstacleBehindEgoVehicle(const std::shared_ptr<Obstacle
   ref_line.XYToSL(point.path_point.x, point.path_point.y, &sl_point);
   if (ego_s > sl_point.s && std::fabs(sl_point.l) < kDefaultLaneWidth / 2.0) {
     return true;
+  }
+  return false;
+}
+bool CollisionChecker::IsCollision(const std::vector<std::shared_ptr<Obstacle>> &obstacles,
+                                   const planning_msgs::Trajectory &ego_trajectory,
+                                   const double ego_length,
+                                   const double ego_width,
+                                   const double back_axle_to_center) {
+  for (const auto & ego_point : ego_trajectory.trajectory_points) {
+    const auto relative_time = ego_point.relative_time;
+    const auto ego_theta = ego_point.path_point.theta;
+
+    common::Box2d ego_box({ego_point.path_point.x, ego_point.path_point.y},
+                          ego_theta, ego_length, ego_width);
+
+
+    double shift_distance =  back_axle_to_center;
+    Eigen::Vector2d shift_vec(shift_distance * std::cos(ego_theta),
+                              shift_distance * std::sin(ego_theta));
+    ego_box.Shift(shift_vec);
+
+    std::vector<common::Box2d> obstacle_boxes;
+    for (const auto& obstacle : obstacles) {
+      auto obstacle_point = obstacle->GetPointAtTime(relative_time);
+      common::Box2d obstacle_box = obstacle->GetBoundingBoxAtPoint(obstacle_point);
+      if (ego_box.HasOverlapWithBox2d(obstacle_box)) {
+        return true;
+      }
+    }
   }
   return false;
 }

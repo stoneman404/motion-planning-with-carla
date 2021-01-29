@@ -15,8 +15,8 @@
 /motion_planner/max_lookahead_distance: 100.0
 /motion_planner/max_lookback_distance: 30.0
 
-/motion_planner/max_lon_acc: 7.0
-/motion_planner/min_lon_acc: -5.0
+/motion_planner/max_lon_acc: 5.0
+/motion_planner/min_lon_acc: -4.0
 /motion_planner/max_lon_velocity: 50.0
 /motion_planner/min_lon_velocity: -0.1
 /motion_planner/max_lon_jerk: 20.0
@@ -24,12 +24,12 @@
 /motion_planner/min_kappa: -4.0
 /motion_planner/max_kappa: 4.0
 
-/motion_planner/min_lat_acc: -4.0
-/motion_planner/max_lat_acc: 4.0
+/motion_planner/min_lat_acc: -3.0
+/motion_planner/max_lat_acc: 3.0
 /motion_planner/lattice_weight_opposite_side_offset: 10.0
 /motion_planner/lattice_weight_same_side_offset: 1.0
 /motion_planner/lattice_weight_dist_travelled: 20.0
-/motion_planner/lattice_weight_target_speed: 10
+/motion_planner/lattice_weight_target_speed: 2
 /motion_planner/lattice_weight_collision: 5.0
 /motion_planner/lattice_weight_lon_jerk: 1.0
 /motion_planner/lattice_weight_lon_target: 80.0

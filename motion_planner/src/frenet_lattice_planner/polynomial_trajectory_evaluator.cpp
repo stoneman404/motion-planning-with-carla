@@ -55,11 +55,10 @@ PolynomialTrajectoryEvaluator::PolynomialTrajectoryEvaluator(const std::array<do
         continue;
       }
 
-
       for (const auto &lat_traj : lat_trajectory_vec) {
-//        if (!IsValidLateralTrajectory(*lon_traj, *lat_traj)) {
-//          continue;
-//        }
+        if (!IsValidLateralTrajectory(*lon_traj, *lat_traj)) {
+          continue;
+        }
         double cost = Evaluate(planning_target, lon_traj, lat_traj);
         cost_queue_.emplace(TrajectoryPair(lon_traj, lat_traj), cost);
       }
@@ -108,12 +107,12 @@ bool PolynomialTrajectoryEvaluator::IsValidLateralTrajectory(const common::Polyn
   while (t < lon_traj.ParamLength()) {
     double s = lon_traj.Evaluate(0, t);
     double l = lat_traj.Evaluate(0, s);
-    double dsdt = lon_traj.Evaluate(1, t);
-    double dsddt = lon_traj.Evaluate(2, t);
-    double dlds = lat_traj.Evaluate(1, s);
-    double dldds = lat_traj.Evaluate(2, s);
-    double dldt = dlds * dsdt;
-    double dlddt = dldds * dsdt * dsdt + dlds * dsddt;
+//    double dsdt = lon_traj.Evaluate(1, t);
+//    double dsddt = lon_traj.Evaluate(2, t);
+//    double dlds = lat_traj.Evaluate(1, s);
+//    double dldds = lat_traj.Evaluate(2, s);
+//    double dldt = dlds * dsdt;
+//    double dlddt = dldds * dsdt * dsdt + dlds * dsddt;
     if (!ConstraintChecker::WithInRange(l, -4.0, 4.0)) {
       return false;
     }
@@ -221,7 +220,7 @@ double PolynomialTrajectoryEvaluator::LonTargetCost(const std::shared_ptr<common
   double speed_cost_sqr_sum = 0.0;
   double speed_cost_weight_sum = 0.0;
 //  ROS_INFO("LonTargetCost: the desired vel is %f", planning_target.desired_vel);
-  double target_speed = planning_target.has_stop_point ? 0.0 : planning_target.desired_vel;
+  double target_speed = /*planning_target.has_stop_point ? 0.0 :*/ planning_target.desired_vel;
   for (double t = 0; t <= t_max; t += PlanningConfig::Instance().delta_t()) {
     double cost = target_speed - lon_trajectory->Evaluate(1, t);
 //    std::cout << " ============cost:=======      " << cost << ", lon_trajectory->Evaluate(1, t): "
@@ -248,17 +247,17 @@ double PolynomialTrajectoryEvaluator::LonCollisionCost(const std::shared_ptr<com
     }
     double t = static_cast<double>(i) * PlanningConfig::Instance().delta_t();
     double traj_s = lon_trajectory->Evaluate(0, t);
-    double sigma = 2.0;
+    double sigma = 1.0;
     for (const auto &m : pt_interval) {
       double dist = 0.0;
-      // yeild
       if (traj_s < m.first - PlanningConfig::Instance().lon_safety_buffer()) {
         dist = m.first - PlanningConfig::Instance().lon_safety_buffer() - traj_s;
-        // overtake
       } else if (traj_s > m.second + PlanningConfig::Instance().lon_safety_buffer()) {
         dist = traj_s - m.second - PlanningConfig::Instance().lon_safety_buffer();
+      } else {
+        dist = -1e20;
       }
-      double cost = std::exp(-dist * dist / (2.0 * sigma * sigma));
+      double cost = std::exp(-dist / (2.0 * sigma * sigma));
 
       cost_sqr_sum += cost * cost;
       cost_abs_sum += cost;
@@ -267,8 +266,8 @@ double PolynomialTrajectoryEvaluator::LonCollisionCost(const std::shared_ptr<com
   return cost_sqr_sum / (cost_abs_sum + 1e-5);
 }
 
-double PolynomialTrajectoryEvaluator::CentripetalAccelerationCost(const std::shared_ptr<common::Polynomial> &lon_trajectory) const {
-  // Assumes the vehicle is not obviously deviate from the reference line.
+double PolynomialTrajectoryEvaluator::CentripetalAccelerationCost(
+    const std::shared_ptr<common::Polynomial> &lon_trajectory) const {
   double centripetal_acc_sum = 0.0;
   double centripetal_acc_sqr_sum = 0.0;
   for (double t = 0.0; t < PlanningConfig::Instance().max_lookahead_time();

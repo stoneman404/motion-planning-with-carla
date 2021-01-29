@@ -252,23 +252,25 @@ void MotionPlanner::VisualizeObstacleTrajectory(const std::vector<std::shared_pt
     info_marker.type = visualization_msgs::Marker::CUBE;
     info_marker.id = i;
     info_marker.scale.x = 0.1;
-    info_marker.color.a = 0.2;
-    info_marker.color.r = .7;
+    info_marker.color.a = 0.7;
+    info_marker.color.r = 0.7;
+    info_marker.color.b = 0.3;
     info_marker.pose.orientation = tf::createQuaternionMsgFromYaw(obstacle->GetBoundingBox().heading());
     info_marker.pose.position.x = obstacle->x();
     info_marker.pose.position.y = obstacle->y();
-    info_marker.pose.position.z = 2.0;
+    info_marker.pose.position.z = obstacle->IsVirtual() ? traffic_lights_info_list_[obstacle->Id()].trigger_volume.center.z
+                                                        : objects_map_[obstacle->Id()].pose.position.z;
     info_marker.header.stamp = ros::Time::now();
     info_marker.header.frame_id = "map";
     info_marker.lifetime = ros::Duration(1.0);
     info_marker.action = visualization_msgs::Marker::ADD;
     info_marker.scale.x = obstacle->GetBoundingBox().length();
     info_marker.scale.y = obstacle->GetBoundingBox().width();
-    info_marker.scale.z = obstacle->IsVirtual() ? traffic_lights_info_list_[obstacle->Id()].trigger_volume.center.z
+    info_marker.scale.z = obstacle->IsVirtual() ? traffic_lights_info_list_[obstacle->Id()].trigger_volume.size.z
                                                 : objects_map_[obstacle->Id()].shape.dimensions[2];
     obstacle_info_mark_array.markers.push_back(info_marker);
 
-    trajectory_marker.type = visualization_msgs::Marker::LINE_STRIP;
+    trajectory_marker.type = visualization_msgs::Marker::POINTS;
     trajectory_marker.id = i;
     trajectory_marker.scale.x = 0.1;
     trajectory_marker.color.a = 1.0;
