@@ -11,7 +11,7 @@
 
 # 2. Ros Graph
 
-
+![](figs/rosgraph.png)
 
 # 3. 参考线
 
@@ -42,6 +42,8 @@ $$
 
 [Robust and Efficient Computation of Closest Point on a Spline](https://www.semanticscholar.org/paper/Robust-and-Efficient-Computation-of-the-Closest-on-Wang-Kearney/50334aefe4a1de7277bd96822db707f55726ab3a). 
 
+
+
 # 4. 规划器
 
 ## 4.1 Frenet Lattice Planner
@@ -56,13 +58,17 @@ todo
 
 # 5. 控制器
 
-## 5.1 Pid_Pursuit
+## 5.1 Pid_PurePursuit
 
-done
+纵向控制： PID 
+
+横向控制： Pure Pursuit
 
 ## 5.2 Pid_Stanley
 
-done
+纵向控制： PID
+
+横向控制： Stanley
 
 ## 5.3 MPC
 
