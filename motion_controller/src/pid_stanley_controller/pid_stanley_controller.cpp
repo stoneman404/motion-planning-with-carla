@@ -45,6 +45,7 @@ bool PIDStanleyController::Execute(double current_time_stamp,
   }
 //  double wheel_base = vehicle_state.vehicle_params().lf_ + vehicle_state.vehicle_params().lr_;
   double max_steer = vehicle_state.vehicle_params().max_steer_angle_;
+  std::cout << "max_steer: " << max_steer << std::endl;
   if (!StanleySteerControl(max_steer, wheel_base, steer_control_state, target_tp, trajectory, &steer)) {
     return false;
   }
@@ -183,13 +184,15 @@ bool PIDStanleyController::StanleySteerControl(double max_steer,
 //                                  target_tp.path_point.y - vehicle_state.y);
   double cross_error = std::fabs(cross_prod);
   double theta_error = common::MathUtils::NormalizeAngle(target_tp.path_point.theta - vehicle_state.theta);
-  double k = 0.8;
+  double k = 0.3;
   if (std::fabs(vehicle_state.v) < 0.5) {
     *steer = 0.0;
     return true;
   }
   double theta_d = std::atan2(k * cross_error, vehicle_state.v);
-  double normalized_steer = (1.0 * theta_error + theta_d) / max_steer;
+  double calc_steer = 1 * theta_error + theta_d;
+  std::cout << " calc_steer : " << calc_steer << std::endl;
+  double normalized_steer = (calc_steer) / max_steer;
 
   *steer = Clamp<double>(normalized_steer, -1.0, 1.0);
   return true;
