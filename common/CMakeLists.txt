@@ -24,7 +24,7 @@ find_package(Eigen3 REQUIRED)
 catkin_package(
         INCLUDE_DIRS include ${catkin_INCLUDE_DIRS}
         LIBRARIES common
-#        CATKIN_DEPENDS planning_msgs planning_srvs roscpp rospy derived_object_msgs sensor_msgs carla_waypoint_types carla_msgs geometry_msgs std_msgs nav_msgs tf
+        #        CATKIN_DEPENDS planning_msgs planning_srvs roscpp rospy derived_object_msgs sensor_msgs carla_waypoint_types carla_msgs geometry_msgs std_msgs nav_msgs tf
         #        DEPENDS Eigen3
 )
 
@@ -55,7 +55,6 @@ target_link_libraries(common
         )
 
 add_dependencies(common ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-
 
 
 #add_dependencies(collision_checker ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
@@ -127,6 +126,18 @@ catkin_add_gtest(box2d_test
         src/polygon/box2d_test.cpp
         src/math/math_utils.cpp)
 if (TARGET box2d_test)
+    target_link_libraries(box2d_test
+            ${catkin_LIBRARIES}
+            ${Eigen3_LIBRARIES})
+endif ()
+
+catkin_add_gtest(spline_test
+        src/curves/spline2d_test.cpp
+        src/math/math_utils.cpp
+        src/curves/simple_spline.cpp
+        src/curves/spline2d.cpp
+        )
+if (TARGET spline_test)
     target_link_libraries(box2d_test
             ${catkin_LIBRARIES}
             ${Eigen3_LIBRARIES})

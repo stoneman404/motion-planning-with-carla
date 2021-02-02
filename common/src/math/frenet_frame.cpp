@@ -26,12 +26,12 @@ STBoundary::STBoundary(const std::vector<std::pair<STPoint, STPoint>> &point_pai
   }
   num_points_ = points_.size();
   ROS_ASSERT(num_points_ >= 2);
-  area_ = 0.0;
-  for (size_t i = 1; i < num_points_; ++i) {
-    area_ += MathUtils::CrossProd({points_[0].t(), points_[0].s()},
-                                  {points_[i - 1].t(), points_[i - 1].s()},
-                                  {points_[i].t(), points_[i].s()});
-  }
+//  area_ = 0.0;
+//  for (size_t i = 1; i < num_points_; ++i) {
+//    area_ += MathUtils::CrossProd({points_[0].t(), points_[0].s()},
+//                                  {points_[i - 1].t(), points_[i - 1].s()},
+//                                  {points_[i].t(), points_[i].s()});
+//  }
 //  if (area_ < 0) {
 //    area_ = -area_;
 //    std::reverse(points_.begin(), points_.end());

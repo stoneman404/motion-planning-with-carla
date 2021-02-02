@@ -1,10 +1,10 @@
 #!/usr/bin/env python
-import math
-import sys
-import threading
 import glob
+import math
 import os
 import random
+import sys
+import threading
 
 try:
     sys.path.append(glob.glob('../carla/dist/carla-*%d.%d-%s.egg' % (
@@ -15,7 +15,6 @@ except IndexError:
     pass
 
 import carla
-from carla import Color
 
 import rospy
 from agents.navigation.local_planner import RoadOption
@@ -25,9 +24,9 @@ from carla_msgs.msg import CarlaWorldInfo
 from carla_waypoint_types.srv import GetActorWaypointResponse, GetActorWaypoint
 from carla_waypoint_types.srv import GetWaypointResponse, GetWaypoint
 from planning_msgs.msg import WayPoint, LaneType, CarlaRoadOption, LaneChangeType
-from planning_srvs.srv import RoutePlanService, RoutePlanServiceResponse, AgentRouteService, AgentRouteServiceResponse
+from planning_srvs.srv import RoutePlanService, RoutePlanServiceResponse, AgentRouteServiceResponse
 from tf.transformations import euler_from_quaternion, quaternion_from_euler
-from planning_msgs.msg import LaneArray, Lane
+from planning_msgs.msg import Lane
 from route_planner import RandomRoutePlanner
 
 WAYPOINT_DISTANCE = 2.0
@@ -48,8 +47,8 @@ class ClinetInterface(object):
         self._goal = None
         self._role_name = rospy.get_param("~role_name", 'ego_vehicle')
         self._dao = GlobalRoutePlannerDAO(self._map, sampling_resolution=WAYPOINT_DISTANCE)
-        # self._random_route_planner = RandomRoutePlanner(self._dao)
-        # self._random_route_planner.setup()
+        self._random_route_planner = RandomRoutePlanner(self._dao)
+        self._random_route_planner.setup()
         self._global_planner = GlobalRoutePlanner(self._dao)
         self._global_planner.setup()
 
@@ -265,8 +264,8 @@ class ClinetInterface(object):
         carl_start_waypoint = self._map.get_waypoint(carla_start.location)
         carla_goal_waypoint = random.choice(self._world.get_map().get_spawn_points())
         response = RoutePlanServiceResponse()
-        raw_route = self._global_planner.trace_route(carl_start_waypoint.transform.location,
-                                                     carla_goal_waypoint.location)
+        raw_route = self._random_route_planner.trace_route(carl_start_waypoint.transform.location,
+                                                           carla_goal_waypoint.location)
         route = []
         extend_route = list()
         waypoints = carl_start_waypoint.previous_until_lane_start(2.0)
@@ -274,7 +273,7 @@ class ClinetInterface(object):
         for wp in waypoints:
             extend_route.append([wp, option])
         extend_route.reverse()
-        raw_route = raw_route + extend_route
+        raw_route = extend_route + raw_route
         if len(raw_route) == 0:
             return response
         last_wp = raw_route[0]

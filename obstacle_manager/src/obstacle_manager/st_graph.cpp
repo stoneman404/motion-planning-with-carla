@@ -34,8 +34,9 @@ STGraph::STGraph(const std::vector<std::shared_ptr<Obstacle>> &obstacles,
 void STGraph::SetUp(const std::vector<std::shared_ptr<Obstacle>> &obstacles,
                     ReferenceLine &ref_line) {
 //  obstacles_sl_boundary_.clear();
+  st_map_.clear();
   for (const auto &obstacle : obstacles) {
-    if (!obstacle->IsStatic()) {
+    if (obstacle->IsStatic()) {
       SetUpStaticObstacle(obstacle, ref_line);
     } else {
       SetUpDynamicObstacle(obstacle, ref_line);
@@ -52,6 +53,7 @@ void STGraph::SetUp(const std::vector<std::shared_ptr<Obstacle>> &obstacles,
   for (auto &obstacle_st : st_map_) {
     obstacles_st_boundary_.push_back(obstacle_st.second);
   }
+  ROS_INFO("[STGraph::SetUp], obstacle_st_boundary size is %zu", obstacles_st_boundary_.size());
 }
 
 void STGraph::SetUpStaticObstacle(const std::shared_ptr<Obstacle> &obstacle,
@@ -59,18 +61,19 @@ void STGraph::SetUpStaticObstacle(const std::shared_ptr<Obstacle> &obstacle,
   auto box = obstacle->BoundingBox();
   SLBoundary sl_boundary;
   if (!ref_line.GetSLBoundary(box, &sl_boundary)) {
-    ROS_DEBUG("[STGraph::SetUpStaticObstacle] Failed to GetSLBoundary.");
+    ROS_INFO("[STGraph::SetUpStaticObstacle] Failed to GetSLBoundary.");
     return;
   }
   int obstacle_id = obstacle->Id();
 //  ref_line.GetLaneWidth(sl_boundary.start_s, &kLeftWidth, &kRightWidth);
   if (sl_boundary.start_s > s_range_.second || sl_boundary.end_s < s_range_.first ||
       sl_boundary.start_l > kLeftWidth || sl_boundary.end_l < -kRightWidth) {
-    ROS_DEBUG("[STGraph::SetUpStaticObstacle], obstacle[%i] is out of range. ", obstacle_id);
+    ROS_INFO("[STGraph::SetUpStaticObstacle], obstacle[%i] is out of range. ", obstacle_id);
     return;
   }
   STBoundary st_boundary;
   if (!MakeSTBoundary(obstacle, ref_line, st_boundary)) {
+    ROS_FATAL("[SetUpStaticObstacle Failed], Failed To MakeSTBoundary");
     return;
   }
   if (st_map_.find(obstacle->Id()) == st_map_.end()) {
@@ -92,7 +95,8 @@ bool STGraph::MakeSTBoundary(const std::shared_ptr<Obstacle> &obstacle,
     Box2d box = obstacle->GetBoundingBoxAtPoint(point);
     SLBoundary sl_boundary;
     if (!ref_line.GetSLBoundary(box, &sl_boundary)) {
-      return false;
+      relative_time += delta_t_;
+      continue;
     }
     if (sl_boundary.start_s > s_range_.second || sl_boundary.end_s < s_range_.first ||
         sl_boundary.start_l > kLeftWidth || sl_boundary.end_l < -kRightWidth) {
@@ -108,6 +112,7 @@ bool STGraph::MakeSTBoundary(const std::shared_ptr<Obstacle> &obstacle,
     return false;
   }
   st_boundary = STBoundary(st_points);
+  st_boundary.set_id(obstacle->Id());
   return true;
 }
 
@@ -167,7 +172,7 @@ std::vector<STPoint> STGraph::GetObstacleSurroundingPoints(int obstacle_id, doub
   }
   const auto &pt_obstacle = st_map_.at(obstacle_id);
   double relative_time = time_range_.first;
-  while (relative_time < time_range_.second) {
+  while (relative_time < time_range_.second + delta_t_) {
     double s_lower, s_upper;
     STPoint st_point;
     if (!pt_obstacle.GetBoundarySRange(relative_time, &s_upper, &s_lower)) {
@@ -184,6 +189,9 @@ std::vector<STPoint> STGraph::GetObstacleSurroundingPoints(int obstacle_id, doub
     pt_pairs.emplace_back(st_point);
     relative_time += t_density;
   }
+//  for (const auto& st_point : pt_pairs) {
+//    std::cout << "t: " << st_point.t() << "s : " << st_point.s() << std::endl;
+//  }
   return pt_pairs;
 //  double s0;
 //  double s1;

@@ -10,7 +10,7 @@ Obstacle::Obstacle(const derived_object_msgs::Object &object) {
       && !std::isnan(object.shape.dimensions[2]));
   id_ = object.id;
   this->speed_ = std::sqrt(object.twist.linear.x +
-      object.twist.linear.y + object.twist.linear.z);
+      object.twist.linear.y);
   this->angular_speed_ = object.twist.angular.z;
 //  this->is_static_ = std::fabs(this->speed_) < 0.1 && std::fabs(this->angular_speed_) < 0.1;
   this->is_static_ = false;
@@ -98,58 +98,60 @@ const double &Obstacle::AngularSpeed() const { return angular_speed_; }
 
 void Obstacle::PredictTrajectory(double predict_horizon, double predict_step) {
   trajectory_ = decltype(trajectory_)();
-  if (is_static_) {
-    trajectory_.trajectory_points.emplace_back();
-    auto &trajectory_point = trajectory_.trajectory_points.back();
-    trajectory_point.path_point.x = center_.x();
-    trajectory_point.path_point.y = center_.y();
-    trajectory_point.path_point.s = 0.0;
-    trajectory_point.path_point.theta = heading_;
+//  if (is_static_) {
+//    trajectory_.trajectory_points.emplace_back();
+//    auto &trajectory_point = trajectory_.trajectory_points.back();
+//    trajectory_point.path_point.x = center_.x();
+//    trajectory_point.path_point.y = center_.y();
+//    trajectory_point.path_point.s = 0.0;
+//    trajectory_point.path_point.theta = heading_;
+//    trajectory_point.path_point.kappa = 0.0;
+//    trajectory_point.path_point.dkappa = 0.0;
+//    trajectory_point.relative_time = 0.0;
+//    trajectory_point.vel = this->speed_;
+//    trajectory_point.acc = acc_;
+//    trajectory_point.jerk = 0.0;
+//    trajectory_point.steer_angle = 0.0;
+//  } else {
+  planning_msgs::TrajectoryPoint last_trajectory_point;
+  last_trajectory_point.path_point.x = this->center_.x();
+  last_trajectory_point.path_point.y = this->center_.y();
+  last_trajectory_point.path_point.kappa = 0.0;
+  last_trajectory_point.path_point.dkappa = 0.0;
+  last_trajectory_point.path_point.s = 0.0;
+  last_trajectory_point.path_point.theta = heading_;
+  last_trajectory_point.vel = speed_;
+  last_trajectory_point.acc = acc_;
+  last_trajectory_point.jerk = 0.0;
+  last_trajectory_point.steer_angle = 0.0;
+  last_trajectory_point.relative_time = 0.0;
+  trajectory_.trajectory_points.push_back(last_trajectory_point);
+  const int kStepSize =
+      static_cast<int>(predict_horizon / predict_step) < 1 ? 1 : static_cast<int>(predict_horizon / predict_step);
+  for (int i = 1; i < kStepSize; ++i) {
+    planning_msgs::TrajectoryPoint trajectory_point;
+//      trajectory_.trajectory_points.emplace_back();
+//      auto &trajectory_point = trajectory_.trajectory_points.back();
+    trajectory_point.path_point.x = last_trajectory_point.path_point.x +
+        predict_step * last_trajectory_point.vel * std::cos(last_trajectory_point.path_point.theta);
+    trajectory_point.path_point.y = last_trajectory_point.path_point.y +
+        predict_step * last_trajectory_point.vel * std::sin(last_trajectory_point.path_point.theta);
+    trajectory_point.path_point.theta = last_trajectory_point.path_point.theta;
     trajectory_point.path_point.kappa = 0.0;
     trajectory_point.path_point.dkappa = 0.0;
-    trajectory_point.relative_time = 0.0;
-    trajectory_point.vel = this->speed_;
-    trajectory_point.acc = acc_;
+    trajectory_point.relative_time = predict_step * static_cast<double>(i);
+    trajectory_point.vel = last_trajectory_point.vel;
+    trajectory_point.acc = 0.0;
     trajectory_point.jerk = 0.0;
     trajectory_point.steer_angle = 0.0;
-  } else {
-    planning_msgs::TrajectoryPoint last_trajectory_point;
-    last_trajectory_point.path_point.x = this->center_.x();
-    last_trajectory_point.path_point.y = this->center_.y();
-    last_trajectory_point.path_point.kappa = 0.0;
-    last_trajectory_point.path_point.dkappa = 0.0;
-    last_trajectory_point.path_point.s = 0.0;
-    last_trajectory_point.path_point.theta = heading_;
-    last_trajectory_point.vel = speed_;
-    last_trajectory_point.acc = acc_;
-    last_trajectory_point.jerk = 0.0;
-    last_trajectory_point.steer_angle = 0.0;
-    last_trajectory_point.relative_time = 0.0;
-    trajectory_.trajectory_points.push_back(last_trajectory_point);
-    const int kStepSize =
-        static_cast<int>(predict_horizon / predict_step) < 1 ? 1 : static_cast<int>(predict_horizon / predict_step);
-    for (int i = 1; i < kStepSize; ++i) {
-      trajectory_.trajectory_points.emplace_back();
-      auto &trajectory_point = trajectory_.trajectory_points.back();
-      trajectory_point.path_point.x = last_trajectory_point.path_point.x +
-          predict_step * last_trajectory_point.vel * std::cos(last_trajectory_point.path_point.theta);
-      trajectory_point.path_point.y = last_trajectory_point.path_point.y +
-          predict_step * last_trajectory_point.vel * std::sin(last_trajectory_point.path_point.theta);
-      trajectory_point.path_point.theta = last_trajectory_point.path_point.theta;
-      trajectory_point.path_point.kappa = 0.0;
-      trajectory_point.path_point.dkappa = 0.0;
-      trajectory_point.relative_time = predict_step * static_cast<double>(i);
-      trajectory_point.vel = last_trajectory_point.vel;
-      trajectory_point.acc = 0.0;
-      trajectory_point.jerk = 0.0;
-      trajectory_point.steer_angle = 0.0;
-      double dx = trajectory_point.path_point.x - last_trajectory_point.path_point.x;
-      double dy = trajectory_point.path_point.y - last_trajectory_point.path_point.y;
-      double delta_s = std::hypot(dx, dy);
-      trajectory_point.path_point.s = last_trajectory_point.path_point.s + delta_s;
-      last_trajectory_point = trajectory_point;
-    }
+    double dx = trajectory_point.path_point.x - last_trajectory_point.path_point.x;
+    double dy = trajectory_point.path_point.y - last_trajectory_point.path_point.y;
+    double delta_s = std::hypot(dx, dy);
+    trajectory_point.path_point.s = last_trajectory_point.path_point.s + delta_s;
+    trajectory_.trajectory_points.push_back(trajectory_point);
+    last_trajectory_point = trajectory_point;
   }
+//  }
 }
 
 Obstacle::Obstacle(const carla_msgs::CarlaTrafficLightInfo &traffic_light_info,
@@ -162,10 +164,10 @@ Obstacle::Obstacle(const carla_msgs::CarlaTrafficLightInfo &traffic_light_info,
       || traffic_light_status.state == carla_msgs::CarlaTrafficLightStatus::YELLOW) {
     is_valid_obstacle_ = true;
   }
-  double box_length = traffic_light_info.trigger_volume.size.x;
-  double box_width = traffic_light_info.trigger_volume.size.y;
-  center_ <<  traffic_light_info.trigger_volume.center.x, traffic_light_info.trigger_volume.center.y;
-  heading_ = tf::getYaw(traffic_light_info.transform.orientation);
+  double box_length = traffic_light_info.trigger_volume.size.y;
+  double box_width = traffic_light_info.trigger_volume.size.x;
+  center_ << traffic_light_info.trigger_volume.center.x, traffic_light_info.trigger_volume.center.y;
+  heading_ = tf::getYaw(traffic_light_info.transform.orientation) + M_PI_2;
   bounding_box_ = common::Box2d(center_, heading_, box_length, box_width);
 }
 

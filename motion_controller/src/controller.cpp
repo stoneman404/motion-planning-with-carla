@@ -1,4 +1,5 @@
 #include <derived_object_msgs/ObjectArray.h>
+#include <pid_stanley_controller/pid_stanley_controller.hpp>
 #include "controller.hpp"
 #include "pid_pure_pursuit_controller/pid_pure_pursuit_controller.hpp"
 #include "name/string_name.hpp"
@@ -28,7 +29,10 @@ Controller::Controller(ros::NodeHandle &nh) : nh_(nh), vehicle_state_(std::make_
   nh_.param<double>("/motion_control/loop_rate", loop_rate_, 50.0);
   if (controller_type_ == "pure_pursuit_pid") {
     control_strategy_ = std::make_unique<PIDPurePursuitController>(control_configs_, loop_rate_);
+  } else if (controller_type_ == "pid_stanley") {
+    control_strategy_ = std::make_unique<PIDStanleyController>(control_configs_, loop_rate_);
   } else {
+
     ROS_FATAL("No such controller... [%s]", controller_type_.c_str());
     ROS_ASSERT(false);
   }

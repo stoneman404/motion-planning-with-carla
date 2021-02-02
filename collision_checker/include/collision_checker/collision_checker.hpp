@@ -37,7 +37,7 @@ class CollisionChecker {
                    double lat_buffer,
                    double lookahead_time,
                    double delta_t,
-                   const vehicle_state::VehicleParams& vehicle_params,
+                   const vehicle_state::VehicleParams &vehicle_params,
                    common::ThreadPool *thread_pool);
   /**
    * @brief: check ego vehicle is collision with obstacles
@@ -46,10 +46,12 @@ class CollisionChecker {
    */
   bool IsCollision(const planning_msgs::Trajectory &trajectory) const;
 
-  static bool IsCollision(
-      const std::vector<std::shared_ptr<Obstacle>>& obstacles,
-      const planning_msgs::Trajectory& ego_trajectory, const double ego_length,
-      const double ego_width, const double back_axle_to_center);
+  static bool IsCollision(const std::vector<std::shared_ptr<Obstacle>> &obstacles,
+                          const ReferenceLine &ref_line,
+                          const planning_msgs::Trajectory &ego_trajectory,
+                          const double ego_length,
+                          const double ego_width,
+                          const double back_axle_to_center);
 
  private:
   /**

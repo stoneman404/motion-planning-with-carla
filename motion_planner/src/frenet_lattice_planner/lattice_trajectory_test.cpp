@@ -42,6 +42,31 @@ TEST(LatticeTrajectoryTest, lattice_trajectory1d_evaluate) {
   }
 }
 
+TEST(LatticeTrajectoryTest, lon_trajectory_test) {
+  std::array<double, 3> init_s{30.0458, 15.0, 0};
+  std::array<double, 3> end_s{35.5136, 0.0, 0.0};
+  std::shared_ptr<common::Polynomial> curve = std::make_shared<common::QuinticPolynomial>(init_s, end_s, 4.0);
+  EXPECT_DOUBLE_EQ(curve->ParamLength(), 4.0);
+  EXPECT_EQ(curve->Order(), 5);
+  auto lattice_trajectory = std::make_shared<LatticeTrajectory1d>(curve);
+  for (double t = 0.0; t < 7.0; t += 0.1) {
+    std::cout << "t: " << t << ", s: " << lattice_trajectory->Evaluate(0, t)
+              << ", s_dot: "
+              << curve->Evaluate(1, t) << ", s_ddot: "
+              << curve->Evaluate(2, t)
+              << std::endl;
+  }
+  std::cout << " ---------------" << std::endl;
+  for (double t = 0.0; t < 8.0; t += 0.1) {
+    std::cout << "t: " << t << ", s: " << lattice_trajectory->Evaluate(0, t)
+              << ", s_dot: "
+              << lattice_trajectory->Evaluate(1, t) << ", s_ddot: "
+              << lattice_trajectory->Evaluate(2, t)
+              << std::endl;
+  }
+
+}
+
 TEST(LatticeTrajectoryTest, lattice_planner_trajectory_generator) {
   std::array<double, 3> init_s{-1.43473, 0.4, 0.0};
   std::array<double, 3> end_s{2.0, 0.3, 0};

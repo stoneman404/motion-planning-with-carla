@@ -170,41 +170,45 @@ bool ReferenceLine::IsOnLane(const SLBoundary &sl_boundary) const {
 
 bool ReferenceLine::GetSLBoundary(const Box2d &box, SLBoundary *sl_boundary) const {
 
-  double start_s = std::numeric_limits<double>::max();
-  double end_s = std::numeric_limits<double>::lowest();
-  double start_l = std::numeric_limits<double>::max();
-  double end_l = std::numeric_limits<double>::lowest();
+  double start_s(std::numeric_limits<double>::max());
+  double end_s(std::numeric_limits<double>::lowest());
+  double start_l(std::numeric_limits<double>::max());
+  double end_l(std::numeric_limits<double>::lowest());
   std::vector<Eigen::Vector2d> corners = box.GetAllCorners();
+  // The order must be counter-clockwise
   std::vector<SLPoint> sl_corners;
   for (const auto &point : corners) {
     SLPoint sl_point;
     if (!XYToSL(point, &sl_point)) {
-      ROS_ERROR("Failed to get projection for point : %lf, %lf", point[0], point[1]);
       return false;
     }
-    sl_corners.push_back(sl_point);
+    sl_corners.push_back(std::move(sl_point));
   }
 
   for (size_t i = 0; i < corners.size(); ++i) {
     auto index0 = i;
-    // 多边形必须闭合
     auto index1 = (i + 1) % corners.size();
     const auto &p0 = corners[index0];
     const auto &p1 = corners[index1];
-    const auto &p_mid = (p0 + p1) * 0.5;
-    SLPoint sl_mid;
-    if (!XYToSL(p_mid, &sl_mid)) {
-      ROS_ERROR("Failed to get projection for point : %lf, %lf", p_mid[0], p_mid[1]);
+
+    const auto p_mid = (p0 + p1) * 0.5;
+    SLPoint sl_point_mid;
+    if (!XYToSL(p_mid, &sl_point_mid)) {
       return false;
     }
-    Eigen::Vector2d v0 = Eigen::Vector2d(sl_corners[index1].s - sl_corners[index0].s,
-                                         sl_corners[index1].l - sl_corners[index0].l);
-    Eigen::Vector2d v1 = Eigen::Vector2d(sl_mid.s - sl_corners[index0].s,
-                                         sl_mid.l - sl_corners[index0].l);
+
+    Eigen::Vector2d v0(sl_corners[index1].s - sl_corners[index0].s,
+                       sl_corners[index1].l - sl_corners[index0].l);
+
+    Eigen::Vector2d v1(sl_point_mid.s - sl_corners[index0].s,
+                       sl_point_mid.l - sl_corners[index0].l);
+
     sl_boundary->boundary_points.push_back(sl_corners[index0]);
-    // corners 的顺序是从右前方逆时针排列的．所以当叉乘为负的时候，说明中点出了凸包
-    if ((v0.x() * v1.y() - v0.y() * v1.x()) < 0.0) {
-      sl_boundary->boundary_points.push_back(sl_mid);
+
+    // sl_point is outside of polygon; add to the vertex list
+    double cross_prod = v0.x() * v1.y() - v0.y() * v1.x();
+    if (cross_prod < 0.0) {
+      sl_boundary->boundary_points.push_back(sl_point_mid);
     }
   }
 
@@ -219,7 +223,6 @@ bool ReferenceLine::GetSLBoundary(const Box2d &box, SLBoundary *sl_boundary) con
   sl_boundary->end_s = end_s;
   sl_boundary->start_l = start_l;
   sl_boundary->end_l = end_l;
-
   return true;
 }
 

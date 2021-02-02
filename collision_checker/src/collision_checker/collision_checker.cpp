@@ -35,24 +35,43 @@ bool CollisionChecker::IsCollision(const planning_msgs::Trajectory &trajectory) 
   double shift_distance = vehicle_params_.back_axle_to_center_length;
 
   assert(trajectory.trajectory_points.size() <= predicted_obstacle_box_.size());
-
 #if DEBUG
+  std::cout << "bounding boxs for obstacle" << std::endl;
+  for (size_t i = 0; i < predicted_obstacle_box_.size(); ++i) {
+    if (!predicted_obstacle_box_[i].empty()) {
+      std::cout << "i " << i << " len: " << predicted_obstacle_box_[i].front().length() << ", width: "
+                << predicted_obstacle_box_[i].front().width()
+                << " heading: " << predicted_obstacle_box_[i].front().heading()
+                << " center_x : " << predicted_obstacle_box_[i].front().center_x()
+                << " center_y : " << predicted_obstacle_box_[i].front().center_y()
+                << std::endl;
+    }
+  }
+  std::cout << " to check trajectory is " << std::endl;
+  for (const auto &trajectory_point : trajectory.trajectory_points) {
+    std::cout << " x: " << trajectory_point.path_point.x
+              << ", y: " << trajectory_point.path_point.y
+              << ", theta: " << trajectory_point.path_point.theta
+              << std::endl;
+  }
+
+
   std::cout << "=====predicted_obstacle_box_ size ===== " << predicted_obstacle_box_.size() << std::endl;
 #endif
   if (this->thread_pool_ == nullptr) {
     for (size_t i = 0; i < trajectory.trajectory_points.size(); ++i) {
-      const auto &traj_point = trajectory.trajectory_points.at(i);
+      auto traj_point = trajectory.trajectory_points.at(i);
       double ego_theta = traj_point.path_point.theta;
       Box2d ego_box = Box2d({traj_point.path_point.x, traj_point.path_point.y}, ego_theta, ego_length, ego_width);
       ego_box.Shift({shift_distance * std::cos(ego_theta), shift_distance * std::sin(ego_theta)});
-      ego_box.LateralExtend(lat_buffer_);
-      ego_box.LongitudinalExtend(lon_buffer_);
 #if DEBUG
       std::cout << " obstacle box at index  " << i << " size is :" << predicted_obstacle_box_[i].size() << std::endl;
       std::cout << "relative trajectory point: x: " << traj_point.path_point.x << ", y: " << traj_point.path_point.y
                 << ", theta: " << traj_point.path_point.theta << std::endl;
 #endif
-      for (const auto& obstacle_box : predicted_obstacle_box_[i]) {
+      for (auto obstacle_box : predicted_obstacle_box_[i]) {
+        obstacle_box.LateralExtend(2.0 * lat_buffer_);
+        obstacle_box.LongitudinalExtend(2.0 * lon_buffer_);
 
 #if DEBUG
         std::cout << " obstacle_box: center: x: " << obstacle_box.center_x() << ", y: " << obstacle_box.center_y()
@@ -97,16 +116,16 @@ void CollisionChecker::Init(const std::unordered_map<int, std::shared_ptr<Obstac
   bool ego_vehicle_in_lane = IsEgoVehicleInLane(ego_vehicle_s, ego_vehicle_d);
   std::vector<std::shared_ptr<Obstacle>> obstacle_considered;
   for (auto &obstacle : obstacles) {
-    if (/*ego_vehicle_in_lane &&*/
+    if (ego_vehicle_in_lane &&
         (IsObstacleBehindEgoVehicle(obstacle.second, ego_vehicle_s, reference_line)
-           /* || !ptr_st_graph_->IsObstacleInGraph(obstacle.first)*/)) {
+            || !ptr_st_graph_->IsObstacleInGraph(obstacle.first))) {
       continue;
     }
     obstacle_considered.push_back(obstacle.second);
   }
 
   double relative_time = 0.0;
-  while (relative_time < lookahead_time_) {
+  while (relative_time < lookahead_time_ + delta_t_) {
     std::vector<Box2d> predicted_env;
     for (const auto &obstacle : obstacle_considered) {
       planning_msgs::TrajectoryPoint point = obstacle->GetPointAtTime(relative_time);
@@ -119,8 +138,9 @@ void CollisionChecker::Init(const std::unordered_map<int, std::shared_ptr<Obstac
 }
 
 bool CollisionChecker::IsEgoVehicleInLane(double ego_vehicle_s, double ego_vehicle_d) const {
-  double left_width = 0.0;
-  double right_width = 0.0;
+  constexpr double kDefaultLaneWidth = 3.5;
+  double left_width = kDefaultLaneWidth / 2.0;
+  double right_width = kDefaultLaneWidth / 2.0;
   ref_line_.GetLaneWidth(ego_vehicle_s, &left_width, &right_width);
   return ego_vehicle_d < left_width && ego_vehicle_d > -right_width;
 }
@@ -137,26 +157,26 @@ bool CollisionChecker::IsObstacleBehindEgoVehicle(const std::shared_ptr<Obstacle
   }
   return false;
 }
+
 bool CollisionChecker::IsCollision(const std::vector<std::shared_ptr<Obstacle>> &obstacles,
+                                   const ReferenceLine &ref_line,
                                    const planning_msgs::Trajectory &ego_trajectory,
                                    const double ego_length,
                                    const double ego_width,
                                    const double back_axle_to_center) {
-  for (const auto & ego_point : ego_trajectory.trajectory_points) {
+  for (const auto &ego_point : ego_trajectory.trajectory_points) {
     const auto relative_time = ego_point.relative_time;
     const auto ego_theta = ego_point.path_point.theta;
-
+    common::SLPoint sl_point;
+    ref_line.XYToSL(ego_point.path_point.x, ego_point.path_point.y, &sl_point);
     common::Box2d ego_box({ego_point.path_point.x, ego_point.path_point.y},
                           ego_theta, ego_length, ego_width);
-
-
-    double shift_distance =  back_axle_to_center;
+    double shift_distance = back_axle_to_center;
     Eigen::Vector2d shift_vec(shift_distance * std::cos(ego_theta),
                               shift_distance * std::sin(ego_theta));
     ego_box.Shift(shift_vec);
-
     std::vector<common::Box2d> obstacle_boxes;
-    for (const auto& obstacle : obstacles) {
+    for (const auto &obstacle : obstacles) {
       auto obstacle_point = obstacle->GetPointAtTime(relative_time);
       common::Box2d obstacle_box = obstacle->GetBoundingBoxAtPoint(obstacle_point);
       if (ego_box.HasOverlapWithBox2d(obstacle_box)) {

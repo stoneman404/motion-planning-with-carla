@@ -151,7 +151,6 @@ std::vector<EndCondition> EndConditionSampler::SampleLonEndConditionWithSTGraph(
     State end_state = {s, v, 0.0};
     end_s_conditions.emplace_back(end_state, t);
   }
-
 #if DEBUG
   for (const auto &sample_point : sample_points_overtake) {
     std::cout << "overtake sample_point: s: " << sample_point.first.s() << ", t: " << sample_point.first.t() << ", v: "
@@ -166,6 +165,8 @@ std::vector<EndCondition> EndConditionSampler::SampleLonEndConditionWithSTGraph(
     auto ref_point = ref_line_.GetReferencePoint(sample_point.first.s());
     std::cout << " following point in cartersian coordinate : x: " << ref_point.x() <<", y: " << ref_point.y() << std::endl;
   }
+
+
 //  std::cout << "---------------------------------" << std::endl;
 //  for (const auto &end_condition : end_s_conditions) {
 //    std::cout << "overtake-following end conditions: " << " s: " << end_condition.first[0]
@@ -185,7 +186,8 @@ std::vector<std::pair<STPoint, double>> EndConditionSampler::OvertakeSamplePoint
     double v = GetObstacleSpeedAlongReferenceLine(obstacle_id, st_point.s(), st_point.t(), ref_line_);
     std::pair<STPoint, double> sample_point;
     sample_point.first = st_point;
-    sample_point.first.set_s(st_point.s() + PlanningConfig::Instance().vehicle_params().half_length
+    sample_point.first.set_s(st_point.s() + PlanningConfig::Instance().lon_safety_buffer()
+                                 + PlanningConfig::Instance().vehicle_params().half_length
                                  - PlanningConfig::Instance().vehicle_params().back_axle_to_center_length);
     sample_point.second = v;
     sample_points.push_back(sample_point);
@@ -199,15 +201,16 @@ std::vector<std::pair<STPoint, double>> EndConditionSampler::FollowingSamplePoin
   std::vector<std::pair<STPoint, double>> sample_points{};
   std::vector<STPoint> follow_st_points = ptr_st_graph_->GetObstacleSurroundingPoints(
       obstacle_id, -1e-3, 0.2);
-  std::cout << "============= vehicle params ========" << std::endl;
-  std::cout << " length: " << PlanningConfig::Instance().vehicle_params().length
-            << " width: " << PlanningConfig::Instance().vehicle_params().width
-            << " back_to_center: " << PlanningConfig::Instance().vehicle_params().back_axle_to_center_length
-            << " front_to_center: " << PlanningConfig::Instance().vehicle_params().front_axle_to_center_length << std::endl;
+//  std::cout << "============= vehicle params ========" << std::endl;
+//  std::cout << " length: " << PlanningConfig::Instance().vehicle_params().length
+//            << " width: " << PlanningConfig::Instance().vehicle_params().width
+//            << " back_to_center: " << PlanningConfig::Instance().vehicle_params().back_axle_to_center_length
+//            << " front_to_center: " << PlanningConfig::Instance().vehicle_params().front_axle_to_center_length << std::endl;
   for (const auto &st_point : follow_st_points) {
     double v = GetObstacleSpeedAlongReferenceLine(obstacle_id, st_point.s(), st_point.t(), ref_line_);
-    double s_upper = st_point.s() - (PlanningConfig::Instance().vehicle_params().half_length
-        + PlanningConfig::Instance().vehicle_params().back_axle_to_center_length);
+    double s_upper = st_point.s() - PlanningConfig::Instance().lon_safety_buffer()
+        - PlanningConfig::Instance().vehicle_params().half_length
+        - PlanningConfig::Instance().vehicle_params().back_axle_to_center_length;
     double s_lower = s_upper - PlanningConfig::Instance().lon_safety_buffer();
     double s_gap =
         PlanningConfig::Instance().lon_safety_buffer() / static_cast<double>(num_sample_follow_per_timestamp - 1);

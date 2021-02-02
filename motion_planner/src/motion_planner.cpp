@@ -58,6 +58,7 @@ std::vector<PlanningTarget> MotionPlanner::GetPlanningTargets(const std::vector<
                                                               const planning_msgs::TrajectoryPoint &init_point) {
   std::vector<PlanningTarget> targets;
   targets.reserve(ref_lines.size());
+  constexpr double kDefaultLaneWidth = 4.0;
   for (const auto &ref_line : ref_lines) {
     common::SLPoint sl_point;
     if (!ref_line.XYToSL(init_point.path_point.x, init_point.path_point.y, &sl_point)) {
@@ -67,7 +68,8 @@ std::vector<PlanningTarget> MotionPlanner::GetPlanningTargets(const std::vector<
     target.ref_lane = ref_line;
     target.has_stop_point = ref_line.Length() < sl_point.s + 50.0;
     target.stop_s = target.has_stop_point ? ref_line.Length() : std::numeric_limits<double>::max();
-    target.is_best_behaviour = ref_line.IsOnLane(sl_point);
+
+    target.is_best_behaviour = true;
     target.desired_vel =
         std::min(PlanningConfig::Instance().desired_velocity(),
                  PlanningConfig::Instance().max_lat_acc()
@@ -117,6 +119,7 @@ void MotionPlanner::RunOnce() {
       traffic_lights_info_list_,
       init_trajectory_point,
       ego_vehicle_id_, planning_targets);
+
   VisualizeObstacleTrajectory(obstacles);
 
   if (!trajectory_planner_->Process(obstacles, init_trajectory_point,
@@ -261,9 +264,11 @@ void MotionPlanner::VisualizeObstacleTrajectory(const std::vector<std::shared_pt
                                                 : objects_map_[obstacle->Id()].shape.dimensions[2];
     obstacle_info_mark_array.markers.push_back(info_marker);
 
-    trajectory_marker.type = visualization_msgs::Marker::POINTS;
+    trajectory_marker.type = visualization_msgs::Marker::LINE_STRIP;
     trajectory_marker.id = i;
-    trajectory_marker.scale.x = 0.1;
+    trajectory_marker.scale.x = 0.2;
+    trajectory_marker.scale.y = 0.2;
+    trajectory_marker.scale.z = 0.2;
     trajectory_marker.color.a = 1.0;
     trajectory_marker.color.r = 0.7;
     trajectory_marker.color.b = 1.0;
@@ -453,7 +458,7 @@ std::vector<planning_msgs::TrajectoryPoint> MotionPlanner::GetStitchingTrajector
     double planning_cycle_time,
     size_t preserve_points_num) {
   auto state = vehicle_state_->GetKinoDynamicVehicleState();
-  if (!has_history_trajectory_) {
+  if (!has_history_trajectory_ || (state.v < 0.2 && std::fabs(state.a) < 0.4)) {
     return MotionPlanner::ComputeReinitStitchingTrajectory(planning_cycle_time, state);
   }
   if (history_trajectory_.trajectory_points.empty()) {

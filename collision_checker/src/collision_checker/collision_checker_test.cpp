@@ -432,6 +432,18 @@ TEST_F(CollisionCheckTest, dynamic_obstacle_test) {
                                                                         nullptr);
   std::cout << collision_checker->IsCollision(ego_trajectory) << std::endl;
 
+}
+
+TEST(CollisionCheck, box_test) {
+  Eigen::Vector2d obstacle_center{37.3609, 170.3};
+  Eigen::Vector2d ego_center{35.3921, 166.691};
+  double obstacle_theta = 1.5708;
+  double ego_theta = 1.54405;
+  common::Box2d obstacle_box = common::Box2d(obstacle_center, obstacle_theta, 1.0, 6.0);
+  obstacle_box.LateralExtend(0.3);
+  obstacle_box.LongitudinalExtend(1.5);
+  common::Box2d ego_box = common::Box2d(ego_center, ego_theta, 4.8, 2.1);
+  EXPECT_TRUE(ego_box.HasOverlapWithBox2d(obstacle_box));
 
 }
 

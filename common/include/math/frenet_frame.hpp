@@ -71,14 +71,12 @@ class STBoundary {
  public:
   STBoundary() = default;
   /**
-   *
    * @param point_pairs, first is lower st point, second is upper point
    */
   explicit STBoundary(const std::vector<std::pair<STPoint, STPoint>> &point_pairs);
   ~STBoundary() = default;
 
   /**
-   *
    * @param curr_time
    * @param s_upper
    * @param s_lower
@@ -87,7 +85,6 @@ class STBoundary {
   bool GetBoundarySRange(double curr_time, double *s_upper, double *s_lower) const;
 
   /**
-   *
    * @param curr_time
    * @param ds_upper
    * @param ds_lower
@@ -101,7 +98,6 @@ class STBoundary {
    * @return
    */
   bool IsPointInBoundary(const STPoint &st_point) const;
-
   int id() const;
 
   void set_id(int id);
@@ -111,17 +107,6 @@ class STBoundary {
   double max_t() const;
   const std::vector<STPoint> &upper_points() const;
   const std::vector<STPoint> &lower_points() const;
-
-//  const STPoint &upper_left_point() const;
-//  const STPoint &upper_right_point() const;
-//  const STPoint &lower_left_point() const;
-//  const STPoint &lower_right_point() const;
-//
-//  void set_upper_left_point(const STPoint &st_point);
-//  void set_upper_right_point(const STPoint &st_point);
-//  void set_lower_left_point(const STPoint &st_point);
-//  void set_lower_right_point(const STPoint &st_point);
-
  private:
   size_t Prev(size_t i) const;
   size_t Next(size_t i) const;
@@ -129,22 +114,14 @@ class STBoundary {
                             size_t *left_index, size_t *right_index);
  private:
   int id_{};
-
   std::vector<STPoint> upper_points_;
   std::vector<STPoint> lower_points_;
-  double length_ = 1.0;
   double min_s_ = std::numeric_limits<double>::max();
   double max_s_ = std::numeric_limits<double>::lowest();
   double min_t_ = std::numeric_limits<double>::max();
   double max_t_ = std::numeric_limits<double>::lowest();
-
   std::vector<STPoint> points_;
-
   size_t num_points_ = 0;
-  double is_convex_ = false;
-
-  double area_ = 0.0;
-
 };
 }
 #endif //CATKIN_WS_SRC_MOTION_PLANNING_WITH_CARLA_LOCAL_PLANNER_COMMON_INCLUDE_ST_DATA_HPP_

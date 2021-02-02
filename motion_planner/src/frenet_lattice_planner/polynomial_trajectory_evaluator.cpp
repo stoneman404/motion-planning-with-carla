@@ -34,6 +34,9 @@ PolynomialTrajectoryEvaluator::PolynomialTrajectoryEvaluator(const std::array<do
         continue;
       }
       for (const auto &lat_traj : lat_trajectory_vec) {
+        if (!IsValidLateralTrajectory(*lon_traj, *lat_traj)) {
+          continue;
+        }
         auto lambda = [&lon_traj, &lat_traj, &planning_target, this]() -> TrajectoryCostPair {
           double cost = Evaluate(planning_target, lon_traj, lat_traj);
           return TrajectoryCostPair(TrajectoryPair(lon_traj, lat_traj), cost);
@@ -116,6 +119,7 @@ bool PolynomialTrajectoryEvaluator::IsValidLateralTrajectory(const common::Polyn
     if (!ConstraintChecker::WithInRange(l, -3.5/2, 3.5/2)) {
       return false;
     }
+    t += PlanningConfig::Instance().delta_t();
 //    if (!ConstraintChecker::WithInRange(dlddt,
 //                                        PlanningConfig::Instance().min_lat_acc(),
 //                                        PlanningConfig::Instance().max_lat_acc())) {
@@ -134,10 +138,12 @@ double PolynomialTrajectoryEvaluator::Evaluate(const PlanningTarget &planning_ta
   double lat_offset_cost = PolynomialTrajectoryEvaluator::LatOffsetCost(lat_traj, lon_traj);
   double lat_jerk_cost = this->LatJerkCost(lat_traj, lon_traj);
   double centripental_cost = this->CentripetalAccelerationCost(lon_traj);
-//  std::cout << " lon_target_cost: " << lon_target_cost << ",lon_jerk_cost: " << lon_jerk_cost
-//            << ", lon_collision_cost: " << lon_collision_cost
-//            << ", lat_offset_cost: " << lat_offset_cost << ", lat_jerk_cost: " << lat_jerk_cost
-//            << ", centripental_cost: " << centripental_cost << std::endl;
+#if DEBUG
+  //  std::cout << " lon_target_cost: " << lon_target_cost << ",lon_jerk_cost: " << lon_jerk_cost
+  //            << ", lon_collision_cost: " << lon_collision_cost
+  //            << ", lat_offset_cost: " << lat_offset_cost << ", lat_jerk_cost: " << lat_jerk_cost
+  //            << ", centripental_cost: " << centripental_cost << std::endl;
+#endif
   return lon_collision_cost * PlanningConfig::Instance().lattice_weight_collision() +
       lon_jerk_cost * PlanningConfig::Instance().lattice_weight_lon_jerk() +
       lon_target_cost * PlanningConfig::Instance().lattice_weight_lon_target() +
@@ -247,17 +253,15 @@ double PolynomialTrajectoryEvaluator::LonCollisionCost(const std::shared_ptr<com
     }
     double t = static_cast<double>(i) * PlanningConfig::Instance().delta_t();
     double traj_s = lon_trajectory->Evaluate(0, t);
-    double sigma = 1.0;
+    double sigma = 2.0;
     for (const auto &m : pt_interval) {
       double dist = 0.0;
       if (traj_s < m.first - PlanningConfig::Instance().lon_safety_buffer()) {
         dist = m.first - PlanningConfig::Instance().lon_safety_buffer() - traj_s;
       } else if (traj_s > m.second + PlanningConfig::Instance().lon_safety_buffer()) {
         dist = traj_s - m.second - PlanningConfig::Instance().lon_safety_buffer();
-      } else {
-        dist = -1e20;
       }
-      double cost = std::exp(-dist / (2.0 * sigma * sigma));
+      double cost = std::exp(-dist * dist / (2.0 * sigma * sigma));
 
       cost_sqr_sum += cost * cost;
       cost_abs_sum += cost;

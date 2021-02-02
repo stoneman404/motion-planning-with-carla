@@ -18,6 +18,9 @@ bool PIDPurePursuitController::Execute(double current_time_stamp,
   if (!GetMatchedPointByPosition(kinodynamic_state.x, kinodynamic_state.y, trajectory, cur_tp)) {
     return false;
   }
+  if (cur_tp == trajectory.trajectory_points.back()) {
+    return false;
+  }
 //  double preview_time = current_time_stamp + control_configs_.lookahead_time;
 //  if (!GetMatchedPointByAbsoluteTime(preview_time, trajectory, target_tp)) {
 //    return false;
@@ -30,8 +33,15 @@ bool PIDPurePursuitController::Execute(double current_time_stamp,
   if (!GetMatchedPointByS(cur_tp.path_point.s + approx_lookahead_dist, trajectory, target_tp)) {
     return false;
   }
+//  double max_vel = trajectory.trajectory_points.front().vel;
+//  for (const auto& tp: trajectory.trajectory_points) {
+//    if (tp.vel > max_vel) {
+//      max_vel = tp.vel;
+//    }
+//  }
+
   const double cur_lon_s_dot = kinodynamic_state.v;
-  const double target_lon_s_dot = target_tp.vel;
+  const double target_lon_s_dot = std::min(target_tp.vel, (3.0 / std::fabs(target_tp.path_point.kappa) + 1e-4));
 
   double throttle = 0.0;
   double steer = 0.0;

@@ -107,17 +107,17 @@ bool FrenetLatticePlanner::PlanningOnRef(const planning_msgs::TrajectoryPoint &i
 #if DEBUG
   std::cout << " ======== obstacle size : " << obstacle_map.size() << std::endl;
 #endif
-//  CollisionChecker collision_checker = CollisionChecker(obstacle_map,
-//                                                        ref_line,
-//                                                        st_graph,
-//                                                        init_s[0],
-//                                                        init_d[0],
-//                                                        PlanningConfig::Instance().lon_safety_buffer(),
-//                                                        PlanningConfig::Instance().lat_safety_buffer(),
-//                                                        PlanningConfig::Instance().max_lookahead_time(),
-//                                                        PlanningConfig::Instance().delta_t(),
-//                                                        PlanningConfig::Instance().vehicle_params(),
-//                                                        nullptr);
+  CollisionChecker collision_checker = CollisionChecker(obstacle_map,
+                                                        ref_line,
+                                                        st_graph,
+                                                        init_s[0],
+                                                        init_d[0],
+                                                        PlanningConfig::Instance().lon_safety_buffer(),
+                                                        PlanningConfig::Instance().lat_safety_buffer(),
+                                                        PlanningConfig::Instance().max_lookahead_time(),
+                                                        PlanningConfig::Instance().delta_t(),
+                                                        PlanningConfig::Instance().vehicle_params(),
+                                                        nullptr);
   size_t collision_failure_count = 0;
   size_t combined_constraint_failure_count = 0;
   size_t lon_vel_failure_count = 0;
@@ -169,17 +169,19 @@ bool FrenetLatticePlanner::PlanningOnRef(const planning_msgs::TrajectoryPoint &i
       }
       continue;
     }
-    if (CollisionChecker::IsCollision(obstacles_,
-                                       combined_trajectory,
-                                       PlanningConfig::Instance().vehicle_params().length
-                                           + PlanningConfig::Instance().lon_safety_buffer(),
-                                       PlanningConfig::Instance().vehicle_params().width
-                                           + PlanningConfig::Instance().lat_safety_buffer(),
-                                       PlanningConfig::Instance().vehicle_params().back_axle_to_center_length)) {
+//    if (CollisionChecker::IsCollision(obstacles_, ref_line, combined_trajectory,
+//                                       PlanningConfig::Instance().vehicle_params().length
+//                                           + 2.0 * PlanningConfig::Instance().lon_safety_buffer(),
+//                                       PlanningConfig::Instance().vehicle_params().width
+//                                           +2.0* PlanningConfig::Instance().lat_safety_buffer(),
+//                                       PlanningConfig::Instance().vehicle_params().back_axle_to_center_length)) {
+//      ++collision_failure_count;
+//      continue;
+//    }
+    if (collision_checker.IsCollision(combined_trajectory)) {
       ++collision_failure_count;
       continue;
     }
-
     num_lattice_traj += 1;
     optimal_trajectory.second = trajectory_pair_cost;
     optimal_trajectory.first = combined_trajectory;
@@ -340,12 +342,13 @@ void FrenetLatticePlanner::GenerateStoppingLonTrajectories(double stop_s,
   ROS_DEBUG("[GenerateStoppingLonTrajectories], GeneratePolynomialTrajectories elapsed %lf s", (end - begin).toSec());
 }
 
-void FrenetLatticePlanner::GenerateOvertakeAndFollowingLonTrajectories(const std::array<double, 3> &init_s,
-                                                                       const std::shared_ptr<EndConditionSampler> &end_condition_sampler,
-                                                                       std::vector<std::shared_ptr<Polynomial>> *ptr_lon_traj_vec) {
+void FrenetLatticePlanner::GenerateOvertakeAndFollowingLonTrajectories(
+    const std::array<double, 3> &init_s,
+    const std::shared_ptr<EndConditionSampler> &end_condition_sampler,
+    std::vector<std::shared_ptr<Polynomial>> *ptr_lon_traj_vec) {
   auto end_conditions = end_condition_sampler->SampleLonEndConditionWithSTGraph();
-  ROS_DEBUG("[FrenetLatticePlanner::GenerateOvertakeAndFollowingLonTrajectories], the end conditions size : %zu",
-            end_conditions.size());
+  ROS_INFO("[FrenetLatticePlanner::GenerateOvertakeAndFollowingLonTrajectories], the end conditions size : %zu",
+           end_conditions.size());
   ros::Time begin = ros::Time::now();
   FrenetLatticePlanner::GeneratePolynomialTrajectories(init_s, end_conditions, 5, ptr_lon_traj_vec);
   ros::Time end = ros::Time::now();
@@ -419,7 +422,7 @@ void FrenetLatticePlanner::GetInitCondition(const ReferenceLine &ptr_ref_line,
                                            init_trajectory_point.path_point.theta,
                                            init_trajectory_point.path_point.kappa,
                                            init_s, init_d);
-#if DEBUG
+#if 1
   std::cout << "++++++++++GetInitConditions++++++++++" << std::endl;
   std::cout << "init_trajectory_point: x: " << init_trajectory_point.path_point.x << ", y: "
             << init_trajectory_point.path_point.y  << ", theta: " << init_trajectory_point.path_point.theta <<  ", v: " << init_trajectory_point.vel
@@ -431,7 +434,8 @@ void FrenetLatticePlanner::GetInitCondition(const ReferenceLine &ptr_ref_line,
             << "theta: " << matched_ref_point.theta() << " kappa: " << matched_ref_point.kappa() << ", dkappa: "
             << matched_ref_point.dkappa()
             << ", matched_s: " << matched_s << std::endl;
-  std::cout << "init_d: " << init_d->at(0)<< ", " << init_d->at(1) << ", " << init_d->at(2)<< std::endl;
+  std::cout << "init_s : " << init_s->at(0) << ", " << init_s->at(1) << ", " << init_s->at(2) << std::endl;
+  std::cout << "init_d: " << init_d->at(0) << ", " << init_d->at(1) << ", " << init_d->at(2) << std::endl;
 #endif
 }
 

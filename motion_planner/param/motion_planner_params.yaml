@@ -1,5 +1,5 @@
 /motion_planner/planner_type: "frenet_lattice"
-/motion_planner/loop_rate: 10
+/motion_planner/loop_rate: 8
 /motion_planner/delta_t: 0.1
 /motion_planner/reference_smoother_deviation_weight: 13.5
 /motion_planner/reference_smoother_curvature_weight: 1.0
@@ -10,29 +10,29 @@
 /motion_planner/spline_order: 3
 /motion_planner/max_lookahead_time: 8.0
 /motion_planner/min_lookahead_time: 0.1
-/motion_planner/lon_safety_buffer: 1.5
+/motion_planner/lon_safety_buffer: 2.0
 /motion_planner/lat_safety_buffer: 0.3
-/motion_planner/max_lookahead_distance: 100.0
+/motion_planner/max_lookahead_distance: 200.0
 /motion_planner/max_lookback_distance: 30.0
 
-/motion_planner/max_lon_acc: 6.0
-/motion_planner/min_lon_acc: -5.0
+/motion_planner/max_lon_acc: 4.0
+/motion_planner/min_lon_acc: -4.0
 /motion_planner/max_lon_velocity: 40.0
-/motion_planner/min_lon_velocity: -0.1
-/motion_planner/max_lon_jerk: 30.0
-/motion_planner/min_lon_jerk: -30.0
-/motion_planner/min_kappa: -4.0
-/motion_planner/max_kappa: 4.0
+/motion_planner/min_lon_velocity: -0.01
+/motion_planner/max_lon_jerk: 8.0
+/motion_planner/min_lon_jerk: -8.0
+/motion_planner/min_kappa: -3.0
+/motion_planner/max_kappa: 3.0
 
-/motion_planner/min_lat_acc: -6.0
-/motion_planner/max_lat_acc: 6.0
+/motion_planner/min_lat_acc: -3.0
+/motion_planner/max_lat_acc: 3.0
 /motion_planner/lattice_weight_opposite_side_offset: 10.0
 /motion_planner/lattice_weight_same_side_offset: 1.0
 /motion_planner/lattice_weight_dist_travelled: 10.0
-/motion_planner/lattice_weight_target_speed: 2
+/motion_planner/lattice_weight_target_speed: 1.0
 /motion_planner/lattice_weight_collision: 5.0
 /motion_planner/lattice_weight_lon_jerk: 0.5
-/motion_planner/lattice_weight_lon_target: 20.0
+/motion_planner/lattice_weight_lon_target: 10.0
 /motion_planner/lattice_weight_lat_offset: 7.0
 /motion_planner/lattice_weight_lat_jerk: 5.0
 /motion_planner/lattice_weight_centripetal_acc: 1.0
@@ -40,7 +40,7 @@
 /motion_planner/max_replan_lon_distance_threshold: 3.5
 /motion_planner/preserve_history_trajectory_point_num: 25
 
-/motion_planner/desired_velocity: 23.0
+/motion_planner/desired_velocity: 30.0
 /motion_planner/sim_horizon: 10.0
 /motion_planner/sim_step: 0.25
 /motion_planner/safe_time_headway: 1.5
@@ -49,7 +49,7 @@
 /motion_planner/s1: 0.0
 /motion_planner/default_lateral_approach_ratio: 0.995
 /motion_planner/cutting_in_lateral_approach_ratio: 0.95
-/motion_planner/sample_lat_threshold: 6.0
+/motion_planner/sample_lat_threshold: 14.0
 /motion_planner/sample_min_lon_threshold: 20.0
 
 

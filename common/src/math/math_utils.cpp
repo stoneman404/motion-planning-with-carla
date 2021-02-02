@@ -72,12 +72,12 @@ double MathUtils::CalcKappa(double dx, double dy, double ddx, double ddy) {
 }
 
 double MathUtils::CalcDKappa(double dx, double dy, double ddx, double ddy, double dddx, double dddy) {
-  const double a = dx * dddy - dy * dddx;
-  const double b = dx * dx + dy * dy;
-  const double c = dx * ddy - dy * ddx;
-  const double d = dx * ddx + dy * ddy;
-  const double sqrt_b = std::sqrt(b);
-  return (a * b - 3 * c * d) / (b * b * sqrt_b);
+  const double a = dx * ddy - dy * ddx;
+  const double b = dx * dddy - dy * dddx;
+  const double c = dx * ddx + dy * ddy;
+  const double d = dx * dx + dy * dy;
+
+  return (b * d - 3.0 * a * c) / (d * d * d);
 }
 
 Eigen::Vector3d MathUtils::Transform(const geometry_msgs::Pose &local_coordinate_transform,
