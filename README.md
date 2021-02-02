@@ -6,7 +6,7 @@
 
 - Ubuntu18.04
 - ROS Melodic
-- carla-simulator 0.9.9
+- carla-simulator 0.9.9.4
 - carla-ros-bridge
 
 # 2. Ros Graph
@@ -30,7 +30,7 @@ Constraints:
 $$
 x_{\text{ref}}[i] - b[i] \leq x[i] \leq x_{\text{ref}}[i] + b[i], i = 0,\ldots, N-1. \\
 y_{\text{ref}}[i] - b[i] \leq y[i] \leq y_{\text{ref}}[i] + b[i], i = 0,\ldots, N-1. \\
-((x[i+1] + x[i-1]-2x[i])^2 + (y[i+1]+y[i-1]-2y[i])^2) \leq (k_{\max} \Delta s^2)^2 
+((x[i+1] + x[i-1]-2x[i])^2 + (y[i+1]+y[i-1]-2y[i])^2) \leq (k_{\max} \Delta s^2)^2
 $$
 
 
@@ -40,41 +40,43 @@ $$
 
 ## 3.3 样条曲线上最近点
 
-[Robust and Efficient Computation of Closest Point on a Spline](https://www.semanticscholar.org/paper/Robust-and-Efficient-Computation-of-the-Closest-on-Wang-Kearney/50334aefe4a1de7277bd96822db707f55726ab3a). 
+[Robust and Efficient Computation of Closest Point on a Spline](https://www.semanticscholar.org/paper/Robust-and-Efficient-Computation-of-the-Closest-on-Wang-Kearney/50334aefe4a1de7277bd96822db707f55726ab3a).  Quaradic Minimization + Newton's Method
+
+# 4. [碰撞检查](https://zhuanlan.zhihu.com/p/99911487)
 
 
 
-# 4. 规划器
+# 5. 规划器
 
-## 4.1 Frenet Lattice Planner
+## 5.1 Frenet Lattice Planner
 
 done
 
-## 4.2 PVD Planner
+## 5.2 PVD Planner
 
 todo
 
 
 
-# 5. 控制器
+# 6. 控制器
 
-## 5.1 Pid_PurePursuit
+## 6.1 Pid_PurePursuit
 
 纵向控制： PID 
 
 横向控制： Pure Pursuit
 
-## 5.2 Pid_Stanley
+## 6.2 Pid_Stanley
 
 纵向控制： PID
 
 横向控制： Stanley
 
-## 5.3 MPC
+## 6.3 MPC
 
 todo
 
-# 6. Result
+# 7. Result
 
 
 
