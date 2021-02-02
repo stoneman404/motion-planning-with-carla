@@ -252,9 +252,9 @@ bool ReferenceLine::XYToSL(const Eigen::Vector2d &xy, SLPoint *sl_point) const {
   }
   double x_der, y_der;
   Eigen::Vector2d heading;
-  ref_line_spline_->EvaluateFirstDerivative(nearest_s, &x_der, &y_der);
-  heading << x_der, y_der;
-  heading.normalize();
+//  ref_line_spline_->EvaluateFirstDerivative(nearest_s, &x_der, &y_der);
+  auto ref_point = this->GetReferencePoint(nearest_s);
+  heading << std::cos(ref_point.theta()), std::sin(ref_point.theta());
   Eigen::Vector2d vec;
   vec << xy(0) - nearest_x, xy(1) - nearest_y;
   double prod = heading(0) * vec(1) - heading(1) * vec(0);
@@ -305,10 +305,33 @@ bool ReferenceLine::SLToXY(const SLPoint &sl_point, Eigen::Vector2d *xy_point) c
   }
   const auto matched_ref_point = GetReferencePoint(sl_point.s);
   const auto angle = matched_ref_point.theta();
-  (*xy_point)[0] = matched_ref_point.x() - std::sin(angle) * sl_point.l;
-  (*xy_point)[1] = matched_ref_point.y() + std::cos(angle) * sl_point.l;
-  return true;
+  const double cos_theta = std::cos(angle);
+  const double sin_theta = std::sin(angle);
+  if (sl_point.s > 1e-4 && sl_point.s < length_ - 1e-4) {
+    (*xy_point)[0] = matched_ref_point.x() - sin_theta * sl_point.l;
+    (*xy_point)[1] = matched_ref_point.y() + cos_theta * sl_point.l;
 
+  } else if (sl_point.s < 1e-4) {
+    Eigen::Matrix2d mat;
+    mat << cos_theta, sin_theta, -sin_theta, cos_theta;
+    Eigen::Vector2d res;
+    res << sl_point.s + cos_theta * matched_ref_point.x() + sin_theta * matched_ref_point.y(),
+        sl_point.l + cos_theta * matched_ref_point.y() - sin_theta * matched_ref_point.x();
+    Eigen::Vector2d xy = mat.reverse() * res;
+    (*xy_point)[0] = xy.x();
+    (*xy_point)[1] = xy.y();
+
+  } else {
+    Eigen::Matrix2d mat;
+    mat << cos_theta, sin_theta, -sin_theta, cos_theta;
+    Eigen::Vector2d res;
+    res << sl_point.s - length_ + cos_theta * matched_ref_point.x() + sin_theta * matched_ref_point.y(),
+        sl_point.l + cos_theta * matched_ref_point.y() - sin_theta * matched_ref_point.x();
+    Eigen::Vector2d xy = mat.reverse() * res;
+    (*xy_point)[0] = xy.x();
+    (*xy_point)[1] = xy.y();
+  }
+  return true;
 }
 
 double ReferenceLine::DistanceToLineSegment(const Eigen::Vector2d &start,
@@ -393,6 +416,7 @@ bool ReferenceLine::Smooth(const double deviation_weight,
     ys.push_back(reference_point.y());
   }
   ref_line_spline_.reset(new Spline2d(xs, ys));
+  length_ = ref_line_spline_->ArcLength();
   return true;
 }
 

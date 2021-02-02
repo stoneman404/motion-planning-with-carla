@@ -62,6 +62,7 @@ TEST_F(ReferenceLineSmootherTest, line_ref_test) {
 //    std::cout << "x: " << smoothed_ref_points[i].x() << ", y: " << smoothed_ref_points[i].y()
 //              << " heading: " << smoothed_ref_points[i].theta() << std::endl;
 //  }
+
 }
 
 TEST_F(ReferenceLineSmootherTest, waypoints_smooth) {
@@ -267,16 +268,36 @@ TEST_F(ReferenceLineSmootherTest, waypoints_smooth) {
   }
   auto refer_line = ReferenceLine(way_points);
   std::vector<ReferencePoint> smoothed_ref_points;
-  EXPECT_EQ(smoother_->SmoothReferenceLine(refer_line.reference_points_, &smoothed_ref_points), true);
+  EXPECT_TRUE(refer_line.Smooth(2.0, 10.0, 1.0, 1.0, 5.0));
 //  for (size_t i = 0; i < way_points.size(); ++i) {
 //    std::cout << "x: " << way_points[i].pose.position.x << ", y: " << way_points[i].pose.position.y
 //              << " heading: " << tf::getYaw(way_points[i].pose.orientation) << std::endl;
 //  }
 //  std::cout << " ========================= " << std::endl;
-//  for (size_t i = 0; i < smoothed_ref_points.size(); ++i) {
-//    std::cout << "x: " << smoothed_ref_points[i].x() << ", y: " << smoothed_ref_points[i].y()
-//              << " heading: " << smoothed_ref_points[i].theta() << std::endl;
+//  for (double s = 0; s < refer_line.Length(); s += 1.0) {
+//    auto ref_point = refer_line.GetReferencePoint(s);
+//    std::cout << "x : " << ref_point.x() << ", y: " << ref_point.y() << ", theta: " << ref_point.theta() << std::endl;
 //  }
+  std::cout << refer_line.GetReferencePoint(refer_line.Length()).theta() << std::endl;
+  double len = 1.0;
+  double width = 6.0;
+  double theta = 1.57712;
+  common::Box2d box = common::Box2d({6.78519, -151.419}, theta, len, width);
+  common::SLPoint sl;
+  EXPECT_TRUE(refer_line.XYToSL(box.center_, &sl));
+  Eigen::Vector2d xy;
+  EXPECT_TRUE(refer_line.SLToXY(sl, &xy));
+  EXPECT_DOUBLE_EQ(xy.x(), box.center_x());
+  EXPECT_DOUBLE_EQ(xy.y(), box.center_y());
+//  EXPECT_DOUBLE_EQ(sl.s, refer_line.Length());
+  common::SLPoint sl_point{refer_line.Length() + 0.1, -1};
+  EXPECT_TRUE(refer_line.SLToXY(sl_point, &xy));
+  std::cout << " xy: " << xy.x() << ", " << xy.y() << std::endl;
+  common::SLPoint sl_point_new;
+  EXPECT_TRUE(refer_line.XYToSL(xy, &sl_point_new));
+  EXPECT_NEAR(sl_point_new.s, sl_point.s, 0.1);
+  EXPECT_NEAR(sl_point_new.l, sl_point.l, 0.1);
+  std::cout << "ref_line length: " << refer_line.Length() << std::endl;
 }
 
 TEST_F(ReferenceLineSmootherTest, spline2d_test) {

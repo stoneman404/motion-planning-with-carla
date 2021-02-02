@@ -189,7 +189,7 @@ bool PIDStanleyController::StanleySteerControl(double max_steer,
     return true;
   }
   double theta_d = std::atan2(k * cross_error, vehicle_state.v);
-  double normalized_steer = theta_error + theta_d / max_steer;
+  double normalized_steer = (1.0 * theta_error + theta_d) / max_steer;
 
   *steer = Clamp<double>(normalized_steer, -1.0, 1.0);
   return true;

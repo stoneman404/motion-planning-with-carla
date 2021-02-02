@@ -72,7 +72,7 @@ bool ReferenceLineSmoother::SetUpConstraint() {
   x_u_.resize(num_of_variables_);
   g_l_.resize(num_of_constraint_);
   g_u_.resize(num_of_constraint_);
-  double boundary_radius = 1.0;
+  double boundary_radius = 1.5;
 
 //  std::cout << "number_of_curvature_constraints: " << number_of_curvature_constraints << std::endl;
   std::vector<double> boundary_bound(num_of_points_, 0.0);
